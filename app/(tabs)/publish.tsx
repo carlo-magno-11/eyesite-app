@@ -4,6 +4,8 @@ import { ScreenContainer } from '@/components/screen-container';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { useSubmitProperty } from '@/hooks/use-submit-property';
 import * as ImagePicker from 'expo-image-picker';
+import * as FileSystem from 'expo-file-system/legacy';
+import * as VideoThumbnails from 'expo-video-thumbnails';
 
 const PROPERTY_TYPES_OPTIONS = [
   { key: 'terreno', label: 'Terreno' },
@@ -12,6 +14,13 @@ const PROPERTY_TYPES_OPTIONS = [
   { key: 'rancho', label: 'Rancho' },
   { key: 'industrial', label: 'Industrial' },
 ];
+
+const PORTADA_OPTIONS = [
+  { key: 'foto', label: 'Foto' },
+  { key: 'video', label: 'Video' },
+];
+
+const MAX_VIDEO_BYTES = 50 * 1024 * 1024; // 50MB
 
 interface FormData {
   title: string;
@@ -48,18 +57,24 @@ export default function PublishScreen() {
   const [submitted, setSubmitted] = useState(false);
   const [selectedImages, setSelectedImages] = useState<SelectedImage[]>([]);
   const [uploadingImages, setUploadingImages] = useState(false);
+  const [portadaTipo, setPortadaTipo] = useState<'foto' | 'video'>('foto');
+  const [videoUri, setVideoUri] = useState<string | null>(null);
+  const [videoThumb, setVideoThumb] = useState<string | null>(null);
+  const [videoName, setVideoName] = useState<string | null>(null);
+  const [videoType, setVideoType] = useState<string | null>(null);
+  const [processingVideo, setProcessingVideo] = useState(false);
 
   const updateField = (key: keyof FormData, value: string) => {
     setForm((prev) => ({ ...prev, [key]: value }));
   };
 
   const { submitProperty, loading: submitting } = useSubmitProperty();
-  const [isLoading, setIsLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
 
   const pickImages = async () => {
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: ['images'],
         quality: 0.8,
       });
 
@@ -76,8 +91,66 @@ export default function PublishScreen() {
     }
   };
 
+  const pickVideo = async () => {
+    try {
+      setProcessingVideo(true);
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['videos'],
+        allowsEditing: true,
+        videoMaxDuration: 30,
+        quality: 0.6,
+      });
+
+      if (!result.canceled && result.assets.length > 0) {
+        const asset = result.assets[0];
+        const uri = asset.uri;
+
+        // Verificar peso del video (máx 50MB)
+        try {
+          const info = await FileSystem.getInfoAsync(uri);
+          if (info.exists && typeof info.size === 'number' && info.size > MAX_VIDEO_BYTES) {
+            Alert.alert(
+              'Video muy pesado',
+              'El video debe pesar máximo 50MB. Selecciona uno más corto o comprímelo.'
+            );
+            return;
+          }
+        } catch (sizeError) {
+          console.log('No se pudo verificar el tamaño del video:', sizeError);
+        }
+
+        // Generar thumbnail (preview) en el segundo 1
+        let thumbnail: string | undefined;
+        try {
+          const { uri: thumbUri } = await VideoThumbnails.getThumbnailAsync(uri, {
+            time: 1000,
+          });
+          thumbnail = thumbUri;
+        } catch (thumbError) {
+          console.log('No se pudo generar thumbnail:', thumbError);
+        }
+
+        setVideoUri(uri);
+        setVideoName(uri.split('/').pop() || 'video.mp4');
+        setVideoType(asset.mimeType || 'video/mp4');
+        setVideoThumb(thumbnail || null);
+      }
+    } catch (error) {
+      Alert.alert('Error', 'No se pudo seleccionar el video');
+    } finally {
+      setProcessingVideo(false);
+    }
+  };
+
   const removeImage = (index: number) => {
     setSelectedImages((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const removeVideo = () => {
+    setVideoUri(null);
+    setVideoThumb(null);
+    setVideoName(null);
+    setVideoType(null);
   };
 
   const handleSubmit = async () => {
@@ -86,41 +159,52 @@ export default function PublishScreen() {
       return;
     }
 
-    setIsLoading(true);
+    setUploading(true);
     try {
       // Convert selected images to URIs
-  const imageUris = selectedImages?.map((img) => img.uri) || [];
+      const imageUris = selectedImages?.map((img) => img.uri) || [];
 
-  const result = await submitProperty({
-    titulo: form.title,
-    tipo: form.type,
-    municipio: form.municipality,
-    precio_actual: parseInt(form.currentPrice),
-    precio_mercado: form.marketPrice ? parseInt(form.marketPrice) : null,
-    unidad_precio: form.priceUnit,
-    superficie: form.surfaceM2 ? parseInt(form.surfaceM2) : null,
-    unidad_superficie: form.priceUnit === 'ml' ? 'ml' : 'm2',
-    descripcion: form.description,
-    contacto_nombre: 'Usuario de la App',
-    contacto_telefono: '+52 9813674060',
-  }, imageUris);
+      const result = await submitProperty(
+        {
+          titulo: form.title,
+          tipo: form.type,
+          municipio: form.municipality,
+          precio_actual: parseInt(form.currentPrice),
+          precio_mercado: form.marketPrice ? parseInt(form.marketPrice) : null,
+          unidad_precio: form.priceUnit,
+          superficie: form.surfaceM2 ? parseInt(form.surfaceM2) : null,
+          unidad_superficie: form.priceUnit === 'ml' ? 'ml' : 'm2',
+          descripcion: form.description,
+          contacto_nombre: 'Usuario de la App',
+          contacto_telefono: '+52 9813674060',
+        },
+        imageUris,
+        portadaTipo === 'video' && videoUri
+          ? { videoUri, videoName: videoName || undefined, videoType: videoType || undefined, thumbnailUri: videoThumb || undefined }
+          : undefined
+      );
 
-  if (result) {
-    setSubmitted(true);
-  } else {
-    Alert.alert('Error', 'Error al enviar la propiedad. Intenta de nuevo.');
-  }
-} catch (error: any) {
-  Alert.alert('Error', error?.message || 'Error al enviar la propiedad. Intenta de nuevo.');
-} finally {
-  setIsLoading(false);
-}
+      if (result) {
+        setSubmitted(true);
+      } else {
+        Alert.alert('Error', 'Error al enviar la propiedad. Intenta de nuevo.');
+      }
+    } catch (error: any) {
+      Alert.alert('Error', error?.message || 'Error al enviar la propiedad. Intenta de nuevo.');
+    } finally {
+      setUploading(false);
+    }
   };
 
   const handleReset = () => {
     setForm(INITIAL_FORM);
     setSubmitted(false);
     setSelectedImages([]);
+    setVideoUri(null);
+    setVideoThumb(null);
+    setVideoName(null);
+    setVideoType(null);
+    setPortadaTipo('foto');
   };
 
   if (submitted) {
@@ -158,6 +242,28 @@ export default function PublishScreen() {
         </View>
 
         <View style={styles.form}>
+          {/* Portada: Foto / Video */}
+          <View style={styles.fieldGroup}>
+            <Text style={styles.label}>Tipo de portada</Text>
+            <View style={styles.typeRow}>
+              {PORTADA_OPTIONS.map((opt) => (
+                <Pressable
+                  key={opt.key}
+                  onPress={() => setPortadaTipo(opt.key as 'foto' | 'video')}
+                  style={({ pressed }) => [
+                    styles.typeChip,
+                    portadaTipo === opt.key && styles.typeChipActive,
+                    pressed && { opacity: 0.7 },
+                  ]}
+                >
+                  <Text style={[styles.typeChipText, portadaTipo === opt.key && styles.typeChipTextActive]}>
+                    {opt.label}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+          </View>
+
           {/* Título */}
           <View style={styles.fieldGroup}>
             <Text style={styles.label}>Título de la propiedad *</Text>
@@ -286,49 +392,95 @@ export default function PublishScreen() {
             />
           </View>
 
-          {/* Fotos */}
-          <View style={styles.fieldGroup}>
-            <Text style={styles.label}>Fotos de la propiedad</Text>
-            <Pressable
-              onPress={pickImages}
-              disabled={uploadingImages}
-              style={({ pressed }) => [styles.photoButton, pressed && { opacity: 0.7 }]}
-            >
-              <IconSymbol name="photo.badge.plus" size={20} color="#C9A84C" />
-              <Text style={styles.photoButtonText}>AGREGAR FOTOS</Text>
-            </Pressable>
+          {/* Portada: Fotos */}
+          {portadaTipo === 'foto' && (
+            <View style={styles.fieldGroup}>
+              <Text style={styles.label}>Fotos de la propiedad</Text>
+              <Pressable
+                onPress={pickImages}
+                disabled={uploadingImages}
+                style={({ pressed }) => [styles.photoButton, pressed && { opacity: 0.7 }]}
+              >
+                <IconSymbol name="photo.badge.plus" size={20} color="#C9A84C" />
+                <Text style={styles.photoButtonText}>AGREGAR FOTOS</Text>
+              </Pressable>
 
-            {selectedImages.length > 0 && (
-              <View style={styles.photoGallery}>
-                <FlatList
-                  data={selectedImages}
-                  horizontal
-                  scrollEnabled={false}
-                  keyExtractor={(_, i) => i.toString()}
-                  renderItem={({ item, index }) => (
-                    <View style={styles.photoItem}>
-                      <Image source={{ uri: item.uri }} style={styles.photoThumbnail} />
-                      <Pressable
-                        onPress={() => removeImage(index)}
-                        style={styles.photoRemove}
-                      >
-                        <Text style={styles.photoRemoveText}>✕</Text>
-                      </Pressable>
+              {selectedImages.length > 0 && (
+                <View style={styles.photoGallery}>
+                  <FlatList
+                    data={selectedImages}
+                    horizontal
+                    scrollEnabled={false}
+                    keyExtractor={(_, i) => i.toString()}
+                    renderItem={({ item, index }) => (
+                      <View style={styles.photoItem}>
+                        <Image source={{ uri: item.uri }} style={styles.photoThumbnail} resizeMode="cover" />
+                        <Pressable
+                          onPress={() => removeImage(index)}
+                          style={styles.photoRemove}
+                        >
+                          <Text style={styles.photoRemoveText}>✕</Text>
+                        </Pressable>
+                      </View>
+                    )}
+                  />
+                  <Text style={styles.photoCount}>{selectedImages.length} foto(s) seleccionada(s)</Text>
+                </View>
+              )}
+            </View>
+          )}
+
+          {/* Portada: Video */}
+          {portadaTipo === 'video' && (
+            <View style={styles.fieldGroup}>
+              <Text style={styles.label}>Video de portada</Text>
+              <Pressable
+                onPress={pickVideo}
+                disabled={processingVideo}
+                style={({ pressed }) => [styles.photoButton, pressed && { opacity: 0.7 }]}
+              >
+                {processingVideo ? (
+                  <ActivityIndicator color="#C9A84C" size="small" />
+                ) : (
+                  <IconSymbol name="video.badge.plus" size={20} color="#C9A84C" />
+                )}
+                <Text style={styles.photoButtonText}>
+                  {processingVideo ? 'PROCESANDO VIDEO...' : 'SELECCIONAR VIDEO (MÁX 30S)'}
+                </Text>
+              </Pressable>
+
+              {videoUri && (
+                <View style={styles.videoPreviewWrap}>
+                  <View style={styles.videoPreview}>
+                    {videoThumb ? (
+                      <Image source={{ uri: videoThumb }} style={styles.videoThumb} resizeMode="cover" />
+                    ) : (
+                      <View style={[styles.videoThumb, styles.videoThumbPlaceholder]}>
+                        <Text style={styles.videoThumbPlaceholderText}>🎬</Text>
+                      </View>
+                    )}
+                    <View style={styles.videoBadge}>
+                      <Text style={styles.videoBadgeText}>▶ VIDEO LISTO</Text>
                     </View>
-                  )}
-                />
-                <Text style={styles.photoCount}>{selectedImages.length} foto(s) seleccionada(s)</Text>
-              </View>
-            )}
-          </View>
+                    <Pressable onPress={removeVideo} style={styles.photoRemove}>
+                      <Text style={styles.photoRemoveText}>✕</Text>
+                    </Pressable>
+                  </View>
+                  <Text style={styles.photoCount} numberOfLines={1}>
+                    Video listo · máx 30s · máx 50MB
+                  </Text>
+                </View>
+              )}
+            </View>
+          )}
 
           {/* Botón de envío */}
           <Pressable
             onPress={handleSubmit}
-            disabled={isLoading}
-            style={({ pressed }) => [styles.submitBtn, pressed && { opacity: 0.85 }, isLoading && { opacity: 0.6 }]}
+            disabled={uploading || submitting}
+            style={({ pressed }) => [styles.submitBtn, pressed && { opacity: 0.85 }, (uploading || submitting) && { opacity: 0.6 }]}
           >
-            {isLoading ? (
+            {uploading || submitting ? (
               <ActivityIndicator color="#0D0D0D" />
             ) : (
               <Text style={styles.submitBtnText}>PUBLICAR PROPIEDAD</Text>
@@ -493,6 +645,43 @@ const styles = StyleSheet.create({
     marginTop: 8,
     fontSize: 12,
     color: '#9A9A9A',
+  },
+  videoPreviewWrap: {
+    marginTop: 12,
+  },
+  videoPreview: {
+    position: 'relative',
+    alignSelf: 'flex-start',
+  },
+  videoThumb: {
+    width: 160,
+    height: 100,
+    borderRadius: 8,
+    backgroundColor: '#1E1E1E',
+  },
+  videoThumbPlaceholder: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  videoThumbPlaceholderText: {
+    fontSize: 32,
+  },
+  videoBadge: {
+    position: 'absolute',
+    bottom: 8,
+    left: 8,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    borderRadius: 4,
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+    borderWidth: 1,
+    borderColor: '#C9A84C',
+  },
+  videoBadgeText: {
+    color: '#C9A84C',
+    fontSize: 9,
+    fontWeight: '700',
+    letterSpacing: 0.5,
   },
   submitBtn: {
     backgroundColor: '#C9A84C',
