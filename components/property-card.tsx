@@ -1,7 +1,7 @@
 import { View, Text, Image, Pressable, StyleSheet } from 'react-native';
 import { router } from 'expo-router';
 import { Property, formatPrice, formatSurface, getReturnColor } from '@/lib/properties-data';
-import { useFavorites } from '@/lib/favorites-context';
+import { useFavorites } from '@/hooks/use-favorites';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 
 interface PropertyCardProps {
@@ -10,8 +10,8 @@ interface PropertyCardProps {
 }
 
 export function PropertyCard({ property, compact = false }: PropertyCardProps) {
-const { isFavorite, toggleFavorite } = useFavorites();
-  const favorite = isFavorite(property.id);
+const { isFav, toggleFav } = useFavorites();
+  const favorite = isFav(property.id);
   const returnColor = getReturnColor(property.returnRate);
 
   const handlePress = () => {
@@ -19,7 +19,7 @@ const { isFavorite, toggleFavorite } = useFavorites();
   };
 
   const handleFavorite = () => {
-    toggleFavorite(property.id);
+    toggleFav(property.id);
   };
 
   if (compact) {
@@ -28,7 +28,7 @@ const { isFavorite, toggleFavorite } = useFavorites();
         onPress={handlePress}
         style={({ pressed }) => [styles.compactCard, pressed && { opacity: 0.8 }]}
       >
-        <Image source={{ uri: property.images?.[0] }} style={styles.compactImage} />
+        <Image source={{ uri: property.images?.[0] }} style={styles.compactImage} resizeMode="cover" />
         <View style={styles.compactOverlay} />
         <View style={styles.compactContent}>
           <View style={[styles.returnBadge, { backgroundColor: returnColor + '33', borderColor: returnColor }]}>
@@ -50,7 +50,7 @@ const { isFavorite, toggleFavorite } = useFavorites();
       style={({ pressed }) => [styles.card, pressed && { opacity: 0.85 }]}
     >
       <View style={styles.imageContainer}>
-        <Image source={{ uri: property.images?.[0] }} style={styles.image} />
+        <Image source={{ uri: property.images?.[0] }} style={styles.image} resizeMode="cover" />
         <View style={styles.imageOverlay} />
         {/* Property Code - Subtle */}
         <View style={styles.codeBadge}>
@@ -60,11 +60,7 @@ const { isFavorite, toggleFavorite } = useFavorites();
           onPress={handleFavorite}
           style={({ pressed }) => [styles.favoriteBtn, pressed && { opacity: 0.7 }]}
         >
-          <IconSymbol
-            name={favorite ? 'heart.fill' : 'heart'}
-            size={20}
-            color={favorite ? '#C9A84C' : '#ffffff'}
-          />
+          <Text style={styles.favoriteHeart}>{favorite ? '♥️' : '♡'}</Text>
         </Pressable>
         <View style={[styles.returnBadge, { backgroundColor: returnColor + '33', borderColor: returnColor }]}>
           <Text style={[styles.returnBadgeText, { color: returnColor }]}>
@@ -114,7 +110,6 @@ const styles = StyleSheet.create({
   image: {
     width: '100%',
     height: '100%',
-    resizeMode: 'cover',
   },
   imageOverlay: {
     ...StyleSheet.absoluteFill,
@@ -127,6 +122,10 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.5)',
     borderRadius: 20,
     padding: 8,
+  },
+  favoriteHeart: {
+    fontSize: 20,
+    color: '#C9A84C',
   },
   codeBadge: {
     position: 'absolute',
@@ -230,7 +229,6 @@ const styles = StyleSheet.create({
   compactImage: {
     width: '100%',
     height: '100%',
-    resizeMode: 'cover',
   },
   compactOverlay: {
     ...StyleSheet.absoluteFill,
