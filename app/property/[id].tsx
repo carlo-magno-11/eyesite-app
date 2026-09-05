@@ -23,12 +23,11 @@ export default function PropertyDetailScreen() {
   // vista normal; el video solo se reproduce dentro del Modal al tocar Play)
   const videos = property?.videos || [];
   const tipoPortada = property?.tipo_portada || 'foto';
-  const usarVideoPortada = tipoPortada === 'video' && videos.length > 0;
+  const isVideo = tipoPortada === 'video' && !!(property?.video_url || videos[0]);
 
   // Video del terreno (sección + modal). Sin autoplay en lista: solo al tocar play.
   const [videoModalVisible, setVideoModalVisible] = useState(false);
   const videoUrl: string | null = property?.video_url || (videos.length > 0 ? videos[0] : null);
-  const videoEnPortada = usarVideoPortada;
   const modalPlayer = useVideoPlayer(videoUrl ? videoUrl : null, (p) => {
     p.loop = false;
   });
@@ -64,7 +63,7 @@ export default function PropertyDetailScreen() {
   // con su thumbnail + botón Play dorado que abre el Modal.
   const portadaThumb: string | null =
     property.portada_url || (property.images || [])[0] || null;
-  const mediaItems = usarVideoPortada && portadaThumb
+  const mediaItems = isVideo && portadaThumb
     ? [{ type: 'image', url: portadaThumb }, ...(property.images || []).map((u: string) => ({ type: 'image', url: u }))]
     : (property.images || []).map((u: string) => ({ type: 'image', url: u }));
 
@@ -104,8 +103,8 @@ export default function PropertyDetailScreen() {
   const openVideoModal = () => {
     setVideoModalVisible(true);
     try {
-      modalPlayer.currentTime = 0;
-      modalPlayer.play();
+      // replay(): vuelve al inicio y reproduce (solo dentro del Modal)
+      modalPlayer.replay();
     } catch (e) {
       console.log('No se pudo reproducir el video:', e);
     }
@@ -142,7 +141,7 @@ export default function PropertyDetailScreen() {
           <View style={styles.galleryOverlay} />
 
           {/* Play de portada: el video solo se reproduce en el Modal */}
-          {usarVideoPortada && videoUrl && (
+          {isVideo && videoUrl && (
             <Pressable
               onPress={openVideoModal}
               style={({ pressed }) => [styles.portadaPlayButton, pressed && { opacity: 0.85 }]}
@@ -251,7 +250,7 @@ export default function PropertyDetailScreen() {
           </View>
 
           {/* Video del terreno */}
-          {videoUrl && !videoEnPortada && (
+          {videoUrl && !isVideo && (
             <View style={styles.videoSection}>
               <Text style={styles.descTitle}>VIDEO DEL TERRENO</Text>
               <Pressable

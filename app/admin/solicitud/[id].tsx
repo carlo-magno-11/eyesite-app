@@ -1,9 +1,21 @@
 import { View, Text, ScrollView, Pressable, StyleSheet, Image, ActivityIndicator, Alert } from 'react-native';
 import { ScreenContainer } from '../../../components/screen-container';
 import { useLocalSearchParams, router } from 'expo-router';
-import { useState, useEffect } from 'react';
+import { useState, useCallback } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import { supabase } from '../../../lib/supabase';
 import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
+import * as VideoThumbnails from 'expo-video-thumbnails';
+import * as FileSystem from 'expo-file-system/legacy';
+
+// Portada en video: máximo 1 minuto y 100MB (misma lógica que publish)
+const MAX_VIDEO_BYTES = 100 * 1024 * 1024;
+const MAX_VIDEO_SECONDS = 60;
+const PORTADA_OPTIONS = [
+  { key: 'foto', label: 'Foto' },
+  { key: 'video', label: 'Video' },
+];
  
 export default function SolicitudDetail() {
   const { id } = useLocalSearchParams();
@@ -11,9 +23,12 @@ export default function SolicitudDetail() {
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
 
-  useEffect(() => {
-    loadSubmission();
-  }, [id]);
+  // ---- Edición de portada (misma lógica que publish) ----
+  const [activeTab, setActiveTab] = useState<'foto' | 'video'>('foto');
+  const [nuevoVideoUri, setNuevoVideoUri] = useState<string | null>(null);
+  const [nuevaPortadaUrl, setNuevaPortadaUrl] = useState<string | null>(null);
+  const [videoEliminado, setVideoEliminado] = useState(false);
+  const [processingVideo, setProcessingVideo] = useState(false);
 
   const loadSubmission = async () => {
     try {
@@ -25,12 +40,81 @@ export default function SolicitudDetail() {
 
       if (error) throw error;
       setSubmission(data);
+      // Sincroniza el tab con el video existente de la solicitud
+      if (data?.video_url && data?.tipo_portada === 'video') {
+        setActiveTab('video');
+      }
     } catch (err) {
       Alert.alert('Error', 'No se pudo cargar la solicitud');
       router.back();
     } finally {
       setLoading(false);
     }
+  };
+
+  useFocusEffect(
+    useCallback(() => {
+      loadSubmission();
+    }, [id])
+  );
+
+  const pickVideo = async () => {
+    try {
+      setProcessingVideo(true);
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['videos'],
+        allowsEditing: true,
+        videoMaxDuration: 60,
+        quality: 0.7,
+      });
+
+      if (!result.canceled && result.assets.length > 0) {
+        const asset = result.assets[0];
+        const uri = asset.uri;
+
+        // Validación: máximo 1 minuto y 100MB
+        const duration = typeof asset.duration === 'number' ? asset.duration : 0;
+        let fileSize = typeof asset.fileSize === 'number' ? asset.fileSize : 0;
+        if (!fileSize) {
+          try {
+            const info = await FileSystem.getInfoAsync(uri);
+            if (info.exists && typeof info.size === 'number') fileSize = info.size;
+          } catch (sizeError) {
+            console.log('No se pudo verificar el tamaño del video:', sizeError);
+          }
+        }
+        if (duration > MAX_VIDEO_SECONDS || fileSize > MAX_VIDEO_BYTES) {
+          Alert.alert('Video no válido', 'Máximo 1 minuto y 100MB');
+          return;
+        }
+
+        // Thumbnail de portada (segundo 1) — mismo enfoque que publish
+        let thumbnail: string | null = null;
+        try {
+          const { uri: thumbUri } = await VideoThumbnails.getThumbnailAsync(uri, { time: 1000 });
+          thumbnail = thumbUri;
+        } catch (thumbError) {
+          console.log('No se pudo generar thumbnail:', thumbError);
+        }
+
+        setNuevoVideoUri(uri);
+        setNuevaPortadaUrl(thumbnail);
+        setVideoEliminado(false);
+        setActiveTab('video');
+      }
+    } catch (error) {
+      Alert.alert('Error', 'No se pudo seleccionar el video');
+    } finally {
+      setProcessingVideo(false);
+    }
+  };
+
+  // Eliminar video de portada: sin video, portada en foto
+  const removeVideo = () => {
+    setNuevoVideoUri(null);
+    setNuevaPortadaUrl(null);
+    setVideoEliminado(true);
+    setActiveTab('foto');
   };
 
   const handleApprove = async () => {
@@ -41,31 +125,107 @@ export default function SolicitudDetail() {
         ? Math.round(((submission.precio_mercado - submission.precio_actual) / submission.precio_actual) * 100)
         : 0;
 
-      // Update submission status
+      // ---- Video de portada (editable por el admin) ----
+      let videoUrlFinal: string | null = submission.video_url || null;
+      let portadaUrlFinal: string | null = submission.portada_url || null;
+      let tipoPortadaFinal: 'foto' | 'video' = videoUrlFinal
+        ? (submission.tipo_portada === 'video' ? 'video' : 'foto')
+        : 'foto';
+
+      if (videoEliminado) {
+        // Eliminar: sin video, portada en foto
+        videoUrlFinal = null;
+        portadaUrlFinal = null;
+        tipoPortadaFinal = 'foto';
+      } else if (nuevoVideoUri) {
+        try {
+          // Video a 'videos-propiedades' como ArrayBuffer (nunca base64)
+          const res = await fetch(nuevoVideoUri);
+          const arrayBuffer = await res.arrayBuffer();
+          const videoPath = `${Date.now()}.mp4`;
+          const { error: videoUploadError } = await supabase.storage
+            .from('videos-propiedades')
+            .upload(videoPath, arrayBuffer, { contentType: 'video/mp4' });
+          if (videoUploadError) throw videoUploadError;
+          const { data: videoPublic } = supabase.storage
+            .from('videos-propiedades')
+            .getPublicUrl(videoPath);
+          videoUrlFinal = videoPublic?.publicUrl || null;
+
+          // Thumbnail de portada a 'fotos-propiedades'
+          if (nuevaPortadaUrl) {
+            try {
+              const thumbRes = await fetch(nuevaPortadaUrl);
+              const thumbBuffer = await thumbRes.arrayBuffer();
+              const thumbPath = `thumbs/${Date.now()}-portada.jpg`;
+              const { error: thumbUploadError } = await supabase.storage
+                .from('fotos-propiedades')
+                .upload(thumbPath, thumbBuffer, { contentType: 'image/jpeg' });
+              if (!thumbUploadError) {
+                const { data: thumbPublic } = supabase.storage
+                  .from('fotos-propiedades')
+                  .getPublicUrl(thumbPath);
+                portadaUrlFinal = thumbPublic?.publicUrl || portadaUrlFinal;
+              }
+            } catch (thumbErr) {
+              console.log('No se pudo subir el thumbnail de portada:', thumbErr);
+            }
+          }
+
+          tipoPortadaFinal = activeTab === 'video' ? 'video' : 'foto';
+        } catch (videoErr) {
+          console.log('No se pudo subir el video nuevo:', videoErr);
+          Alert.alert('Aviso', 'No se pudo subir el video nuevo; se conserva el video actual.');
+        }
+      }
+
+      // Update submission status (+ refleja la edición de portada)
+      const solicitudUpdate: Record<string, any> = {
+        estado: 'aprobada',
+        updated_at: new Date().toISOString(),
+      };
+      if (nuevoVideoUri || videoEliminado) {
+        solicitudUpdate.video_url = videoUrlFinal;
+        solicitudUpdate.tipo_portada = tipoPortadaFinal;
+        solicitudUpdate.portada_url = portadaUrlFinal;
+      }
       await supabase
         .from('solicitudes_propiedades')
-        .update({ estado: 'aprobada', updated_at: new Date().toISOString() })
+        .update(solicitudUpdate)
         .eq('id', submission.id);
 
-      // Insert into propiedades table
-      await supabase.from('propiedades').insert([
+      // Insert into propiedades table (defensivo: reintenta sin columnas de video)
+      const propertyPayload: Record<string, any> = {
+        titulo: submission.titulo,
+        tipo: submission.tipo,
+        municipio: submission.municipio,
+        precio_actual: submission.precio_actual,
+        precio_mercado: submission.precio_mercado,
+        unidad_precio: submission.unidad_precio,
+        superficie: submission.superficie,
+        unidad_superficie: submission.unidad_superficie,
+        rendimiento,
+        fotos: submission.fotos || [],
+        descripcion: submission.descripcion,
+        activa: true,
+        destacada: false,
+        orden: 0,
+      };
+
+      const { error: insertError } = await supabase.from('propiedades').insert([
         {
-          titulo: submission.titulo,
-          tipo: submission.tipo,
-          municipio: submission.municipio,
-          precio_actual: submission.precio_actual,
-          precio_mercado: submission.precio_mercado,
-          unidad_precio: submission.unidad_precio,
-          superficie: submission.superficie,
-          unidad_superficie: submission.unidad_superficie,
-          rendimiento,
-          fotos: submission.fotos || [],
-          descripcion: submission.descripcion,
-          activa: true,
-          destacada: false,
-          orden: 0,
+          ...propertyPayload,
+          video_url: videoUrlFinal,
+          tipo_portada: tipoPortadaFinal,
+          portada_url: portadaUrlFinal,
         },
       ]);
+      if (insertError && /column|Could not find/i.test(insertError.message || '')) {
+        console.log('Reintentando insert sin columnas de video:', insertError.message);
+        await supabase.from('propiedades').insert([propertyPayload]);
+      } else if (insertError) {
+        throw insertError;
+      }
 
       Alert.alert('Éxito', 'Solicitud aprobada y publicada');
       router.back();
@@ -245,12 +405,118 @@ export default function SolicitudDetail() {
             <View style={styles.photoGrid}>
               {submission.fotos.map((photo: string, index: number) => (
                 <View key={index} style={styles.photoItem}>
-                  <Image source={{ uri: photo }} style={styles.photo} />
+                  <Image source={{ uri: photo }} style={styles.photo} resizeMode="cover" />
                 </View>
               ))}
             </View>
           </View>
         )}
+
+        {/* Portada: Foto / Video (editable, misma lógica que publish) */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Portada</Text>
+          <View style={styles.tabRow}>
+            {PORTADA_OPTIONS.map((opt) => (
+              <Pressable
+                key={opt.key}
+                onPress={() => setActiveTab(opt.key as 'foto' | 'video')}
+                style={({ pressed }) => [
+                  styles.tabChip,
+                  activeTab === opt.key && styles.tabChipActive,
+                  pressed && { opacity: 0.7 },
+                ]}
+              >
+                <Text style={[styles.tabChipText, activeTab === opt.key && styles.tabChipTextActive]}>
+                  {opt.label}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+
+          {/* Preview del video existente (remoto) */}
+          {!nuevoVideoUri && !videoEliminado && submission.video_url && (
+            <View style={styles.videoPreviewWrap}>
+              <View style={styles.videoPreview}>
+                <Image
+                  source={{ uri: submission.portada_url || (submission.fotos || [])[0] || undefined }}
+                  style={styles.videoThumb}
+                  resizeMode="cover"
+                />
+                <View style={styles.videoBadge}>
+                  <Text style={styles.videoBadgeText}>VIDEO</Text>
+                </View>
+              </View>
+              <View style={styles.videoActionsRow}>
+                <Pressable
+                  onPress={pickVideo}
+                  disabled={processingVideo}
+                  style={({ pressed }) => [styles.videoActionBtn, pressed && { opacity: 0.7 }]}
+                >
+                  <Text style={styles.videoActionBtnText}>CAMBIAR</Text>
+                </Pressable>
+                <Pressable
+                  onPress={removeVideo}
+                  style={({ pressed }) => [styles.videoActionBtnDelete, pressed && { opacity: 0.7 }]}
+                >
+                  <Text style={styles.videoActionBtnDeleteText}>ELIMINAR</Text>
+                </Pressable>
+              </View>
+            </View>
+          )}
+
+          {/* Preview del video nuevo (local, antes de aprobar) */}
+          {nuevoVideoUri && (
+            <View style={styles.videoPreviewWrap}>
+              <View style={styles.videoPreview}>
+                {nuevaPortadaUrl ? (
+                  <Image source={{ uri: nuevaPortadaUrl }} style={styles.videoThumb} resizeMode="cover" />
+                ) : (
+                  <View style={[styles.videoThumb, styles.videoThumbPlaceholder]}>
+                    <Text style={styles.videoThumbPlaceholderText}>🎬</Text>
+                  </View>
+                )}
+                <View style={styles.videoBadge}>
+                  <Text style={styles.videoBadgeText}>VIDEO</Text>
+                </View>
+              </View>
+              <View style={styles.videoActionsRow}>
+                <Pressable
+                  onPress={pickVideo}
+                  disabled={processingVideo}
+                  style={({ pressed }) => [styles.videoActionBtn, pressed && { opacity: 0.7 }]}
+                >
+                  <Text style={styles.videoActionBtnText}>
+                    {processingVideo ? 'PROCESANDO...' : 'CAMBIAR'}
+                  </Text>
+                </Pressable>
+                <Pressable
+                  onPress={removeVideo}
+                  style={({ pressed }) => [styles.videoActionBtnDelete, pressed && { opacity: 0.7 }]}
+                >
+                  <Text style={styles.videoActionBtnDeleteText}>ELIMINAR</Text>
+                </Pressable>
+              </View>
+            </View>
+          )}
+
+          {/* Seleccionar video: tab en video sin ninguno disponible */}
+          {activeTab === 'video' && !nuevoVideoUri && !(submission.video_url && !videoEliminado) && (
+            <Pressable
+              onPress={pickVideo}
+              disabled={processingVideo}
+              style={({ pressed }) => [styles.photoButton, pressed && { opacity: 0.7 }]}
+            >
+              {processingVideo ? (
+                <ActivityIndicator color="#C9A84C" size="small" />
+              ) : (
+                <Ionicons name={'videocam-outline' as any} size={20} color="#C9A84C" />
+              )}
+              <Text style={styles.photoButtonText}>
+                {processingVideo ? 'PROCESANDO VIDEO...' : 'SELECCIONAR VIDEO (MÁX 1 MIN Y 100MB)'}
+              </Text>
+            </Pressable>
+          )}
+        </View>
 
         {/* Actions */}
         {submission.estado === 'pendiente' && (
@@ -392,7 +658,115 @@ const styles = StyleSheet.create({
   photo: {
     width: '100%',
     height: '100%',
-    resizeMode: 'cover',
+  },
+  tabRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 12,
+  },
+  tabChip: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#C9A84C',
+    backgroundColor: '#1A1A1A',
+  },
+  tabChipActive: {
+    backgroundColor: '#C9A84C',
+  },
+  tabChipText: {
+    color: '#C9A84C',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  tabChipTextActive: {
+    color: '#0D0D0D',
+  },
+  photoButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: '#1A1A1A',
+    borderWidth: 2,
+    borderColor: '#C9A84C',
+    borderStyle: 'dashed',
+    borderRadius: 8,
+    paddingVertical: 16,
+  },
+  photoButtonText: {
+    color: '#C9A84C',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  videoPreviewWrap: {
+    marginTop: 4,
+  },
+  videoPreview: {
+    position: 'relative',
+    alignSelf: 'flex-start',
+  },
+  videoThumb: {
+    width: 160,
+    height: 100,
+    borderRadius: 8,
+    backgroundColor: '#1A1A1A',
+  },
+  videoThumbPlaceholder: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  videoThumbPlaceholderText: {
+    fontSize: 32,
+  },
+  videoBadge: {
+    position: 'absolute',
+    bottom: 8,
+    left: 8,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    borderRadius: 4,
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+    borderWidth: 1,
+    borderColor: '#C9A84C',
+  },
+  videoBadgeText: {
+    color: '#C9A84C',
+    fontSize: 9,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+  },
+  videoActionsRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 8,
+  },
+  videoActionBtn: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#C9A84C',
+    backgroundColor: '#1A1A1A',
+  },
+  videoActionBtnText: {
+    color: '#C9A84C',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  videoActionBtnDelete: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#EF4444',
+    backgroundColor: '#1A1A1A',
+  },
+  videoActionBtnDeleteText: {
+    color: '#EF4444',
+    fontSize: 12,
+    fontWeight: '700',
   },
   actionContainer: {
     paddingHorizontal: 16,
