@@ -1,11 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, ScrollView, StyleSheet, RefreshControl } from 'react-native';
-import { createClient } from '@supabase/supabase-js';
-
-const supabaseUrl = process.env.VITE_SUPABASE_URL || '';
-const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY || '';
-
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
+// Cliente ÚNICO de Supabase (proyecto activo xhvpvpvtkdgnnxdwdrkn).
+// No crear clientes locales: usar siempre @/lib/supabase
+import { supabase } from '@/lib/supabase';
 
 interface DashboardStats {
   totalUsers: number;
@@ -31,15 +28,15 @@ export function AdminDashboard() {
   }, []);
 
   const setupRealtime = () => {
-    // Subscribe to real-time changes on app_users table
+    // Subscribe to real-time changes on profiles table
     const subscription = supabase
-      .channel('app_users_changes')
+      .channel('profiles_changes')
       .on(
         'postgres_changes',
         {
           event: '*',
           schema: 'public',
-          table: 'app_users',
+          table: 'profiles',
         },
         () => {
           loadStats();
@@ -52,33 +49,56 @@ export function AdminDashboard() {
     };
   };
 
+  // Cuenta filas de forma resiliente: si la columna no existe (PGRST204)
+  // o RLS bloquea la lectura, devuelve 0 en lugar de romper el UI.
+  const safeCount = async (
+    run: () => PromiseLike<{ count: number | null; error: { message?: string } | null }>
+  ): Promise<number> => {
+    try {
+      const { count, error } = await run();
+      if (error) {
+        console.warn('[admin-dashboard] contador no disponible:', error.message);
+        return 0;
+      }
+      return count ?? 0;
+    } catch {
+      return 0;
+    }
+  };
+
   const loadStats = async () => {
     try {
-      // Total users
-      const { count: totalCount } = await supabase
-        .from('app_users')
-        .select('*', { count: 'exact', head: true });
+      // Total users = count(profiles)
+      const totalCount = await safeCount(() =>
+        supabase.from('profiles').select('*', { count: 'exact', head: true })
+      );
 
-      // Active users (logged in last 24 hours)
+      // Active users (logged in last 24 hours) — solo si existe last_login_at
       const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-      const { count: activeCount } = await supabase
-        .from('app_users')
-        .select('*', { count: 'exact', head: true })
-        .gt('last_login_at', yesterday);
+      const activeCount = await safeCount(() =>
+        supabase
+          .from('profiles')
+          .select('*', { count: 'exact', head: true })
+          .gt('last_login_at', yesterday)
+      );
 
-      // Admin users
-      const { count: adminCount } = await supabase
-        .from('app_users')
-        .select('*', { count: 'exact', head: true })
-        .eq('role', 'admin');
+      // Admin users — solo si existe la columna role; si no existe, 0
+      const adminCount = await safeCount(() =>
+        supabase
+          .from('profiles')
+          .select('*', { count: 'exact', head: true })
+          .eq('role', 'admin')
+      );
 
-      // Users created today
+      // Users created today — solo si existe la columna created_at
       const today = new Date().toISOString().split('T')[0];
-      const { count: todayCount } = await supabase
-        .from('app_users')
-        .select('*', { count: 'exact', head: true })
-        .gte('created_at', `${today}T00:00:00`)
-        .lt('created_at', `${today}T23:59:59`);
+      const todayCount = await safeCount(() =>
+        supabase
+          .from('profiles')
+          .select('*', { count: 'exact', head: true })
+          .gte('created_at', `${today}T00:00:00`)
+          .lt('created_at', `${today}T23:59:59`)
+      );
 
       setStats({
         totalUsers: totalCount || 0,
@@ -88,7 +108,9 @@ export function AdminDashboard() {
         lastUpdated: new Date().toLocaleTimeString(),
       });
     } catch (error) {
-      console.error('Error loading stats:', error);
+      // Nunca crashear el UI: los contadores se quedan en 0
+      console.warn('Error loading stats:', error);
+      setStats((prev) => ({ ...prev, lastUpdated: new Date().toLocaleTimeString() }));
     }
   };
 

@@ -57,7 +57,6 @@ export default function SolicitudDetail() {
       loadSubmission();
     }, [id])
   );
-
   const pickVideo = async () => {
     try {
       setProcessingVideo(true);

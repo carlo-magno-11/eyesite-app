@@ -46,7 +46,7 @@ export default function AdminPanel() {
 
   const rechazar = async () => {
     if(!motivo) return Alert.alert("Escribe el motivo");
-    await supabase.from('solicitud_propiedades').update({ estado: 'rechazada', motivo_rechazo: motivo }).eq('id', selectedId);
+    await supabase.from('solicitudes_propiedades').update({ estado: 'rechazada', motivo_rechazo: motivo }).eq('id', selectedId);
     setMotivo(""); setSelectedId(null);
     Alert.alert("Rechazado");
     cargarPendientes();
