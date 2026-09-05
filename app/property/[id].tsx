@@ -1,9 +1,9 @@
 import { useState } from 'react';
-import { View, Text, Image, ScrollView, Pressable, Linking, StyleSheet, Dimensions, Share, ActivityIndicator } from 'react-native';
+import { View, Text, Image, ScrollView, Pressable, Linking, StyleSheet, Dimensions, Share, ActivityIndicator, Modal } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { VideoView, useVideoPlayer } from 'expo-video';
 import { formatPrice, formatSurface, getReturnColor } from '@/lib/properties-data';
-import { useFavorites } from '@/lib/favorites-context';
+import { useFavorites } from '@/hooks/use-favorites';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { ScreenContainer } from '@/components/screen-container';
 import { useProperty } from '@/hooks/use-properties';
@@ -16,7 +16,7 @@ const PHONE = '+52 9813674060';
 export default function PropertyDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { property, loading } = useProperty(id);
-  const { isFavorite, toggleFavorite } = useFavorites();
+  const { isFav, toggleFav } = useFavorites();
   const [activeImage, setActiveImage] = useState(0);
 
   // Portada intercambiable video/foto (hooks siempre en el mismo orden)
@@ -26,6 +26,14 @@ export default function PropertyDetailScreen() {
   const player = useVideoPlayer(usarVideoPortada ? videos[0] : null, (p) => {
     p.loop = true;
     p.play();
+  });
+
+  // Video del terreno (sección + modal). Sin autoplay en lista: solo al tocar play.
+  const [videoModalVisible, setVideoModalVisible] = useState(false);
+  const videoUrl: string | null = property?.video_url || (videos.length > 0 ? videos[0] : null);
+  const videoEnPortada = usarVideoPortada;
+  const modalPlayer = useVideoPlayer(!videoEnPortada && videoUrl ? videoUrl : null, (p) => {
+    p.loop = false;
   });
 
   if (loading) {
@@ -52,7 +60,7 @@ export default function PropertyDetailScreen() {
     );
   }
 
-  const favorite = isFavorite(property.id);
+  const favorite = isFav(property.id);
   const returnColor = getReturnColor(property.returnRate);
 
   const mediaItems = usarVideoPortada
@@ -89,6 +97,28 @@ export default function PropertyDetailScreen() {
     ? Math.round((((property.marketPrice || property.precio_mercado) - (property.currentPrice || property.precio_actual)) / (property.marketPrice || property.precio_mercado)) * 100)
     : 0;
 
+  const videoPoster: string | null =
+    property?.portada_url || (property?.images || property?.fotos || [])[0] || null;
+
+  const openVideoModal = () => {
+    setVideoModalVisible(true);
+    try {
+      modalPlayer.currentTime = 0;
+      modalPlayer.play();
+    } catch (e) {
+      console.log('No se pudo reproducir el video:', e);
+    }
+  };
+
+  const closeVideoModal = () => {
+    try {
+      modalPlayer.pause();
+    } catch (e) {
+      console.log('No se pudo pausar el video:', e);
+    }
+    setVideoModalVisible(false);
+  };
+
   return (
     <View style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 120 }}>
@@ -110,7 +140,7 @@ export default function PropertyDetailScreen() {
                   <VideoView player={player} style={styles.galleryVideo} contentFit="cover" nativeControls />
                 </View>
               ) : (
-                <Image key={idx} source={{ uri: item.url }} style={styles.galleryImage} />
+                <Image key={idx} source={{ uri: item.url }} style={styles.galleryImage} resizeMode="cover" />
               )
             ))}
           </ScrollView>
@@ -134,7 +164,7 @@ export default function PropertyDetailScreen() {
 
           {/* Botón favorito */}
           <Pressable
-            onPress={() => toggleFavorite(property.id)}
+            onPress={() => toggleFav(property.id)}
             style={({ pressed }) => [styles.favoriteButton, pressed && { opacity: 0.7 }]}
           >
             <IconSymbol
@@ -215,6 +245,29 @@ export default function PropertyDetailScreen() {
             </Text>
           </View>
 
+          {/* Video del terreno */}
+          {videoUrl && !videoEnPortada && (
+            <View style={styles.videoSection}>
+              <Text style={styles.descTitle}>VIDEO DEL TERRENO</Text>
+              <Pressable
+                onPress={openVideoModal}
+                style={({ pressed }) => [styles.videoPoster, pressed && { opacity: 0.9 }]}
+              >
+                {videoPoster ? (
+                  <Image source={{ uri: videoPoster }} style={styles.videoPosterImage} resizeMode="cover" />
+                ) : (
+                  <View style={[styles.videoPosterImage, styles.videoPosterPlaceholder]}>
+                    <Text style={styles.videoPosterPlaceholderText}>🎬</Text>
+                  </View>
+                )}
+                <View style={styles.videoPosterOverlay} />
+                <View style={styles.playButton}>
+                  <Text style={styles.playIcon}>▶</Text>
+                </View>
+              </Pressable>
+            </View>
+          )}
+
           {/* Descripción */}
           <View style={styles.descSection}>
             <Text style={styles.descTitle}>DESCRIPCIÓN</Text>
@@ -250,6 +303,31 @@ export default function PropertyDetailScreen() {
           <Text style={styles.whatsappBtnText}>AGENDAR LLAMADA</Text>
         </Pressable>
       </View>
+
+      {/* Modal de video del terreno */}
+      <Modal
+        visible={videoModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={closeVideoModal}
+      >
+        <View style={styles.videoModalBackdrop}>
+          <Pressable style={StyleSheet.absoluteFill} onPress={closeVideoModal} />
+          <View style={styles.videoModalContent}>
+            {videoUrl && (
+              <VideoView
+                player={modalPlayer}
+                style={styles.videoModalPlayer}
+                contentFit="contain"
+                nativeControls
+              />
+            )}
+            <Pressable onPress={closeVideoModal} style={styles.videoModalClose}>
+              <Text style={styles.videoModalCloseText}>✕</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -266,7 +344,6 @@ const styles = StyleSheet.create({
   galleryImage: {
     width: SCREEN_WIDTH,
     height: 320,
-    resizeMode: 'cover',
   },
   galleryVideoContainer: {
     width: SCREEN_WIDTH,
@@ -517,6 +594,87 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '800',
     letterSpacing: 1.5,
+  },
+  videoSection: {
+    marginBottom: 20,
+  },
+  videoPoster: {
+    width: '100%',
+    height: 200,
+    borderRadius: 10,
+    overflow: 'hidden',
+    backgroundColor: '#1A1A1A',
+    borderWidth: 1,
+    borderColor: '#2A2A2A',
+  },
+  videoPosterImage: {
+    width: '100%',
+    height: '100%',
+  },
+  videoPosterPlaceholder: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  videoPosterPlaceholderText: {
+    fontSize: 40,
+  },
+  videoPosterOverlay: {
+    ...StyleSheet.absoluteFill,
+    backgroundColor: 'rgba(0,0,0,0.35)',
+  },
+  playButton: {
+    position: 'absolute',
+    top: '50%',
+    left: '50%',
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    marginTop: -32,
+    marginLeft: -32,
+    backgroundColor: '#C9A84C',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  playIcon: {
+    color: '#0D0D0D',
+    fontSize: 24,
+    fontWeight: '700',
+    marginLeft: 4,
+  },
+  videoModalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.95)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  videoModalContent: {
+    width: SCREEN_WIDTH - 32,
+    aspectRatio: 16 / 9,
+    backgroundColor: '#000',
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  videoModalPlayer: {
+    width: '100%',
+    height: '100%',
+  },
+  videoModalClose: {
+    position: 'absolute',
+    top: -44,
+    right: 0,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#1A1A1A',
+    borderWidth: 1,
+    borderColor: '#C9A84C',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  videoModalCloseText: {
+    color: '#C9A84C',
+    fontSize: 16,
+    fontWeight: '700',
   },
   notFound: {
     flex: 1,
