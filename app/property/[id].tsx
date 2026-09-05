@@ -19,20 +19,17 @@ export default function PropertyDetailScreen() {
   const { isFav, toggleFav } = useFavorites();
   const [activeImage, setActiveImage] = useState(0);
 
-  // Portada intercambiable video/foto (hooks siempre en el mismo orden)
+  // Portada intercambiable video/foto (anti-trabe: sin player ni autoplay en la
+  // vista normal; el video solo se reproduce dentro del Modal al tocar Play)
   const videos = property?.videos || [];
   const tipoPortada = property?.tipo_portada || 'foto';
   const usarVideoPortada = tipoPortada === 'video' && videos.length > 0;
-  const player = useVideoPlayer(usarVideoPortada ? videos[0] : null, (p) => {
-    p.loop = true;
-    p.play();
-  });
 
   // Video del terreno (sección + modal). Sin autoplay en lista: solo al tocar play.
   const [videoModalVisible, setVideoModalVisible] = useState(false);
   const videoUrl: string | null = property?.video_url || (videos.length > 0 ? videos[0] : null);
   const videoEnPortada = usarVideoPortada;
-  const modalPlayer = useVideoPlayer(!videoEnPortada && videoUrl ? videoUrl : null, (p) => {
+  const modalPlayer = useVideoPlayer(videoUrl ? videoUrl : null, (p) => {
     p.loop = false;
   });
 
@@ -63,8 +60,12 @@ export default function PropertyDetailScreen() {
   const favorite = isFav(property.id);
   const returnColor = getReturnColor(property.returnRate);
 
-  const mediaItems = usarVideoPortada
-    ? [{ type: 'video', url: videos[0] }, ...(property.images || []).map((u: string) => ({ type: 'image', url: u }))]
+  // Galería 100% de imágenes (sin <Video>): la portada en video se representa
+  // con su thumbnail + botón Play dorado que abre el Modal.
+  const portadaThumb: string | null =
+    property.portada_url || (property.images || [])[0] || null;
+  const mediaItems = usarVideoPortada && portadaThumb
+    ? [{ type: 'image', url: portadaThumb }, ...(property.images || []).map((u: string) => ({ type: 'image', url: u }))]
     : (property.images || []).map((u: string) => ({ type: 'image', url: u }));
 
   const handleWhatsApp = () => {
@@ -135,16 +136,20 @@ export default function PropertyDetailScreen() {
             scrollEventThrottle={16}
           >
             {mediaItems.map((item, idx) => (
-              item.type === 'video' ? (
-                <View key={idx} style={styles.galleryVideoContainer}>
-                  <VideoView player={player} style={styles.galleryVideo} contentFit="cover" nativeControls />
-                </View>
-              ) : (
-                <Image key={idx} source={{ uri: item.url }} style={styles.galleryImage} resizeMode="cover" />
-              )
+              <Image key={idx} source={{ uri: item.url }} style={styles.galleryImage} resizeMode="cover" />
             ))}
           </ScrollView>
           <View style={styles.galleryOverlay} />
+
+          {/* Play de portada: el video solo se reproduce en el Modal */}
+          {usarVideoPortada && videoUrl && (
+            <Pressable
+              onPress={openVideoModal}
+              style={({ pressed }) => [styles.portadaPlayButton, pressed && { opacity: 0.85 }]}
+            >
+              <Text style={styles.portadaPlayIcon}>▶</Text>
+            </Pressable>
+          )}
 
           {/* Botón atrás */}
           <Pressable
@@ -336,6 +341,23 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#0D0D0D',
+  },
+  portadaPlayButton: {
+    position: 'absolute',
+    top: '50%',
+    left: '50%',
+    transform: [{ translateX: -30 }, { translateY: -30 }],
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: '#C9A84C',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  portadaPlayIcon: {
+    color: '#0D0D0D',
+    fontSize: 24,
+    marginLeft: 3,
   },
   galleryContainer: {
     height: 320,

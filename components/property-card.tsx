@@ -13,6 +13,8 @@ export function PropertyCard({ property, compact = false }: PropertyCardProps) {
 const { isFav, toggleFav } = useFavorites();
   const favorite = isFav(property.id);
   const returnColor = getReturnColor(property.returnRate);
+  const esVideoPortada = property.tipo_portada === 'video';
+  const thumbUri = esVideoPortada && property.portada_url ? property.portada_url : property.images?.[0];
 
   const handlePress = () => {
     router.push(`/property/${property.id}` as any);
@@ -28,8 +30,13 @@ const { isFav, toggleFav } = useFavorites();
         onPress={handlePress}
         style={({ pressed }) => [styles.compactCard, pressed && { opacity: 0.8 }]}
       >
-        <Image source={{ uri: property.images?.[0] }} style={styles.compactImage} resizeMode="cover" />
+        <Image source={{ uri: thumbUri }} style={styles.compactImage} resizeMode="cover" />
         <View style={styles.compactOverlay} />
+        {esVideoPortada && (
+          <View style={styles.videoPlayOverlay} pointerEvents="none">
+            <Text style={styles.videoPlayIcon}>▶</Text>
+          </View>
+        )}
         <View style={styles.compactContent}>
           <View style={[styles.returnBadge, { backgroundColor: returnColor + '33', borderColor: returnColor }]}>
             <Text style={[styles.returnBadgeText, { color: returnColor }]}>
@@ -50,8 +57,13 @@ const { isFav, toggleFav } = useFavorites();
       style={({ pressed }) => [styles.card, pressed && { opacity: 0.85 }]}
     >
       <View style={styles.imageContainer}>
-        <Image source={{ uri: property.images?.[0] }} style={styles.image} resizeMode="cover" />
+        <Image source={{ uri: thumbUri }} style={styles.image} resizeMode="cover" />
         <View style={styles.imageOverlay} />
+        {esVideoPortada && (
+          <View style={styles.videoPlayOverlay} pointerEvents="none">
+            <Text style={styles.videoPlayIcon}>▶</Text>
+          </View>
+        )}
         {/* Property Code - Subtle */}
         <View style={styles.codeBadge}>
           <Text style={styles.codeBadgeText}>#{property.code}</Text>
@@ -114,6 +126,18 @@ const styles = StyleSheet.create({
   imageOverlay: {
     ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(0,0,0,0.2)',
+  },
+  videoPlayOverlay: {
+    ...StyleSheet.absoluteFill,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  videoPlayIcon: {
+    fontSize: 34,
+    color: '#C9A84C',
+    textShadowColor: 'rgba(0,0,0,0.7)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 6,
   },
   favoriteBtn: {
     position: 'absolute',
