@@ -1,15 +1,15 @@
 import { View, Text, FlatList, StyleSheet, ActivityIndicator } from 'react-native';
 import { ScreenContainer } from '@/components/screen-container';
 import { PropertyCard } from '@/components/property-card';
-import { useFavoritesContext } from '@/lib/favorites-context';
+import { useFavorites } from '@/hooks/use-favorites';
 import { useProperties } from '@/hooks/use-properties';
 
 export default function FavoritesScreen() {
-  const { favorites, loading: favLoading } = useFavoritesContext();
+  const { favs } = useFavorites();
   const { properties, loading: propsLoading } = useProperties();
 
-  const favoriteProperties = properties.filter((p) => favorites.includes(p.id));
-  const loading = favLoading || propsLoading;
+  const favoriteProperties = properties.filter((p) => favs.includes(p.id));
+  const loading = propsLoading;
 
   return (
     <ScreenContainer edges={['top', 'left', 'right']} containerClassName="bg-background">
