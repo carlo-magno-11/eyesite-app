@@ -6,7 +6,7 @@ import { useProperties } from '@/hooks/use-properties';
 
 export default function FavoritesScreen() {
   const { favs } = useFavorites();
-  const { properties, loading: propsLoading } = useProperties();
+  const { properties, loading: propsLoading, refetch: fetchProperties } = useProperties();
 
   const favoriteProperties = properties.filter((p) => favs.includes(p.id));
   const loading = propsLoading;
@@ -27,6 +27,8 @@ export default function FavoritesScreen() {
         <FlatList
           data={favoriteProperties}
           keyExtractor={(item) => item.id}
+          refreshing={loading}
+          onRefresh={fetchProperties}
           contentContainerStyle={styles.listContainer}
           showsVerticalScrollIndicator={false}
           renderItem={({ item }) => <PropertyCard property={item} />}

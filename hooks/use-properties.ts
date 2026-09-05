@@ -1,6 +1,7 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useState, useCallback } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import { supabase } from '@/lib/supabase';
-import { Property } from '@/lib/properties-data';
+import { Property, MOCK_PROPERTIES } from '@/lib/properties-data';
 
 function mapProperty(raw: any): Property {
   return {
@@ -46,7 +47,7 @@ export function useProperties() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const loadProperties = useCallback(async () => {
+  const fetchProperties = useCallback(async () => {
     try {
       setLoading(true);
       console.log('🔍 Fetching propiedades activas desde Supabase...');
@@ -59,7 +60,8 @@ export function useProperties() {
       if (err) {
         console.error('❌ Supabase error:', err.message);
         setError(err.message);
-        setProperties([]);
+        // Fallback a MOCK_DATA para que la app nunca se quede en blanco
+        setProperties(MOCK_PROPERTIES as Property[]);
         return;
       }
 
@@ -70,17 +72,27 @@ export function useProperties() {
       const msg = e instanceof Error ? e.message : 'Error desconocido';
       console.error('❌ Error cargando propiedades:', msg);
       setError(msg);
-      setProperties([]);
+      // Fallback a MOCK_DATA para que la app nunca se quede en blanco
+      setProperties(MOCK_PROPERTIES as Property[]);
     } finally {
       setLoading(false);
     }
   }, []);
 
-  useEffect(() => {
-    loadProperties();
-  }, [loadProperties]);
+  useFocusEffect(
+    useCallback(() => {
+      fetchProperties();
+      const channel = supabase
+        .channel('live-props')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'propiedades' }, () => fetchProperties())
+        .subscribe();
+      return () => {
+        supabase.removeChannel(channel);
+      };
+    }, [])
+  );
 
-  return { properties, loading, error, refetch: loadProperties };
+  return { properties, loading, error, refetch: fetchProperties };
 }
 
 export function useProperty(id?: string) {

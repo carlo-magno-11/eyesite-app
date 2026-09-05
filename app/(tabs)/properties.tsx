@@ -11,7 +11,7 @@ export default function PropertiesScreen() {
   const params = useLocalSearchParams<{ filter?: string }>();
   const [search, setSearch] = useState('');
   const [activeFilter, setActiveFilter] = useState<string>('all');
-  const { properties, loading, error } = useProperties();
+  const { properties, loading, error, refetch: fetchProperties } = useProperties();
 
   useEffect(() => {
     if (params.filter) {
@@ -99,6 +99,8 @@ export default function PropertiesScreen() {
         <FlatList
           data={filtered}
           keyExtractor={(item) => item.id}
+          refreshing={loading}
+          onRefresh={fetchProperties}
           contentContainerStyle={styles.listContainer}
           showsVerticalScrollIndicator={false}
           renderItem={({ item }) => <PropertyCard property={item} />}
