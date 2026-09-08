@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { View, Text, Image, ScrollView, Pressable, Linking, StyleSheet, Dimensions, Share, ActivityIndicator, Modal } from 'react-native';
+import { useState, useEffect, useMemo } from 'react';
+import { View, Text, Image, ScrollView, Pressable, Linking, StyleSheet, Dimensions, Share, ActivityIndicator, Modal, FlatList } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { VideoView, useVideoPlayer } from 'expo-video';
 import { formatPrice, formatSurface, getReturnColor } from '@/lib/properties-data';
@@ -14,7 +14,7 @@ const WHATSAPP = '+52 9813674060';
 const PHONE = '+52 9813674060';
 
 export default function PropertyDetailScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, play } = useLocalSearchParams<{ id: string; play?: string }>();
   const { property, loading } = useProperty(id);
   const { isFav, toggleFav } = useFavorites();
   const [activeImage, setActiveImage] = useState(0);
@@ -22,8 +22,8 @@ export default function PropertyDetailScreen() {
   // Portada intercambiable video/foto (anti-trabe: sin player ni autoplay en la
   // vista normal; el video solo se reproduce dentro del Modal al tocar Play)
   const videos = property?.videos || [];
-  const tipoPortada = property?.tipo_portada || 'foto';
-  const isVideo = tipoPortada === 'video' && !!(property?.video_url || videos[0]);
+  // videos[0] feed para el player del carrusel (El Modal con modalPlayer sigue
+  // usándose para el auto-play desde la card con ?play=1)
 
   // Video del terreno (sección + modal). Sin autoplay en lista: solo al tocar play.
   const [videoModalVisible, setVideoModalVisible] = useState(false);
@@ -31,6 +31,64 @@ export default function PropertyDetailScreen() {
   const modalPlayer = useVideoPlayer(videoUrl ? videoUrl : null, (p) => {
     p.loop = false;
   });
+
+  // V5: auto-abrir el reproductor cuando la card navega con ?play=1 (video desde la card)
+  useEffect(() => {
+    if (play === '1' && videoUrl && !loading) {
+      setVideoModalVisible(true);
+      try { modalPlayer.play(); } catch {}
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [play, videoUrl, loading]);
+
+  const [videoPlaying, setVideoPlaying] = useState(false);
+
+  // V6.3: player inline para el slide de video del carrusel (independiente del Modal)
+  const carouselPlayer = useVideoPlayer(videoUrl ? videoUrl : null, (p) => {
+    p.loop = false;
+  });
+
+  const handleCarouselPlay = () => {
+    try {
+      carouselPlayer.play();
+      setVideoPlaying(true);
+    } catch (e) {
+      console.log('No se pudo reproducir el video del carrusel:', e);
+    }
+  };
+
+  // Orden fijo: portada (foto) → video (con poster) → resto de la galería
+  const mediaList = useMemo(() => {
+    if (!property) {
+      return [] as { type: 'image' | 'video'; url: string; poster?: string; id: string }[];
+    }
+    const list: { type: 'image' | 'video'; url: string; poster?: string; id: string }[] = [];
+    const fotosRaw: any[] = ((property as any).fotos || property.images || []) as any[];
+    const urlOf = (f: any) => (typeof f === 'string' ? f : f?.url || f?.uri || null);
+    // 1) PORTADA (foto, SIEMPRE primero)
+    if (property.portada_url) {
+      list.push({ type: 'image', url: property.portada_url, id: 'portada' });
+    }
+    // 2) VIDEO (segundo, con poster = portada)
+    if (videoUrl) {
+      list.push({
+        type: 'video',
+        url: videoUrl,
+        poster: property.portada_url || urlOf(fotosRaw[0]) || undefined,
+        id: 'video',
+      });
+    }
+    // 3) Resto de la galería (sin duplicar portada ni video)
+    fotosRaw.forEach((f, i) => {
+      const url = urlOf(f);
+      if (!url) return;
+      if (url === property.portada_url && i === 0) return;
+      if (url === videoUrl) return;
+      if (list.some((m) => m.url === url)) return;
+      list.push({ type: 'image', url, id: `f-${i}` });
+    });
+    return list;
+  }, [property, videoUrl]);
 
   if (loading) {
     return (
@@ -59,13 +117,7 @@ export default function PropertyDetailScreen() {
   const favorite = isFav(property.id);
   const returnColor = getReturnColor(property.returnRate);
 
-  // Galería 100% de imágenes (sin <Video>): la portada en video se representa
-  // con su thumbnail + botón Play dorado que abre el Modal.
-  const portadaThumb: string | null =
-    property.portada_url || (property.images || [])[0] || null;
-  const mediaItems = isVideo && portadaThumb
-    ? [{ type: 'image', url: portadaThumb }, ...(property.images || []).map((u: string) => ({ type: 'image', url: u }))]
-    : (property.images || []).map((u: string) => ({ type: 'image', url: u }));
+  // (mediaList se construye arriba con useMemo: portada → video → galería)
 
   const handleWhatsApp = () => {
     const msg = encodeURIComponent(
@@ -97,19 +149,6 @@ export default function PropertyDetailScreen() {
     ? Math.round((((property.marketPrice || property.precio_mercado) - (property.currentPrice || property.precio_actual)) / (property.marketPrice || property.precio_mercado)) * 100)
     : 0;
 
-  const videoPoster: string | null =
-    property?.portada_url || (property?.images || property?.fotos || [])[0] || null;
-
-  const openVideoModal = () => {
-    setVideoModalVisible(true);
-    try {
-      // replay(): vuelve al inicio y reproduce (solo dentro del Modal)
-      modalPlayer.replay();
-    } catch (e) {
-      console.log('No se pudo reproducir el video:', e);
-    }
-  };
-
   const closeVideoModal = () => {
     try {
       modalPlayer.pause();
@@ -122,33 +161,53 @@ export default function PropertyDetailScreen() {
   return (
     <View style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 120 }}>
-        {/* Galería de imágenes */}
+        {/* Galería V6.3: orden fijo — portada (foto) → video (con poster) → resto. Sin negro. */}
         <View style={styles.galleryContainer}>
-          <ScrollView
+          <FlatList
             horizontal
             pagingEnabled
+            data={mediaList}
+            keyExtractor={(item) => item.id}
             showsHorizontalScrollIndicator={false}
-            onScroll={(e) => {
+            onMomentumScrollEnd={(e) => {
               const index = Math.round(e.nativeEvent.contentOffset.x / SCREEN_WIDTH);
               setActiveImage(index);
             }}
-            scrollEventThrottle={16}
-          >
-            {mediaItems.map((item, idx) => (
-              <Image key={idx} source={{ uri: item.url }} style={styles.galleryImage} resizeMode="cover" />
-            ))}
-          </ScrollView>
-          <View style={styles.galleryOverlay} />
-
-          {/* Play de portada: el video solo se reproduce en el Modal */}
-          {isVideo && videoUrl && (
-            <Pressable
-              onPress={openVideoModal}
-              style={({ pressed }) => [styles.portadaPlayButton, pressed && { opacity: 0.85 }]}
-            >
-              <Text style={styles.portadaPlayIcon}>▶</Text>
-            </Pressable>
-          )}
+            renderItem={({ item }) =>
+              item.type === 'video' ? (
+                videoPlaying ? (
+                  <VideoView
+                    player={carouselPlayer}
+                    nativeControls
+                    contentFit="contain"
+                    style={{ width: SCREEN_WIDTH, height: 300, backgroundColor: '#000' }}
+                  />
+                ) : (
+                  <Pressable
+                    onPress={handleCarouselPlay}
+                    style={{ width: SCREEN_WIDTH, height: 300, backgroundColor: '#000' }}
+                  >
+                    {item.poster ? (
+                      <Image
+                        source={{ uri: item.poster }}
+                        style={StyleSheet.absoluteFill}
+                        resizeMode="contain"
+                      />
+                    ) : null}
+                    <View style={styles.carouselPlayBtn}>
+                      <Text style={styles.carouselPlayIcon}>▶</Text>
+                    </View>
+                  </Pressable>
+                )
+              ) : (
+                <Image
+                  source={{ uri: item.url }}
+                  style={{ width: SCREEN_WIDTH, height: 300 }}
+                  resizeMode="cover"
+                />
+              )
+            }
+          />
 
           {/* Botón atrás */}
           <Pressable
@@ -179,9 +238,9 @@ export default function PropertyDetailScreen() {
           </Pressable>
 
           {/* Indicador de imágenes */}
-          {mediaItems.length > 1 && (
+          {mediaList.length > 1 && (
             <View style={styles.imageDots}>
-              {mediaItems.map((_, idx) => (
+              {mediaList.map((_, idx) => (
                 <View
                   key={idx}
                   style={[styles.dot, idx === activeImage && styles.dotActive]}
@@ -249,28 +308,8 @@ export default function PropertyDetailScreen() {
             </Text>
           </View>
 
-          {/* Video del terreno */}
-          {videoUrl && !isVideo && (
-            <View style={styles.videoSection}>
-              <Text style={styles.descTitle}>VIDEO DEL TERRENO</Text>
-              <Pressable
-                onPress={openVideoModal}
-                style={({ pressed }) => [styles.videoPoster, pressed && { opacity: 0.9 }]}
-              >
-                {videoPoster ? (
-                  <Image source={{ uri: videoPoster }} style={styles.videoPosterImage} resizeMode="cover" />
-                ) : (
-                  <View style={[styles.videoPosterImage, styles.videoPosterPlaceholder]}>
-                    <Text style={styles.videoPosterPlaceholderText}>🎬</Text>
-                  </View>
-                )}
-                <View style={styles.videoPosterOverlay} />
-                <View style={styles.playButton}>
-                  <Text style={styles.playIcon}>▶</Text>
-                </View>
-              </Pressable>
-            </View>
-          )}
+          {/* Video del terreno: ahora vive en el carrusel (slide 2, V6.3) —
+              el video se reproduce inline con poster, no como sección aparte */}
 
           {/* Descripción */}
           <View style={styles.descSection}>
@@ -374,6 +413,25 @@ const styles = StyleSheet.create({
   galleryVideo: {
     width: '100%',
     height: '100%',
+  },
+  carouselPlayBtn: {
+    position: 'absolute',
+    top: '50%',
+    left: '50%',
+    marginLeft: -28,
+    marginTop: -28,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    borderWidth: 2,
+    borderColor: '#FFD60A',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  carouselPlayIcon: {
+    fontSize: 22,
+    color: '#FFD60A',
   },
   galleryOverlay: {
     position: 'absolute',

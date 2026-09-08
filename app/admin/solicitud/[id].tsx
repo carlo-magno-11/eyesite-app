@@ -2,7 +2,7 @@ import { View, Text, ScrollView, Pressable, StyleSheet, Image, ActivityIndicator
 import { ScreenContainer } from '../../../components/screen-container';
 import { useLocalSearchParams, router } from 'expo-router';
 import { useState, useCallback } from 'react';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect } from 'expo-router';
 import { supabase } from '../../../lib/supabase';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
@@ -188,10 +188,15 @@ export default function SolicitudDetail() {
         solicitudUpdate.tipo_portada = tipoPortadaFinal;
         solicitudUpdate.portada_url = portadaUrlFinal;
       }
-      await supabase
+      const { error: updErr } = await supabase
         .from('solicitudes_propiedades')
         .update(solicitudUpdate)
         .eq('id', submission.id);
+      if (updErr) {
+        console.error('[handleApprove] update solicitud falló:', {
+          code: updErr.code, message: updErr.message, details: updErr.details, hint: updErr.hint,
+        });
+      }
 
       // Insert into propiedades table (defensivo: reintenta sin columnas de video)
       const propertyPayload: Record<string, any> = {
@@ -219,17 +224,33 @@ export default function SolicitudDetail() {
           portada_url: portadaUrlFinal,
         },
       ]);
+      if (insertError) {
+        console.error('[handleApprove] insert propiedades falló:', {
+          code: insertError.code, message: insertError.message,
+          details: insertError.details, hint: insertError.hint,
+        });
+      }
       if (insertError && /column|Could not find/i.test(insertError.message || '')) {
         console.log('Reintentando insert sin columnas de video:', insertError.message);
-        await supabase.from('propiedades').insert([propertyPayload]);
+        const { error: retryError } = await supabase.from('propiedades').insert([propertyPayload]);
+        if (retryError) {
+          console.error('[handleApprove] reintento falló:', {
+            code: retryError.code, message: retryError.message,
+            details: retryError.details, hint: retryError.hint,
+          });
+          throw retryError;
+        }
       } else if (insertError) {
         throw insertError;
       }
 
       Alert.alert('Éxito', 'Solicitud aprobada y publicada');
       router.back();
-    } catch (err) {
-      Alert.alert('Error', 'No se pudo aprobar la solicitud');
+    } catch (err: any) {
+      console.error('[handleApprove] ERROR REAL:', {
+        code: err?.code, message: err?.message, details: err?.details, hint: err?.hint,
+      });
+      Alert.alert('Error', `${err?.message || 'No se pudo aprobar la solicitud'}${err?.details ? ' — ' + err.details : ''}`);
     } finally {
       setProcessing(false);
     }
@@ -246,18 +267,28 @@ export default function SolicitudDetail() {
           onPress: async (reason? : string) => {
             setProcessing(true);
             try {
-              await supabase
+              const { error } = await supabase
                 .from('solicitudes_propiedades')
                 .update({
                   estado: 'rechazada',
                   updated_at: new Date().toISOString(),
                 })
                 .eq('id', submission.id);
+              if (error) {
+                console.error('[handleReject] ERROR REAL:', {
+                  code: error.code, message: error.message, details: error.details, hint: error.hint,
+                });
+                Alert.alert('Error', `${error.message}${error.details ? ' — ' + error.details : ''}`);
+                return;
+              }
 
               Alert.alert('Éxito', 'Solicitud rechazada');
               router.back();
-            } catch (err) {
-              Alert.alert('Error', 'No se pudo rechazar la solicitud');
+            } catch (err: any) {
+              console.error('[handleReject] ERROR REAL:', {
+                code: err?.code, message: err?.message, details: err?.details, hint: err?.hint,
+              });
+              Alert.alert('Error', err?.message || 'No se pudo rechazar la solicitud');
             } finally {
               setProcessing(false);
             }

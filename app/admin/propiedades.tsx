@@ -1,25 +1,42 @@
 import { View, Text, ScrollView, StyleSheet, ActivityIndicator, TouchableOpacity, Image } from 'react-native';
 import { ScreenContainer } from '../../components/screen-container';
 import { supabase } from '@/lib/supabase';
-import { useEffect, useState } from 'react';
+import { useEffect, useCallback, useState } from 'react';
 import { Link } from 'expo-router';
+import { useRealtimeTable } from '@/hooks/useRealtimeTable';
 
 export default function AdminPropiedades() {
   const [props, setProps] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    (async () => {
+  const fetchProps = useCallback(async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      console.log('[propiedades] fetching as', user?.email, 'uid:', user?.id);
       const { data, error } = await supabase
         .from('propiedades')
         .select('*')
         .order('created_at', { ascending: false });
-      
-      if (error) console.log('Error:', error.message);
-      else setProps(data || []);
+      console.log('[propiedades] result count:', data?.length, 'error:', error);
+
+      if (error) {
+        console.error('[propiedades] Error:', error.code, error.message, error.details, error.hint);
+        return;
+      }
+      setProps(data || []);
+    } catch (e) {
+      console.error('[propiedades] Error cargando:', e);
+    } finally {
       setLoading(false);
-    })();
+    }
   }, []);
+
+  useEffect(() => {
+    fetchProps();
+  }, [fetchProps]);
+
+  // Realtime: una propiedad nueva/actualizada aparece sin F5.
+  useRealtimeTable('propiedades', fetchProps);
 
   if (loading) {
     return (

@@ -81,11 +81,19 @@ export function usePropertySubmissions() {
 
   const approveSubmission = async (submissionId: string, propertyData: any) => {
     try {
-      // Update submission status
-      await supabase
+      // Update submission status (updated_at: creado por migración 20250515)
+      const { error: updateError } = await supabase
         .from('solicitudes_propiedades')
         .update({ estado: 'aprobada', updated_at: new Date().toISOString() })
         .eq('id', submissionId);
+      if (updateError) {
+        console.error('[approveSubmission] update falló:', {
+          code: updateError.code,
+          message: updateError.message,
+          details: updateError.details,
+          hint: updateError.hint,
+        });
+      }
 
       // Insert into propiedades table
       const { error: insertError } = await supabase.from('propiedades').insert([
@@ -107,7 +115,15 @@ export function usePropertySubmissions() {
         },
       ]);
 
-      if (insertError) throw insertError;
+      if (insertError) {
+        console.error('[approveSubmission] insert propiedades falló:', {
+          code: insertError.code,
+          message: insertError.message,
+          details: insertError.details,
+          hint: insertError.hint,
+        });
+        throw insertError;
+      }
       return { success: true };
     } catch (err) {
       return {
@@ -119,14 +135,26 @@ export function usePropertySubmissions() {
 
   const rejectSubmission = async (submissionId: string, reason?: string) => {
     try {
-      await supabase
+      // motivo_rechazo y updated_at: creados por la migración 20250515
+      const { error } = await supabase
         .from('solicitudes_propiedades')
         .update({
           estado: 'rechazada',
+          ...(reason ? { motivo_rechazo: reason } : {}),
           updated_at: new Date().toISOString(),
         })
         .eq('id', submissionId);
 
+      if (error) {
+        // Log del error REAL (42501=RLS, 42703/PGRST204=columna faltante)
+        console.error('[rejectSubmission] ERROR REAL:', {
+          code: error.code,
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+        });
+        return { success: false, error: error.message };
+      }
       return { success: true };
     } catch (err) {
       return {

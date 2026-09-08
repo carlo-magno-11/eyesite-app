@@ -1,7 +1,10 @@
 import { View, Text, ScrollView, Pressable, StyleSheet } from 'react-native';
+import { useState, useEffect, useCallback } from 'react';
 import { ScreenContainer } from '@/components/screen-container';
 import { router } from 'expo-router';
 import { IconSymbol } from '@/components/ui/icon-symbol';
+import { supabase } from '@/lib/supabase';
+import { useRealtimeTable } from '@/hooks/useRealtimeTable';
 
 const ADMIN_MENU = [
   {
@@ -28,9 +31,49 @@ const ADMIN_MENU = [
     route: '/admin/estadisticas',
     color: '#45B7D1',
   },
+  {
+    id: 'users',
+    title: 'Usuarios',
+    description: 'Aprobar, rechazar y gestionar usuarios',
+    icon: '👥',
+    route: '/admin/users',
+    color: '#A78BFA',
+  },
 ];
 
 export default function AdminDashboard() {
+  const [stats, setStats] = useState<{ solicitudes: number; propiedades: number; usuarios: number }>({
+    solicitudes: -1,
+    propiedades: -1,
+    usuarios: -1,
+  });
+
+  const fetchStats = useCallback(async () => {
+    try {
+      const [sol, prop, usr] = await Promise.all([
+        supabase.from('solicitudes_propiedades').select('id', { count: 'exact', head: true }),
+        supabase.from('propiedades').select('id', { count: 'exact', head: true }),
+        supabase.from('profiles').select('id', { count: 'exact', head: true }),
+      ]);
+      setStats({
+        solicitudes: sol.count ?? 0,
+        propiedades: prop.count ?? 0,
+        usuarios: usr.count ?? 0,
+      });
+    } catch (e) {
+      console.error('[admin] stats fallaron:', e);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchStats();
+  }, [fetchStats]);
+
+  // Realtime: contadores actualizados en vivo (usuarios, propiedades, solicitudes).
+  useRealtimeTable('profiles', fetchStats);
+  useRealtimeTable('propiedades', fetchStats);
+  useRealtimeTable('solicitudes_propiedades', fetchStats);
+
   const handleMenuPress = (route: string) => {
     router.push(route as any);
   };
@@ -77,15 +120,15 @@ export default function AdminDashboard() {
           <Text style={styles.sectionTitle}>Resumen Rápido</Text>
           <View style={styles.statsGrid}>
             <View style={styles.statCard}>
-              <Text style={styles.statValue}>--</Text>
+              <Text style={styles.statValue}>{stats.solicitudes < 0 ? '--' : stats.solicitudes}</Text>
               <Text style={styles.statLabel}>Solicitudes</Text>
             </View>
             <View style={styles.statCard}>
-              <Text style={styles.statValue}>--</Text>
+              <Text style={styles.statValue}>{stats.propiedades < 0 ? '--' : stats.propiedades}</Text>
               <Text style={styles.statLabel}>Propiedades</Text>
             </View>
             <View style={styles.statCard}>
-              <Text style={styles.statValue}>--</Text>
+              <Text style={styles.statValue}>{stats.usuarios < 0 ? '--' : stats.usuarios}</Text>
               <Text style={styles.statLabel}>Usuarios</Text>
             </View>
           </View>

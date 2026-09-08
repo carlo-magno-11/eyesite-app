@@ -1,7 +1,7 @@
 const SU='https://xhvpvpvtkdgnnxdwdrkn.supabase.co',SK='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhodnB2cHZ0a2Rnbm54ZHdkcmtuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODcwODk5MTEsImV4cCI6MjEwMjY2NTkxMX0.zsEMmjhbln24S25FnbKvlkic2djzON8QoXNLO8CtXA0';
 const {createClient}=supabase,db=createClient(SU,SK);
 let props=[],pendientes=[],editId=null,viewId=null,ns=nS(),es=null;
-function nS(){return{tipo:'terreno',unidad:'m²',estado:'activa',fotos:[],pdfs:[],kmz_kml:[],videos:[],ubicaciones:[],fn:[],pn:[],kn:[]};}
+function nS(){return{tipo:'terreno',unidad:'m²',estado:'activa',fotos:[],pdfs:[],kmz_kml:[],videos:[],ubicaciones:[],fn:[],pn:[],kn:[],vn:[],portadaFile:null};}
 
 /* ── AUTH ── */
 async function doLogin(){
@@ -82,7 +82,7 @@ function renderProps(list){
   tb.innerHTML=list.map(p=>{
     const fotos=parseFotos(p.fotos);
     return `<tr>
-    <td>${fotos[0]?`<img class="thumb" src="${fotos[0]}" onerror="this.style.display='none'">`:'<div class="thumb" style="display:flex;align-items:center;justify-content:center;font-size:14px">🏠</div>'}</td>
+    <td>${fotos[0]?`<div style="position:relative;width:fit-content"><img class="thumb" src="${fotos[0]}" onerror="this.style.display='none'">${p.video_url?`<span style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:11px;background:rgba(0,0,0,.65);border-radius:50%;width:24px;height:24px;display:flex;align-items:center;justify-content:center">▶️</span>`:''}</div>`:'<div class="thumb" style="display:flex;align-items:center;justify-content:center;font-size:14px">🏠</div>'}</td>
     <td class="p" style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(p.titulo)}</td>
     <td><span class="badge bb2">${esc(p.tipo)}</span></td><td>${esc(p.municipio)}</td>
     <td>${fmt(p.precio_actual)}/${esc(p.unidad_precio||'m²')}</td>
@@ -112,7 +112,7 @@ function renderPend(lista){
     const precio=p.precio_actual||p.precio_esperado||p.precio_mercado||0;
     const usuario=p.contacto_nombre||p.usuario||'Usuario';
     return `<tr>
-    <td>${fotos[0]?`<img class="thumb50" src="${fotos[0]}" onerror="this.style.display='none'">`:'<div class="thumb50" style="display:flex;align-items:center;justify-content:center;font-size:18px">🏠</div>'}</td>
+    <td>${fotos[0]?`<div style="position:relative;width:fit-content"><img class="thumb50" src="${fotos[0]}" onerror="this.style.display='none'">${p.video_url?`<span style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:14px;background:rgba(0,0,0,.65);border-radius:50%;width:30px;height:30px;display:flex;align-items:center;justify-content:center">▶️</span>`:''}</div>`:'<div class="thumb50" style="display:flex;align-items:center;justify-content:center;font-size:18px">🏠</div>'}</td>
     <td><b style="color:var(--tx)">${esc(p.titulo)}</b><br><small style="opacity:.6">${esc(trunc(p.descripcion,60))}${p.superficie?' • '+p.superficie+' '+(p.unidad_superficie||'m²'):''}</small></td>
     <td>${esc(usuario)}</td>
     <td><span class="badge bb2">${esc(p.tipo)}</span></td>
@@ -199,7 +199,7 @@ async function aprobarPend(id){
 };
 
   const{error}=await db.from('propiedades').insert(nueva);
-  if(error){toast('❌ Error al aprobar: '+error.message);return;}
+  if(error){toast('❌ Error al aprobar: '+error.message+(error.code?' ['+error.code+']':'')+(error.details?' — '+error.details:''));console.error('[aprobarPend] ERROR REAL:',error);return;}
   await db.from('solicitudes_propiedades').delete().eq('id',pid);
   closeMod('vmod');
   toast('✅ Propiedad aprobada y publicada en la app');
@@ -268,17 +268,30 @@ function buildF(cid,st){
     </div>
   </div>
   <div class="ups">
-    <div class="upt">🖼️ Portada de la propiedad</div>
-    <div class="fg" style="margin-bottom:10px;">
-      <label>Tipo de portada</label>
-      <select class="fsel" id="${cid}_tipo_portada">
-        <option value="foto" ${(st.tipo_portada||'foto')==='foto'?'selected':''}>Foto de portada</option>
-        <option value="video" ${st.tipo_portada==='video'?'selected':''}>Video de portada</option>
-      </select>
+    <div class="upt">🖼️ FOTO PORTADA (OBLIGATORIA)</div>
+    <img id="${cid}_preview_foto" src="${esc((st.fotos&&st.fotos[0])||'')}" style="width:200px;border-radius:8px;margin:8px 0;${(st.fotos&&st.fotos[0])?'':'display:none'}">
+    <div class="fg">
+      <label>${(st.fotos&&st.fotos[0])?'Reemplazar foto de portada':'Subir foto de portada'}</label>
+      <input type="file" accept="image/*" id="${cid}_foto_portada" onchange="hPortada(this.files,'${cid}')">
     </div>
+    <div class="rh" style="display:block">Esta foto SIEMPRE se ve en el Home. El video (siguiente bloque) va en SEGUNDO lugar del detalle: ninguno borra al otro.</div>
   </div>
   <div class="ups">
-    <div class="upt">📸 Fotos de la propiedad</div>
+    <div class="upt">🎥 Video de Portada (Opcional — se guarda JUNTO con la foto)</div>
+    <div class="dz" id="${cid}_dzv" style="margin-bottom:8px;">
+      <input type="file" accept="video/*" onchange="hFiles(this.files,'v','${cid}')">
+      <div class="dzi">🎥</div><div class="dzl"><strong>Clic o arrastra</strong> el video aquí</div>
+      <div class="dzh">MP4/MOV — Máx. 50MB</div>
+    </div>
+    <div class="fg">
+      <label>…o pega una URL de video directo (.mp4)</label>
+      <input class="fi2" id="${cid}_video_url" placeholder="https://...mp4" value="${esc(st.video_url||'')}">
+    </div>
+    <video id="${cid}_preview_video" src="${esc(st.video_url||(st.videos&&st.videos[0])||'')}" width="200" controls style="border-radius:8px;margin-top:8px;${(st.video_url||(st.videos&&st.videos[0]))?'':'display:none'}"></video>
+    <div class="fl2" id="${cid}_lvf" style="margin-top:8px;"></div>
+  </div>
+  <div class="ups">
+    <div class="upt">🖼️ Galería (0–10 fotos) — ↑↓ ordena · ✕ borra</div>
     <div class="pgrid" id="${cid}_fg"></div>
     <div class="rh" id="${cid}_rh" style="display:none">La primera foto es la portada. Para reordenar: elimina y vuelve a subir en el orden deseado.</div>
     <div class="dz" id="${cid}_dzf" style="margin-top:8px;">
@@ -341,8 +354,8 @@ function buildF(cid,st){
   if(st.videos&&st.videos.length)st.videos.forEach(u=>renderLk('v',u,cid));
   if(st.ubicaciones&&st.ubicaciones.length)st.ubicaciones.forEach(u=>renderLk('m',u,cid));
 
-  ['dzf','dzpdf','dzkmz'].forEach((dzid,i)=>{
-    const type=['f','pdf','kmz'][i];
+  ['dzf','dzpdf','dzkmz','dzv'].forEach((dzid,i)=>{
+    const type=['f','pdf','kmz','v'][i];
     const dz=document.getElementById(cid+'_'+dzid);if(!dz)return;
     dz.addEventListener('dragover',e=>{e.preventDefault();dz.classList.add('drag');});
     dz.addEventListener('dragleave',()=>dz.classList.remove('drag'));
@@ -370,10 +383,15 @@ function sUnidad(cid,v){
 }
 function renderPG(cid,fotos){
   const g=document.getElementById(cid+'_fg');if(!g)return;
+  // V5: sincroniza el preview de portada (siempre FOTO)
+  const pv=document.getElementById(cid+'_preview_foto');
+  if(pv){if(fotos&&fotos[0]){pv.src=fotos[0];pv.style.display='block';}else{pv.removeAttribute('src');pv.style.display='none';}}
   g.innerHTML=fotos.map((u,i)=>`<div class="pi" data-url="${u}">
     ${i===0?'<div class="pimain">PORTADA</div>':''}
     <div class="piord">${i+1}</div>
     <img src="${u}" onerror="this.src=''">
+    <button class="pidel" style="top:2px;left:2px;right:auto" title="Subir" onclick="mvF('${cid}',${i},-1)">↑</button>
+    <button class="pidel" style="top:2px;left:24px;right:auto" title="Bajar" onclick="mvF('${cid}',${i},1)">↓</button>
     <button class="pidel" onclick="rmEP('${u}','${cid}')">✕</button>
   </div>`).join('');
 }
@@ -382,6 +400,23 @@ function rmEP(url,cid){
   st.fotos=st.fotos.filter(u=>u!==url);
   renderPG(cid,st.fotos);
   if(!st.fotos.length)document.getElementById(cid+'_rh').style.display='none';
+}
+function mvF(cid,i,dir){
+  const st=cid==='ef'?es:ns;
+  const j=i+dir;
+  if(!st.fotos||j<0||j>=st.fotos.length)return;
+  const [x]=st.fotos.splice(i,1);
+  st.fotos.splice(j,0,x);
+  renderPG(cid,st.fotos);
+}
+function hPortada(files,cid){
+  const st=cid==='ef'?es:ns;
+  const file=files&&files[0];if(!file)return;
+  if(file.size>30*1024*1024){toast('⚠️ La portada excede 30MB');return;}
+  st.portadaFile={id:Date.now()+Math.random(),file};
+  const pv=document.getElementById(cid+'_preview_foto');
+  if(pv){pv.src=URL.createObjectURL(file);pv.style.display='block';}
+  toast('Portada lista: se subirá al guardar ✓');
 }
 function addExR(containerId,icon,url,onDel){
   const name=url.split('/').pop().split('?')[0];
@@ -393,8 +428,9 @@ function addExR(containerId,icon,url,onDel){
 }
 function hFiles(files,type,cid){
   const st=cid==='ef'?es:ns;
-  const icons={f:'🖼️',pdf:'📄',kmz:'🗺️'};
-  const key=type==='f'?'fn':type==='pdf'?'pn':'kn';
+  const icons={f:'🖼️',pdf:'📄',kmz:'🗺️',v:'🎥'};
+  const key=type==='f'?'fn':type==='pdf'?'pn':type==='v'?'vn':'kn';
+  if(type==='f'&&(st.fotos||[]).length+(st.fn||[]).length+Array.from(files).length>10){toast('⚠️ Máximo 10 fotos en la galería');return;}
   Array.from(files).forEach(file=>{
     const id=Date.now()+Math.random();
     st[key]=[...(st[key]||[]),{id,file}];
@@ -407,8 +443,9 @@ function hFiles(files,type,cid){
         g.appendChild(d);
       };r.readAsDataURL(file);
     }
+    if(type==='v'){const pv=document.getElementById(cid+'_preview_video');if(pv){try{pv.src=URL.createObjectURL(file);pv.style.display='block';}catch{}}}
     const sz=(file.size/1024/1024).toFixed(1)+'MB';
-    const li=document.getElementById(cid+'_l'+(type==='f'?'f':type));if(!li)return;
+    const li=document.getElementById(cid+'_l'+(type==='f'?'f':type==='v'?'vf':type));if(!li)return;
     const row=document.createElement('div');row.className='fir';row.id='fi'+id;
     row.innerHTML=`<span class="fii">${icons[type]}</span><span class="fin">${file.name}</span><span class="fis2">${sz}</span><span class="fist" id="fs${id}">⏳</span><button class="fdel" onclick="rmNF('${type}','${id}','${cid}')">✕</button>`;
     li.appendChild(row);
@@ -416,7 +453,7 @@ function hFiles(files,type,cid){
 }
 function rmNF(type,id,cid){
   const st=cid==='ef'?es:ns;
-  const k=type==='f'?'fn':type==='pdf'?'pn':'kn';
+  const k=type==='f'?'fn':type==='pdf'?'pn':type==='v'?'vn':'kn';
   if(st[k])st[k]=st[k].filter(f=>String(f.id)!==String(id));
   document.getElementById('fi'+id)?.remove();
   document.getElementById('np'+id)?.remove();
@@ -491,9 +528,20 @@ function compressImage(file){
   });
 }
 async function uploadAll(st){
-  let fu=[...(st.fotos||[])],pu=[...(st.pdfs||[])],ku=[...(st.kmz_kml||[])];
+  let fu=[...(st.fotos||[])],pu=[...(st.pdfs||[])],ku=[...(st.kmz_kml||[])],vu=[];
+  let pou=null;
+  if(st.portadaFile){
+    try{
+      const f=st.portadaFile;
+      const ext=(f.file.name.split('.').pop()||'jpg').toLowerCase();
+      const path=`imagenes/portada-${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+      const{error}=await db.storage.from('eyesite-media').upload(path,f.file,{contentType:f.file.type||'image/jpeg'});
+      if(!error){const{data:pub}=db.storage.from('eyesite-media').getPublicUrl(path);pou=pub.publicUrl;}
+      else{toast('⚠️ Portada: '+error.message+(error.code?' ['+error.code+']':''));console.error('[uploadAll] portada ERROR REAL:',error);}
+    }catch(e){console.error('[uploadAll] portada ERROR:',e);}
+  }
   const imgExts=['jpg','jpeg','png','gif','bmp','tiff','webp'];
-  const totalFiles=(st.fn||[]).length+(st.pn||[]).length+(st.kn||[]).length;
+  const totalFiles=(st.fn||[]).length+(st.pn||[]).length+(st.kn||[]).length+(st.vn||[]).length;
   let uploaded=0;
   const updateProgress=()=>{
     const pct=totalFiles?Math.round((uploaded/totalFiles)*100):0;
@@ -516,7 +564,7 @@ async function uploadAll(st){
           if(se)se.textContent=saved>0?`⚡-${saved}%`:'✅';
         }catch(ce){if(se)se.textContent='⚡orig';}
       }
-      const path=`propiedades/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+      const path=`imagenes/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
       const{error}=await db.storage.from('eyesite-media').upload(path,blob,{contentType:ct,upsert:false});
       if(!error){const{data:pub}=db.storage.from('eyesite-media').getPublicUrl(path);fu.push(pub.publicUrl);if(se)se.textContent='✅';}
       else{if(se)se.textContent='❌';}
@@ -539,7 +587,15 @@ async function uploadAll(st){
     }catch{}
     uploaded++;updateProgress();
   }
-  return{fu,pu,ku};
+  for(const f of(st.vn||[])){
+    try{
+      const path=`videos/${Date.now()}-${f.file.name}`;
+      const{error}=await db.storage.from('eyesite-media').upload(path,f.file,{contentType:f.file.type||'video/mp4'});
+      if(!error){const{data:pub}=db.storage.from('eyesite-media').getPublicUrl(path);vu.push(pub.publicUrl);try{document.getElementById('fs'+f.id).textContent='✅';}catch{}}
+    }catch{}
+    uploaded++;updateProgress();
+  }
+  return{fu,pu,ku,vu,pou};
 }
 
 /* ── GUARDAR NUEVA ── */
@@ -551,13 +607,17 @@ async function saveNew(){
   const btn=document.getElementById('nbtn');btn.disabled=true;btn.textContent='⏳ Guardando...';
   const pg=document.getElementById('nprog'),pf=document.getElementById('nprogf'),pl=document.getElementById('nprogl');
   pg.style.display='block';pl.textContent='Subiendo archivos... 0%';pf.style.width='5%';
-  const{fu,pu,ku}=await uploadAll(ns);
-  const tipoPortada=document.getElementById('nf_tipo_portada')?.value||'foto';
-  const portadaUrl=tipoPortada==='video'?(ns.videos||[])[0]||null:(fu||[])[0]||null;
+  const{fu,pu,ku,vu,pou}=await uploadAll(ns);
+  // V6.3: portada SIEMPRE es FOTO. Si se reemplazó, la nueva va en [0] y la vieja sale de la galería.
+  const oldPortada=ns.fotos&&ns.fotos[0];
+  const fotosArray=pou?[pou,...fu.filter(u=>u!==oldPortada)]:fu;
+  const currentPortadaUrl=pou||fotosArray[0]||null;
+  const currentVideoUrl=vu[0]||document.getElementById('nf_video_url')?.value?.trim()||null;
+  const allVideos=currentVideoUrl?Array.from(new Set([...(ns.videos||[]),currentVideoUrl])):(ns.videos||[]);
   pf.style.width='80%';pl.textContent='Guardando en base de datos...';
-  const{error}=await db.from('propiedades').insert({...d,fotos:fu,pdfs:pu,kmz_kml:ku,estado:'activa',destacada:true,certeza_legal:true,precio_esperado:d.precio_actual,tipo_portada:tipoPortada,portada_url:portadaUrl});
+  const{error}=await db.from('propiedades').insert({...d,fotos:fotosArray,pdfs:pu,kmz_kml:ku,estado:'activa',destacada:true,certeza_legal:true,precio_esperado:d.precio_actual,tipo_portada:currentVideoUrl?'video':'foto',portada_url:currentPortadaUrl,video_url:currentVideoUrl,videos:allVideos});
   pf.style.width='100%';
-  if(error)toast('❌ Error: '+error.message);
+  if(error){toast('❌ Error: '+error.message+(error.code?' ['+error.code+']':'')+(error.details?' — '+error.details:''));console.error('[saveNew] ERROR REAL:',error);}
   else{
     toast('✅ Propiedad publicada y visible en la app');
     resetNew();
@@ -575,7 +635,7 @@ function openEdit(id){
   editId=id;
   es={...p,tipo:p.tipo||'terreno',unidad:p.unidad_precio||'m²',unidad_precio:p.unidad_precio||'m²',
     videos:p.videos||[],ubicaciones:p.ubicaciones||[],
-    fotos:p.fotos||[],pdfs:p.pdfs||[],kmz_kml:p.kmz_kml||[],
+    fotos:p.fotos||[],pdfs:p.pdfs||[],kmz_kml:p.kmz_kml||[],vn:[],portadaFile:null,
     detalles:p.detalles||{},
     fn:[],pn:[],kn:[]};
   document.getElementById('emsub').textContent=p.titulo;
@@ -591,13 +651,18 @@ async function saveEdit(){
   const btn=document.getElementById('esb');
   btn.disabled=true;btn.textContent='⏳ Guardando...';
   try{
-    const{fu,pu,ku}=await uploadAll(es);
-    const tipoPortada=document.getElementById('ef_tipo_portada')?.value||'foto';
-    const portadaUrl=tipoPortada==='video'?(es.videos||[])[0]||null:(fu||[])[0]||null;
-    const updates={...d,fotos:fu,pdfs:pu,kmz_kml:ku,tipo_portada:tipoPortada,portada_url:portadaUrl};
+    const{fu,pu,ku,vu,pou}=await uploadAll(es);
+    // V6.3: editar agregando video NUNCA borra la foto (portada siempre = FOTO).
+    const oldPortada=es.fotos&&es.fotos[0];
+    const fotosArray=pou?[pou,...fu.filter(u=>u!==oldPortada)]:fu;
+    const currentPortadaUrl=pou||fotosArray[0]||null;
+    const currentVideoUrl=vu[0]||document.getElementById('ef_video_url')?.value?.trim()||null;
+    const allVideos=currentVideoUrl?Array.from(new Set([...(es.videos||[]),currentVideoUrl])):(es.videos||[]);
+    const updates={...d,fotos:fotosArray,pdfs:pu,kmz_kml:ku,tipo_portada:currentVideoUrl?'video':'foto',portada_url:currentPortadaUrl,video_url:currentVideoUrl,videos:allVideos};
     const{error}=await db.from('propiedades').update(updates).eq('id',editId).select();
     if(error){
-      toast('❌ Error al guardar: '+error.message);
+      console.error('[saveEdit] ERROR REAL:',error);
+      toast('❌ Error al guardar: '+error.message+(error.code?' ['+error.code+']':'')+(error.details?' — '+error.details:''));
     }else{
       const idx=props.findIndex(x=>x.id===editId);
       if(idx>=0)props[idx]={...props[idx],...updates,id:editId};

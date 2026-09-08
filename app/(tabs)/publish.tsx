@@ -190,7 +190,18 @@ export default function PublishScreen() {
         Alert.alert('Error', 'Error al enviar la propiedad. Intenta de nuevo.');
       }
     } catch (error: any) {
-      Alert.alert('Error', error?.message || 'Error al enviar la propiedad. Intenta de nuevo.');
+      // Log del error REAL de Supabase (42501=RLS, 42703/PGRST204=columna faltante)
+      console.error('[publish] ERROR REAL:', {
+        code: error?.code,
+        message: error?.message,
+        details: error?.details,
+        hint: error?.hint,
+      });
+      Alert.alert(
+        'Error',
+        [error?.message, error?.details].filter(Boolean).join(' — ') ||
+          'Error al enviar la propiedad. Intenta de nuevo.'
+      );
     } finally {
       setUploading(false);
     }
@@ -249,7 +260,19 @@ export default function PublishScreen() {
               {PORTADA_OPTIONS.map((opt) => (
                 <Pressable
                   key={opt.key}
-                  onPress={() => setPortadaTipo(opt.key as 'foto' | 'video')}
+                  onPress={() => {
+                    // Tipo EXCLUSIVO (TAREA 5): si eliges Foto se limpia el video;
+                    // si eliges Video se limpian las fotos seleccionadas.
+                    if (opt.key === 'video') {
+                      setSelectedImages([]);
+                    } else {
+                      setVideoUri(null);
+                      setVideoThumb(null);
+                      setVideoName(null);
+                      setVideoType(null);
+                    }
+                    setPortadaTipo(opt.key as 'foto' | 'video');
+                  }}
                   style={({ pressed }) => [
                     styles.typeChip,
                     portadaTipo === opt.key && styles.typeChipActive,

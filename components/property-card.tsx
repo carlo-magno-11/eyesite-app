@@ -1,4 +1,6 @@
-import { View, Text, Image, Pressable, StyleSheet } from 'react-native';
+import { View, Text, Pressable, StyleSheet } from 'react-native';
+// expo-image: mejor render de thumbs + caché memoria/disco
+import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { Property, formatPrice, formatSurface, getReturnColor } from '@/lib/properties-data';
 import { useFavorites } from '@/hooks/use-favorites';
@@ -13,11 +15,24 @@ export function PropertyCard({ property, compact = false }: PropertyCardProps) {
 const { isFav, toggleFav } = useFavorites();
   const favorite = isFav(property.id);
   const returnColor = getReturnColor(property.returnRate);
-  const esVideoPortada = property.tipo_portada === 'video';
-  const thumbUri = esVideoPortada && property.portada_url ? property.portada_url : property.images?.[0];
+
+  // ── V5: FOTO y VIDEO conviven ──
+  // El video NUNCA se usa como thumb (antes portada_url guardaba la URL del
+  // video → <Image uri=video> = CARD NEGRA con play). Si portada_url es un
+  // video (datos legacy), se cae a la primera FOTO.
+  const VIDEO_URI_RE = /\.(mp4|webm|mov|m4v)(\?.*)?$/i;
+  const isVideoUri = (u?: string | null) =>
+    !!u && (VIDEO_URI_RE.test(u) || u.includes('/videos-propiedades/') || u.includes('/videos/'));
+  const fotos: any[] = ((property as any).fotos || property.images || []) as any[];
+  const firstFoto = (typeof fotos[0] === 'string' ? fotos[0] : fotos[0]?.url || fotos[0]?.uri) || null;
+  const rawPortada: string | null = property.portada_url || null;
+  const thumbUri: string | null = isVideoUri(rawPortada) ? firstFoto : rawPortada || firstFoto;
+  const videoUrl = property.video_url || property.videos?.[0] || null;
+  const hasVideo = !!videoUrl;
 
   const handlePress = () => {
-    router.push(`/property/${property.id}` as any);
+    // Si hay video, el detalle abre directo el reproductor (?play=1)
+    router.push(`/property/${property.id}${hasVideo ? '?play=1' : ''}` as any);
   };
 
   const handleFavorite = () => {
@@ -30,11 +45,23 @@ const { isFav, toggleFav } = useFavorites();
         onPress={handlePress}
         style={({ pressed }) => [styles.compactCard, pressed && { opacity: 0.8 }]}
       >
-        <Image source={{ uri: thumbUri }} style={styles.compactImage} resizeMode="cover" />
+        {thumbUri ? (
+          <Image
+            source={{ uri: thumbUri }}
+            style={styles.compactImage}
+            contentFit="cover"
+            cachePolicy="memory-disk"
+            transition={150}
+          />
+        ) : (
+          <View style={[styles.compactImage, styles.noPhotoFallback]}>
+            <Text style={styles.noPhotoIcon}>🏠</Text>
+          </View>
+        )}
         <View style={styles.compactOverlay} />
-        {esVideoPortada && (
-          <View style={styles.videoPlayOverlay} pointerEvents="none">
-            <Text style={styles.videoPlayIcon}>▶</Text>
+        {hasVideo && (
+          <View style={styles.videoBadge} pointerEvents="none">
+            <Text style={styles.videoBadgeText}>▶️</Text>
           </View>
         )}
         <View style={styles.compactContent}>
@@ -57,11 +84,23 @@ const { isFav, toggleFav } = useFavorites();
       style={({ pressed }) => [styles.card, pressed && { opacity: 0.85 }]}
     >
       <View style={styles.imageContainer}>
-        <Image source={{ uri: thumbUri }} style={styles.image} resizeMode="cover" />
+        {thumbUri ? (
+          <Image
+            source={{ uri: thumbUri }}
+            style={styles.image}
+            contentFit="cover"
+            cachePolicy="memory-disk"
+            transition={150}
+          />
+        ) : (
+          <View style={[styles.image, styles.noPhotoFallback]}>
+            <Text style={styles.noPhotoIcon}>🏠</Text>
+          </View>
+        )}
         <View style={styles.imageOverlay} />
-        {esVideoPortada && (
-          <View style={styles.videoPlayOverlay} pointerEvents="none">
-            <Text style={styles.videoPlayIcon}>▶</Text>
+        {hasVideo && (
+          <View style={styles.videoBadge} pointerEvents="none">
+            <Text style={styles.videoBadgeText}>▶️</Text>
           </View>
         )}
         {/* Property Code - Subtle */}
@@ -239,6 +278,26 @@ const styles = StyleSheet.create({
     color: '#9A9A9A',
     fontSize: 12,
     textDecorationLine: 'line-through',
+  },
+  videoBadge: {
+    position: 'absolute',
+    bottom: 8,
+    right: 8,
+    backgroundColor: '#FFD60A',
+    borderRadius: 20,
+    padding: 6,
+  },
+  videoBadgeText: {
+    fontSize: 14,
+  },
+  noPhotoFallback: {
+    backgroundColor: '#1E1E1E',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  noPhotoIcon: {
+    fontSize: 40,
+    color: '#4A4A4A',
   },
   // Compact styles
   compactCard: {

@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { Property, MOCK_PROPERTIES } from '@/lib/properties-data';
 
