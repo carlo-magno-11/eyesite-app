@@ -1,3 +1,5 @@
+// hooks/use-favorites.ts
+// Favoritos persistentes en AsyncStorage (UI local) + sincronía opcional con Supabase public.favoritos.
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useState, useCallback } from 'react';
 import { useFocusEffect } from 'expo-router';
