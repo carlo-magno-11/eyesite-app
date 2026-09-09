@@ -40,7 +40,7 @@ ALTER TABLE public.propiedades ADD COLUMN IF NOT EXISTS contacto_email text;
 UPDATE public.propiedades SET precio = precio_actual WHERE precio IS NULL AND precio_actual IS NOT NULL;
 UPDATE public.propiedades SET ubicacion = municipio WHERE ubicacion IS NULL AND municipio IS NOT NULL;
 UPDATE public.propiedades SET codigo = left(id::text, 6) WHERE codigo IS NULL;
-UPDATE public.propiedades SET imagenes = fotos WHERE imagenes IS NULL OR imagenes = '[]'::jsonb;
+UPDATE public.propiedades SET imagenes = to_jsonb(fotos) WHERE fotos IS NOT NULL AND (imagenes IS NULL OR imagenes = '[]'::jsonb);
 UPDATE public.propiedades SET activa = true WHERE activa IS NULL;
 
 -- ── 4. Recargar caché de esquema de PostgREST (OBLIGATORIO tras ALTER TABLE) ──
