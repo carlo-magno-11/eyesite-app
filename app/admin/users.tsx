@@ -40,7 +40,7 @@ export default function AdminUsers() {
       console.log('[users] fetching as', user?.email, 'uid:', user?.id);
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, email, nombre, full_name, telefono, phone, estado, status, created_at')
+        .select('*')
         .order('created_at', { ascending: false });
       console.log('[users] result count:', data?.length, 'error:', error);
       if (error) {
@@ -68,7 +68,7 @@ export default function AdminUsers() {
       const to = from + PAGE_SIZE - 1;
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, email, nombre, full_name, telefono, phone, estado, status, created_at')
+        .select('*')
         .order('created_at', { ascending: false })
         .limit(PAGE_SIZE)
         .range(from, to);
