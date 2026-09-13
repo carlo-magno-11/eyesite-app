@@ -24,10 +24,11 @@ const config: ExpoConfig = {
   // con el runtime nativo instalado.
   runtimeVersion: { policy: "appVersion" },
   updates: {
-    enabled: true,
-    checkAutomatically: "ON_LOAD",
-    fallbackToCacheTimeout: 0,
-  },
+  enabled: true,
+  checkAutomatically: "ON_LOAD",
+  fallbackToCacheTimeout: 0,
+  url: "https://u.expo.dev/53f27292-7aee-4a95-a597-0f3d062495bd",
+},
   orientation: "portrait",
   icon: "./assets/images/icon.png",
   scheme: env.scheme,
