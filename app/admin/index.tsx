@@ -1,0 +1,256 @@
+import { View, Text, ScrollView, Pressable, StyleSheet } from 'react-native';
+import { useState, useEffect, useCallback } from 'react';
+import { ScreenContainer } from '@/components/screen-container';
+import { router } from 'expo-router';
+import { IconSymbol } from '@/components/ui/icon-symbol';
+import { supabase } from '@/lib/supabase';
+import { useRealtimeTable } from '@/hooks/useRealtimeTable';
+
+const ADMIN_MENU = [
+  {
+    id: 'solicitudes',
+    title: 'Solicitudes Pendientes',
+    description: 'Revisar y aprobar propiedades enviadas por usuarios',
+    icon: '📋',
+    route: '/admin/solicitudes',
+    color: '#FF6B6B',
+  },
+  {
+    id: 'propiedades',
+    title: 'Propiedades Publicadas',
+    description: 'Gestionar propiedades activas en la plataforma',
+    icon: '🏢',
+    route: '/admin/propiedades',
+    color: '#4ECDC4',
+  },
+  {
+    id: 'estadisticas',
+    title: 'Estadísticas',
+    description: 'Ver métricas y actividad en tiempo real',
+    icon: '📊',
+    route: '/admin/estadisticas',
+    color: '#45B7D1',
+  },
+  {
+    id: 'users',
+    title: 'Usuarios',
+    description: 'Aprobar, rechazar y gestionar usuarios',
+    icon: '👥',
+    route: '/admin/users',
+    color: '#A78BFA',
+  },
+  {
+    id: 'auditoria',
+    title: 'Auditoría',
+    description: 'Historial de acciones administrativas y cambios',
+    icon: '🧾',
+    route: '/admin/auditoria',
+    color: '#F59E0B',
+  },
+];
+
+export default function AdminDashboard() {
+  const [stats, setStats] = useState<{ solicitudes: number; propiedades: number; usuarios: number }>({
+    solicitudes: -1,
+    propiedades: -1,
+    usuarios: -1,
+  });
+
+  const fetchStats = useCallback(async () => {
+    try {
+      const [sol, prop, usr] = await Promise.all([
+        supabase.from('solicitudes_propiedades').select('id', { count: 'exact', head: true }).eq('estado','pendiente'),
+        supabase.from('propiedades_admin').select('id', { count: 'exact', head: true }),
+        supabase.from('profiles').select('id', { count: 'exact', head: true }),
+      ]);
+      setStats({
+        solicitudes: sol.count ?? 0,
+        propiedades: prop.count ?? 0,
+        usuarios: usr.count ?? 0,
+      });
+    } catch (e) {
+      console.error('[admin] stats fallaron:', e);
+    }
+  }, []);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      void fetchStats();
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [fetchStats]);
+
+  // Realtime: contadores actualizados en vivo (usuarios, propiedades, solicitudes).
+  useRealtimeTable('profiles', fetchStats);
+  useRealtimeTable('propiedades', fetchStats);
+  useRealtimeTable('solicitudes_propiedades', fetchStats);
+
+  const handleMenuPress = (route: string) => {
+    router.push(route as any);
+  };
+
+  return (
+    <ScreenContainer edges={['top', 'left', 'right']} containerClassName="bg-background">
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 100 }}
+      >
+        {/* Header */}
+        <View style={styles.header}>
+          <Text style={styles.logo}>EYESI<Text style={styles.logoPlus}>+</Text>E</Text>
+          <Text style={styles.subtitle}>Panel de Administración</Text>
+          <Text style={styles.tagline}>Gestiona tu plataforma inmobiliaria</Text>
+        </View>
+
+        {/* Menu Grid */}
+        <View style={styles.menuContainer}>
+          {ADMIN_MENU.map((item) => (
+            <Pressable
+              key={item.id}
+              onPress={() => handleMenuPress(item.route)}
+              style={({ pressed }) => [
+                styles.menuCard,
+                { borderLeftColor: item.color },
+                pressed && { opacity: 0.85 },
+              ]}
+            >
+              <View style={styles.menuCardContent}>
+                <Text style={styles.menuIcon}>{item.icon}</Text>
+                <View style={styles.menuTextContainer}>
+                  <Text style={styles.menuTitle}>{item.title}</Text>
+                  <Text style={styles.menuDescription}>{item.description}</Text>
+                </View>
+              </View>
+              <IconSymbol name="chevron.right" size={20} color="#C9A84C" />
+            </Pressable>
+          ))}
+        </View>
+
+        {/* Quick Stats */}
+        <View style={styles.statsSection}>
+          <Text style={styles.sectionTitle}>Resumen Rápido</Text>
+          <View style={styles.statsGrid}>
+            <View style={styles.statCard}>
+              <Text style={styles.statValue}>{stats.solicitudes < 0 ? '--' : stats.solicitudes}</Text>
+              <Text style={styles.statLabel}>Solicitudes</Text>
+            </View>
+            <View style={styles.statCard}>
+              <Text style={styles.statValue}>{stats.propiedades < 0 ? '--' : stats.propiedades}</Text>
+              <Text style={styles.statLabel}>Propiedades</Text>
+            </View>
+            <View style={styles.statCard}>
+              <Text style={styles.statValue}>{stats.usuarios < 0 ? '--' : stats.usuarios}</Text>
+              <Text style={styles.statLabel}>Usuarios</Text>
+            </View>
+          </View>
+        </View>
+      </ScrollView>
+    </ScreenContainer>
+  );
+}
+
+const styles = StyleSheet.create({
+  header: {
+    paddingHorizontal: 16,
+    paddingVertical: 24,
+    borderBottomWidth: 1,
+    borderBottomColor: '#2A2A2A',
+  },
+  logo: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: '#C9A84C',
+    letterSpacing: 1,
+    marginBottom: 8,
+  },
+  logoPlus: {
+    color: '#C9A84C',
+  },
+  subtitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    marginBottom: 4,
+  },
+  tagline: {
+    fontSize: 13,
+    color: '#9A9A9A',
+    fontStyle: 'italic',
+  },
+  menuContainer: {
+    paddingHorizontal: 16,
+    paddingVertical: 20,
+    gap: 12,
+  },
+  menuCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#1A1A1A',
+    borderRadius: 12,
+    padding: 16,
+    borderLeftWidth: 4,
+    borderWidth: 1,
+    borderColor: '#2A2A2A',
+  },
+  menuCardContent: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  menuIcon: {
+    fontSize: 32,
+  },
+  menuTextContainer: {
+    flex: 1,
+  },
+  menuTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    marginBottom: 4,
+  },
+  menuDescription: {
+    fontSize: 12,
+    color: '#9A9A9A',
+    lineHeight: 16,
+  },
+  statsSection: {
+    paddingHorizontal: 16,
+    paddingVertical: 20,
+    borderTopWidth: 1,
+    borderTopColor: '#2A2A2A',
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    marginBottom: 12,
+    letterSpacing: 0.5,
+  },
+  statsGrid: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  statCard: {
+    flex: 1,
+    backgroundColor: '#1A1A1A',
+    borderRadius: 8,
+    padding: 12,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#2A2A2A',
+  },
+  statValue: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#C9A84C',
+    marginBottom: 4,
+  },
+  statLabel: {
+    fontSize: 11,
+    color: '#9A9A9A',
+    fontWeight: '500',
+  },
+});
