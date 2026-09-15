@@ -1,7 +1,7 @@
-const { getDefaultConfig } = require("expo/metro-config");
 const { withNativeWind } = require("nativewind/metro");
+const { getSentryExpoConfig } = require("@sentry/react-native/metro");
 
-const config = getDefaultConfig(__dirname);
+const config = getSentryExpoConfig(__dirname);
 
 // V6.3: pnpm + @expo/vector-icons — resolver de symlinks y package exports.
 // Fix del error "ExpoAsset.downloadAsync failed ... ?unstable_path=...".
