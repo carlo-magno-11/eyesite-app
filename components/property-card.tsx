@@ -21,14 +21,43 @@ const { isFav, toggleFav } = useFavorites();
   // video → <Image uri=video> = CARD NEGRA con play). Si portada_url es un
   // video (datos legacy), se cae a la primera FOTO.
   const VIDEO_URI_RE = /\.(mp4|webm|mov|m4v)(\?.*)?$/i;
-  const isVideoUri = (u?: string | null) =>
-    !!u && (VIDEO_URI_RE.test(u) || u.includes('/videos/'));
-  const fotos: any[] = ((property as any).fotos || property.images || []) as any[];
-  const firstFoto = (typeof fotos[0] === 'string' ? fotos[0] : fotos[0]?.url || fotos[0]?.uri) || null;
-  const rawPortada: string | null = property.portada_url || null;
-  const thumbUri: string | null = isVideoUri(rawPortada) ? firstFoto : rawPortada || firstFoto;
-  const videoUrl = property.video_url || property.videos?.[0] || null;
-  const hasVideo = !!videoUrl;
+
+const isVideoUri = (u?: string | null) =>
+  !!u &&
+  (
+    VIDEO_URI_RE.test(u) ||
+    u.includes('/videos/')
+  );
+
+const fotos: any[] =
+  Array.isArray((property as any).fotos)
+    ? (property as any).fotos
+    : Array.isArray(property.images)
+      ? property.images
+      : [];
+
+const firstFoto =
+  typeof fotos[0] === 'string'
+    ? fotos[0]
+    : fotos[0]?.url ||
+      fotos[0]?.uri ||
+      null;
+
+const rawPortada =
+  property.portada_url || null;
+
+const thumbUri =
+  isVideoUri(rawPortada)
+    ? firstFoto
+    : rawPortada || firstFoto;
+
+const videoUrl =
+  property.video_url ||
+  property.videos?.[0] ||
+  null;
+
+const hasVideo =
+  Boolean(videoUrl);
 
   const handlePress = () => {
     // Si hay video, el detalle abre directo el reproductor (?play=1)
