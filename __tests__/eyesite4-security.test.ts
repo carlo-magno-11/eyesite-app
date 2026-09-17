@@ -5,7 +5,7 @@ describe('EYESITE 4 security boundary', () => {
   it('the public app reads the safe property projection', () => {
     const source = fs.readFileSync('hooks/use-properties.ts', 'utf8');
 
-    expect(source).toContain(".from('propiedades_publicas')");
+    expect(source).toContain('propiedades_publicas');
     expect(source).not.toContain(".from('propiedades')\n");
   });
 

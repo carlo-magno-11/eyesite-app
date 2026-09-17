@@ -123,6 +123,51 @@ export default function PropertyDetailScreen() {
   const favorite = isFav(property.id);
   const returnColor = getReturnColor(property.returnRate);
 
+  const currentPrice =
+  Number(
+    property.currentPrice ??
+      property.precio_actual ??
+      property.price ??
+      property.precio ??
+      0
+  );
+
+ const marketPrice =
+  Number(
+    property.marketPrice ??
+      property.precio_mercado ??
+      0
+  );
+
+ const surfaceM2 =
+  Number(
+    property.surfaceM2 ??
+      property.superficie ??
+      0
+  );
+
+ const constructionM2 =
+  Number(
+    property.constructionM2 ??
+      property.construccion_m2 ??
+      0
+  );
+
+ const priceUnit =
+  property.priceUnit ??
+  property.unidad_precio ??
+  'm²';
+
+ const title =
+  property.title ??
+  property.titulo ??
+  'Propiedad';
+
+ const location =
+  property.location ??
+  property.municipio ??
+  property.ubicacion ??
+  '';
   // (mediaList se construye arriba con useMemo: portada → video → galería)
 
   const handleWhatsApp = () => {
@@ -136,23 +181,31 @@ export default function PropertyDetailScreen() {
     Linking.openURL(`tel:${PHONE}`);
   };
 
-  const handleShareProperty = async () => {
+  const handleShareProperty =
+  async () => {
     try {
-      const appLink = `https://www.eyesite.mx/property/${property.id}`;
-      const message = `Mira esta propiedad en EYESITE: ${property.title || property.titulo} en ${property.location || property.municipio}. Precio: ${formatPrice(property.currentPrice || property.precio_actual, property.priceUnit || property.unidad_precio)}. Descarga la app: https://www.eyesite.mx`;
-      
+      const appLink =
+        `https://www.eyesite.mx/property/${property.id}`;
+
+      const message =
+        `Mira esta propiedad en EYESITE: ${title} en ${location}. Precio: ${formatPrice(currentPrice, priceUnit)}. Descarga la app: https://www.eyesite.mx`;
+
       await Share.share({
-        message: message,
-        title: `Propiedad: ${property.title || property.titulo}`,
+        message,
+        title:
+          `Propiedad: ${title}`,
         url: appLink,
       });
     } catch (error) {
-      console.error('Error compartiendo:', error);
+      console.error(
+        'Error compartiendo:',
+        error
+      );
     }
   };
 
-  const returnDiff = (property.marketPrice || property.precio_mercado) > 0
-    ? Math.round((((property.marketPrice || property.precio_mercado) - (property.currentPrice || property.precio_actual)) / (property.marketPrice || property.precio_mercado)) * 100)
+  const returnDiff = (marketPrice) > 0
+    ? Math.round((((marketPrice) - (currentPrice)) / (marketPrice)) * 100)
     : 0;
 
   const closeVideoModal = () => {
@@ -281,22 +334,27 @@ export default function PropertyDetailScreen() {
           <View style={styles.metricsGrid}>
             <View style={styles.metricCard}>
               <Text style={styles.metricLabel}>Precio actual</Text>
-              <Text style={styles.metricValue}>{formatPrice(property.currentPrice || property.precio_actual, property.priceUnit || property.unidad_precio)}</Text>
+              <Text style={styles.metricValue}>
+               {formatPrice(
+                currentPrice,
+                 priceUnit
+                  )}
+             </Text>
             </View>
             <View style={styles.metricCard}>
               <Text style={styles.metricLabel}>Precio mercado</Text>
               <Text style={[styles.metricValue, styles.metricValueMuted]}>
-                {formatPrice(property.marketPrice || property.precio_mercado, property.priceUnit || property.unidad_precio)}
+                {formatPrice(marketPrice, priceUnit)}
               </Text>
             </View>
             <View style={styles.metricCard}>
               <Text style={styles.metricLabel}>Superficie</Text>
-              <Text style={styles.metricValue}>{formatSurface(property.surfaceM2 || property.superficie)}</Text>
+              <Text style={styles.metricValue}>{formatSurface(surfaceM2)}</Text>
             </View>
-            {property.constructionM2 > 0 && (
+            {constructionM2 > 0 && (
               <View style={styles.metricCard}>
                 <Text style={styles.metricLabel}>Construcción</Text>
-                <Text style={styles.metricValue}>{formatSurface(property.constructionM2)}</Text>
+                <Text style={styles.metricValue}>{formatSurface(constructionM2)}</Text>
               </View>
             )}
           </View>

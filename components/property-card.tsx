@@ -5,6 +5,7 @@ import { router } from 'expo-router';
 import { Property, formatPrice, formatSurface, getReturnColor } from '@/lib/properties-data';
 import { useFavorites } from '@/hooks/use-favorites';
 import { IconSymbol } from '@/components/ui/icon-symbol';
+import { getFirstImage,isVideoUri, } from '@/lib/property-media';
 
 interface PropertyCardProps {
   property: Property;
@@ -20,40 +21,18 @@ const { isFav, toggleFav } = useFavorites();
   // El video NUNCA se usa como thumb (antes portada_url guardaba la URL del
   // video → <Image uri=video> = CARD NEGRA con play). Si portada_url es un
   // video (datos legacy), se cae a la primera FOTO.
-  const VIDEO_URI_RE = /\.(mp4|webm|mov|m4v)(\?.*)?$/i;
-
-const isVideoUri = (u?: string | null) =>
-  !!u &&
-  (
-    VIDEO_URI_RE.test(u) ||
-    u.includes('/videos/')
+  
+const thumbUri =
+  getFirstImage(
+    property.fotos ??
+      property.images ??
+      property.imagenes,
+    property.portada_url
   );
 
-const fotos: any[] =
-  Array.isArray((property as any).fotos)
-    ? (property as any).fotos
-    : Array.isArray(property.images)
-      ? property.images
-      : [];
-
-const firstFoto =
-  typeof fotos[0] === 'string'
-    ? fotos[0]
-    : fotos[0]?.url ||
-      fotos[0]?.uri ||
-      null;
-
-const rawPortada =
-  property.portada_url || null;
-
-const thumbUri =
-  isVideoUri(rawPortada)
-    ? firstFoto
-    : rawPortada || firstFoto;
-
 const videoUrl =
-  property.video_url ||
-  property.videos?.[0] ||
+  property.video_url ??
+  property.videos?.[0] ??
   null;
 
 const hasVideo =

@@ -1,29 +1,132 @@
 export type Property = {
   id: string;
+
+  // Identificación
   title: string;
-  price: number;
-  location: string;
+  titulo?: string;
+  code?: string;
+  codigo?: string;
+
+  // Tipo y ubicación
   type: string;
+  tipo?: string;
+  location: string;
+  ubicacion?: string;
+  municipality?: string;
+  municipio?: string;
+  direccion?: string;
+
+  // Precios
+  price: number;
+  precio?: number;
+  currentPrice: number;
+  precio_actual?: number;
+  marketPrice: number;
+  precio_mercado?: number;
+  expectedPrice?: number;
+  precio_esperado?: number;
+  priceUnit?: string;
+  unidad_precio?: string;
+  moneda?: string;
+
+  // Superficie
+  surfaceM2: number;
+  superficie?: number;
+  surfaceUnit?: string;
+  unidad_superficie?: string;
+  frente?: number;
+  fondo?: number;
+  constructionM2?: number;
+  construccion_m2?: number;
+
+  // Rendimiento
+  returnRate: number;
+  rendimiento?: number;
+
+  // Media
   image?: string;
   images?: string[];
+  imagenes?: string[];
+  fotos?: string[];
+  fotos_pro?: string[];
   videos?: string[];
-  tipo_portada?: 'foto' | 'video';
-  video_url?: string;
-  portada_url?: string;
+  video_url?: string | null;
+  portada_url?: string | null;
+  tipo_portada?: string;
+  portada_tipo?: string;
+
+  // Información
+  description?: string;
+  descripcion?: string;
+  descripcion_pro?: string;
+
+  detalles?: Record<string, any> | null;
+  caracteristicas?: Record<string, any> | null;
+  servicios_cercanos?: Record<string, any> | null;
+
+  // Archivos y enlaces
+  pdfs?: string[];
+  kmz_kml?: string[];
+  ubicaciones?: string[];
+  tour_360?: string | null;
+  archivos?: any[];
+  enlaces?: any[];
+
+  // Coordenadas
+  latitud?: number | null;
+  longitud?: number | null;
+
+  // Estado
+  estado?: string;
+  activa?: boolean;
+
+  // Destacada
   is_featured?: boolean;
   featured?: boolean;
   destacada?: boolean;
+
+  // Legal / orden
+  estatus_legal?: string;
+  certeza_legal?: string;
+  orden?: number;
+
+  // Fechas
+  created_at?: string;
+  updated_at?: string;
+
+  // Permite campos adicionales procedentes de Supabase
   [key: string]: any;
 };
 
-export const PROPERTY_TYPES = ['Casa', 'Departamento', 'Terreno', 'Local', 'Oficina'] as const;
-export type PropertyType = typeof PROPERTY_TYPES_OPTIONS[number];
+export const PROPERTY_TYPES = [
+  'Casa',
+  'Departamento',
+  'Terreno',
+  'Local',
+  'Oficina',
+] as const;
 
+export type PropertyType =
+  typeof PROPERTY_TYPES[number];
+
+export const PROPERTY_TYPES_OPTIONS =
+  PROPERTY_TYPES.map((t) => ({
+    key: t,
+    label: t,
+    value: t,
+  }));
+
+/*
+ * La app ya no depende de propiedades simuladas.
+ * Las propiedades reales vienen de Supabase.
+ */
 export const PROPERTIES: Property[] = [];
 
-/**
- * MOCK_DATA: propiedades de ejemplo para que la app siga funcionando
- * (nunca pantalla en blanco) cuando Supabase no responde o falla.
+/*
+ * Datos de ejemplo antiguos.
+ *
+ * Se conservan temporalmente para no romper otros imports
+ * del proyecto, pero useProperties NO los utiliza como fallback.
  */
 export const MOCK_PROPERTIES: Property[] = [
   {
@@ -60,10 +163,11 @@ export const MOCK_PROPERTIES: Property[] = [
       'https://images.unsplash.com/photo-1449844908441-8829872d2607?w=800&q=80',
     ],
     description:
-      'Terreno residencial en la zona de mayor plusvalía de Mérida, a 5 minutos de nucleos comerciales y colegios. Documentación en regla, lista para escriturar.',
+      'Terreno residencial en la zona de mayor plusvalía de Mérida, a 5 minutos de núcleos comerciales y colegios. Documentación en regla, lista para escriturar.',
     descripcion:
-      'Terreno residencial en la zona de mayor plusvalía de Mérida, a 5 minutos de nucleos comerciales y colegios. Documentación en regla, lista para escriturar.',
+      'Terreno residencial en la zona de mayor plusvalía de Mérida, a 5 minutos de núcleos comerciales y colegios.',
   },
+
   {
     id: 'mock-terreno-2',
     price: 7800000,
@@ -100,8 +204,9 @@ export const MOCK_PROPERTIES: Property[] = [
     description:
       'Hacienda campestre con casa principal restaurada, pozo y arboleda. Ideal para proyecto ecoturístico cerca de la zona puuc.',
     descripcion:
-      'Hacienda campestre con casa principal restaurada, pozo y arboleda. Ideal para proyecto ecoturístico cerca de la zona puuc.',
+      'Hacienda campestre con casa principal restaurada, pozo y arboleda.',
   },
+
   {
     id: 'mock-terreno-3',
     price: 5100000,
@@ -134,8 +239,9 @@ export const MOCK_PROPERTIES: Property[] = [
     description:
       'Terreno comercial sobre anillo periférico con frente de 45 metros, uso de suelo comercial aprobado y acceso a servicios.',
     descripcion:
-      'Terreno comercial sobre anillo periférico con frente de 45 metros, uso de suelo comercial aprobado y acceso a servicios.',
+      'Terreno comercial sobre anillo periférico con frente de 45 metros.',
   },
+
   {
     id: 'mock-terreno-4',
     price: 4300000,
@@ -168,7 +274,7 @@ export const MOCK_PROPERTIES: Property[] = [
     description:
       'Rancho ganadero con corrales, abrevaderos y pasto introducido. Contiguo a carretera estatal, ideal para ganado mayor.',
     descripcion:
-      'Rancho ganadero con corrales, abrevaderos y pasto introducido. Contiguo a carretera estatal, ideal para ganado mayor.',
+      'Rancho ganadero con corrales, abrevaderos y pasto introducido.',
   },
 ];
 
@@ -178,14 +284,24 @@ export const getReturnColor = (value: number) => {
   return 'red';
 };
 
-export const PROPERTY_TYPES_OPTIONS = PROPERTY_TYPES.map(t => ({ key: t, label: t, value: t }));
-
-export const formatPrice = (price: number, unit?: string) => {
+export const formatPrice = (
+  price: number,
+  unit?: string
+) => {
   void unit;
-  return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(price);
+
+  return new Intl.NumberFormat('es-MX', {
+    style: 'currency',
+    currency: 'MXN',
+    maximumFractionDigits: 0,
+  }).format(price);
 };
 
-export const formatSurface = (surface: number, unit?: string) => {
+export const formatSurface = (
+  surface: number,
+  unit?: string
+) => {
   void unit;
+
   return `${surface} m²`;
 };
