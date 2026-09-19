@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { View, Text, TextInput, ScrollView, Pressable, StyleSheet, Alert, ActivityIndicator, Image, FlatList } from 'react-native';
 import { ScreenContainer } from '@/components/screen-container';
 import { IconSymbol } from '@/components/ui/icon-symbol';
@@ -7,6 +7,7 @@ import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as VideoThumbnails from 'expo-video-thumbnails';
 import * as Location from 'expo-location';
+import { WebView } from 'react-native-webview';
 
 const PROPERTY_TYPES_OPTIONS = [
   { key: 'terreno', label: 'Terreno' },
@@ -43,6 +44,185 @@ interface SelectedImage {
   type: string;
 }
 
+const PROPERTY_LOCATION_MAP_HTML = `
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+
+<meta
+  name="viewport"
+  content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+/>
+
+<link
+  rel="stylesheet"
+  href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+/>
+
+<style>
+html,
+body,
+#map {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  background: #0D0D0D;
+}
+
+body {
+  overflow: hidden;
+  font-family:
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+}
+
+.leaflet-control-zoom a {
+  background: #151515 !important;
+  color: #F5F5F5 !important;
+  border-color: #303030 !important;
+}
+
+.leaflet-control-attribution {
+  background: rgba(14, 14, 14, 0.85) !important;
+  color: #999 !important;
+  font-size: 9px !important;
+}
+
+.leaflet-control-attribution a {
+  color: #C9A84C !important;
+}
+</style>
+</head>
+
+<body>
+
+<div id="map"></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script>
+
+const DEFAULT_LAT = 20.9674;
+const DEFAULT_LNG = -89.5926;
+
+let propertyMarker = null;
+
+const map = L.map('map', {
+  zoomControl: true,
+  attributionControl: true,
+}).setView(
+  [DEFAULT_LAT, DEFAULT_LNG],
+  11
+);
+
+L.tileLayer(
+  'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+  {
+    maxZoom: 19,
+    attribution: '&copy; OpenStreetMap contributors',
+  }
+).addTo(map);
+
+function sendCoordinates(lat, lng) {
+
+  if (
+    window.ReactNativeWebView &&
+    window.ReactNativeWebView.postMessage
+  ) {
+
+    window.ReactNativeWebView.postMessage(
+      JSON.stringify({
+        type: 'property_location',
+        latitude: Number(lat),
+        longitude: Number(lng),
+      })
+    );
+
+  }
+}
+
+function placeMarker(lat, lng, zoom = true) {
+
+  lat = Number(lat);
+  lng = Number(lng);
+
+  if (
+    !Number.isFinite(lat) ||
+    !Number.isFinite(lng)
+  ) {
+    return;
+  }
+
+  if (propertyMarker) {
+
+    propertyMarker.setLatLng([
+      lat,
+      lng
+    ]);
+
+  } else {
+
+    propertyMarker = L.marker(
+      [lat, lng],
+      {
+        draggable: true,
+      }
+    ).addTo(map);
+
+    propertyMarker.on(
+      'dragend',
+      function(event) {
+
+        const position =
+          event.target.getLatLng();
+
+        sendCoordinates(
+          position.lat,
+          position.lng
+        );
+
+      }
+    );
+
+  }
+
+  if (zoom) {
+
+    map.setView(
+      [lat, lng],
+      15
+    );
+
+  }
+
+  sendCoordinates(
+    lat,
+    lng
+  );
+}
+
+map.on(
+  'click',
+  function(event) {
+
+    placeMarker(
+      event.latlng.lat,
+      event.latlng.lng
+    );
+
+  }
+);
+
+</script>
+
+</body>
+</html>
+`;
+
 const INITIAL_FORM: FormData = {
   title: '',
   type: '',
@@ -75,24 +255,107 @@ export default function PublishScreen() {
   const { submitProperty, loading: submitting } = useSubmitProperty();
   const [uploading, setUploading] = useState(false);
   const [locating, setLocating] = useState(false);
+  const propertyMapRef = useRef<WebView>(null);
 
   const useCurrentPropertyLocation = async () => {
-    setLocating(true);
-    try {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== Location.PermissionStatus.GRANTED) {
-        Alert.alert('Permiso de ubicación', 'Necesitamos tu ubicación solo para colocar el punto de la propiedad en el mapa.');
-        return;
-      }
-      const current = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
-      setForm((prev) => ({ ...prev, latitud: current.coords.latitude, longitud: current.coords.longitude }));
-    } catch {
-      console.error('[publish] location error');
-      Alert.alert('Ubicación', 'No pudimos obtener la ubicación. Intenta nuevamente.');
-    } finally {
-      setLocating(false);
+  setLocating(true);
+
+  try {
+    const { status } =
+      await Location.requestForegroundPermissionsAsync();
+
+    if (
+      status !== Location.PermissionStatus.GRANTED
+    ) {
+      Alert.alert(
+        'Permiso de ubicación',
+        'Necesitamos tu ubicación solo para colocar el punto de la propiedad en el mapa.'
+      );
+      return;
     }
-  };
+
+    const current =
+      await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.Balanced,
+      });
+
+    const latitude =
+      current.coords.latitude;
+
+    const longitude =
+      current.coords.longitude;
+
+    setForm((prev) => ({
+      ...prev,
+      latitud: latitude,
+      longitud: longitude,
+    }));
+
+    propertyMapRef.current?.injectJavaScript(`
+      placeMarker(
+        ${latitude},
+        ${longitude},
+        true
+      );
+      true;
+    `);
+
+  } catch (error) {
+    console.error(
+      '[publish] location error',
+      error
+    );
+
+    Alert.alert(
+      'Ubicación',
+      'No pudimos obtener la ubicación. Intenta nuevamente.'
+    );
+
+  } finally {
+    setLocating(false);
+  }
+};
+
+const handlePropertyMapMessage = (
+  event: any
+) => {
+  try {
+    const data = JSON.parse(
+      event?.nativeEvent?.data ?? '{}'
+    );
+
+    if (
+      data?.type !== 'property_location'
+    ) {
+      return;
+    }
+
+    const latitude =
+      Number(data.latitude);
+
+    const longitude =
+      Number(data.longitude);
+
+    if (
+      !Number.isFinite(latitude) ||
+      !Number.isFinite(longitude)
+    ) {
+      return;
+    }
+
+    setForm((prev) => ({
+      ...prev,
+      latitud: latitude,
+      longitud: longitude,
+    }));
+
+  } catch (error) {
+    console.error(
+      '[publish] map message error',
+      error
+    );
+  }
+};
 
   const pickImages = async () => {
     try {
@@ -424,21 +687,72 @@ export default function PublishScreen() {
             </View>
           </View>
 
-          {/* Ubicación geográfica para el mapa */}
-          <View style={styles.fieldGroup}>
-            <Text style={styles.label}>Ubicación en mapa</Text>
-            <Text style={styles.locationHint}>Si estás físicamente en el terreno, usa tu ubicación para colocar el punto exacto.</Text>
-            <Pressable
-              onPress={useCurrentPropertyLocation}
-              disabled={locating}
-              style={({ pressed }) => [styles.locationBtn, pressed && { opacity: 0.8 }]}
-            >
-              {locating ? <ActivityIndicator color="#0D0D0D" /> : <Text style={styles.locationBtnText}>{form.latitud ? '✓ UBICACIÓN GUARDADA' : '⌖ USAR MI UBICACIÓN'}</Text>}
-            </Pressable>
-            {form.latitud !== null && form.longitud !== null && (
-              <Text style={styles.coordinatesText}>Punto: {form.latitud.toFixed(6)}, {form.longitud.toFixed(6)}</Text>
-            )}
-          </View>
+           {/* Ubicación geográfica para el mapa */}
+           <View style={styles.fieldGroup}>
+
+           <Text style={styles.label}>
+               Ubicación de la propiedad
+               </Text>
+
+                <Text style={styles.locationHint}>
+                 Esta opción es opcional. Toca el mapa para colocar
+                 el punto exacto donde se encuentra la propiedad.
+                 También puedes mover el marcador después de colocarlo.
+              </Text>
+
+           <View style={styles.propertyMapContainer}>
+
+           <WebView
+              ref={propertyMapRef}
+               originWhitelist={['*']}
+               source={{
+               html: PROPERTY_LOCATION_MAP_HTML,
+                }}
+               javaScriptEnabled
+              domStorageEnabled
+           onMessage={handlePropertyMapMessage}
+       style={styles.propertyMap}
+       />
+
+       </View>
+
+          <Text style={styles.mapInstruction}>
+            📍 Toca el mapa para seleccionar la ubicación
+             </Text>
+
+             <Pressable
+             onPress={useCurrentPropertyLocation}
+             disabled={locating}
+             style={({ pressed }) => [
+           styles.locationBtn,
+         pressed && { opacity: 0.8 },
+     ]}
+      >
+    {locating ? (
+      <ActivityIndicator
+        color="#0D0D0D"
+      />
+      ) : (
+      <Text style={styles.locationBtnText}>
+        {form.latitud !== null &&
+        form.longitud !== null
+          ? '✓ UBICACIÓN GUARDADA'
+          : '⌖ USAR MI UBICACIÓN'}
+      </Text>
+      )}
+      </Pressable>
+
+  {form.latitud !== null &&
+    form.longitud !== null && (
+      <Text style={styles.coordinatesText}>
+        Coordenadas seleccionadas:{'\n'}
+        {form.latitud.toFixed(6)},
+        {' '}
+        {form.longitud.toFixed(6)}
+      </Text>
+    )}
+
+</View>
 
           {/* Descripción */}
           <View style={styles.fieldGroup}>
@@ -561,6 +875,31 @@ export default function PublishScreen() {
 }
 
 const styles = StyleSheet.create({
+  
+  propertyMapContainer: {
+  height: 280,
+  width: '100%',
+  borderRadius: 12,
+  overflow: 'hidden',
+  marginTop: 4,
+  backgroundColor: '#0D0D0D',
+  borderWidth: 1,
+  borderColor: '#303030',
+},
+
+propertyMap: {
+  flex: 1,
+},
+
+mapInstruction: {
+  color: '#C9A84C',
+  fontSize: 12,
+  fontWeight: '600',
+  textAlign: 'center',
+  marginTop: 9,
+  marginBottom: 9,
+},
+  
   header: {
     paddingHorizontal: 16,
     paddingVertical: 20,

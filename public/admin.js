@@ -53,143 +53,98 @@ let adminPropertyMarker = null;
 const ADMIN_DEFAULT_LAT = 20.9674;
 const ADMIN_DEFAULT_LNG = -89.5926;
 
-function initAdminPropertyMap(lat = null, lng = null) {
-  const mapElement = document.getElementById("adminPropertyMap");
 
-  if (!mapElement) {
-    return;
-  }
+/* ============================================================
+   OBTENER COORDENADAS ACTUALES
+   ============================================================ */
 
-  const hasCoordinates =
-    Number.isFinite(Number(lat)) &&
-    Number.isFinite(Number(lng));
+function getAdminPropertyCoordinates() {
+  const latElement =
+    document.getElementById("prop_latitud");
 
-  const initialLat = hasCoordinates
-    ? Number(lat)
-    : ADMIN_DEFAULT_LAT;
+  const lngElement =
+    document.getElementById("prop_longitud");
 
-  const initialLng = hasCoordinates
-    ? Number(lng)
-    : ADMIN_DEFAULT_LNG;
+  const lat =
+    latElement
+      ? Number(latElement.value)
+      : NaN;
 
-  if (adminPropertyMap) {
-    adminPropertyMap.remove();
+  const lng =
+    lngElement
+      ? Number(lngElement.value)
+      : NaN;
 
-    adminPropertyMap = null;
-    adminPropertyMarker = null;
-  }
+  /*
+   * 0,0 no se considera una ubicación válida
+   * para EYESITE.
+   */
 
-  adminPropertyMap = L.map("adminPropertyMap", {
-    zoomControl: true,
-    attributionControl: true,
-  }).setView(
-    [initialLat, initialLng],
-    hasCoordinates ? 15 : 11
-  );
+  const validLat =
+    Number.isFinite(lat) &&
+    lat >= -90 &&
+    lat <= 90 &&
+    lat !== 0;
 
-  L.tileLayer(
-    "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-    {
-      maxZoom: 19,
-      attribution: "&copy; OpenStreetMap contributors",
-    }
-  ).addTo(adminPropertyMap);
+  const validLng =
+    Number.isFinite(lng) &&
+    lng >= -180 &&
+    lng <= 180 &&
+    lng !== 0;
 
-  if (hasCoordinates) {
-    setAdminPropertyMarker(
-      initialLat,
-      initialLng,
-      false
-    );
-  }
+  return {
+    latitud:
+      validLat
+        ? lat
+        : null,
 
-  adminPropertyMap.on("click", (event) => {
-    setAdminPropertyMarker(
-      event.latlng.lat,
-      event.latlng.lng,
-      true
-    );
-  });
-
-  setTimeout(() => {
-    adminPropertyMap?.invalidateSize();
-  }, 150);
+    longitud:
+      validLng
+        ? lng
+        : null,
+  };
 }
 
-function setAdminPropertyMarker(
-  lat,
-  lng,
-  centerMap = true
-) {
-  lat = Number(lat);
-  lng = Number(lng);
 
-  if (
-    !Number.isFinite(lat) ||
-    !Number.isFinite(lng)
-  ) {
-    return;
-  }
-
-  if (!adminPropertyMap) {
-    return;
-  }
-
-  if (adminPropertyMarker) {
-    adminPropertyMarker.setLatLng([lat, lng]);
-  } else {
-    adminPropertyMarker = L.marker(
-      [lat, lng],
-      {
-        draggable: true,
-      }
-    ).addTo(adminPropertyMap);
-
-    adminPropertyMarker.on(
-      "dragend",
-      (event) => {
-        const position =
-          event.target.getLatLng();
-
-        updateAdminPropertyCoordinates(
-          position.lat,
-          position.lng
-        );
-      }
-    );
-  }
-
-  updateAdminPropertyCoordinates(
-    lat,
-    lng
-  );
-
-  if (centerMap) {
-    adminPropertyMap.setView(
-      [lat, lng],
-      15
-    );
-  }
-}
+/* ============================================================
+   ACTUALIZAR COORDENADAS EN EL FORMULARIO
+   ============================================================ */
 
 function updateAdminPropertyCoordinates(
   lat,
   lng
 ) {
+  const parsedLat =
+    Number(lat);
+
+  const parsedLng =
+    Number(lng);
+
+  if (
+    !Number.isFinite(parsedLat) ||
+    !Number.isFinite(parsedLng)
+  ) {
+    return;
+  }
+
   const latInput =
-    document.getElementById("prop_latitud");
+    document.getElementById(
+      "prop_latitud"
+    );
 
   const lngInput =
-    document.getElementById("prop_longitud");
+    document.getElementById(
+      "prop_longitud"
+    );
 
   if (latInput) {
     latInput.value =
-      Number(lat).toFixed(8);
+      parsedLat.toFixed(8);
   }
 
   if (lngInput) {
     lngInput.value =
-      Number(lng).toFixed(8);
+      parsedLng.toFixed(8);
   }
 
   const coordinates =
@@ -199,33 +154,340 @@ function updateAdminPropertyCoordinates(
 
   if (coordinates) {
     coordinates.textContent =
-      `Coordenadas: ${Number(lat).toFixed(6)}, ${Number(lng).toFixed(6)}`;
+      "Coordenadas: " +
+      parsedLat.toFixed(6) +
+      ", " +
+      parsedLng.toFixed(6);
   }
 }
 
-function getAdminPropertyCoordinates() {
-  const lat = Number(
-    document.getElementById(
-      "prop_latitud"
-    )?.value
+
+/* ============================================================
+   COLOCAR / MOVER MARCADOR
+   ============================================================ */
+
+function setAdminPropertyMarker(
+  lat,
+  lng,
+  centerMap = true
+) {
+  const parsedLat =
+    Number(lat);
+
+  const parsedLng =
+    Number(lng);
+
+  if (
+    !Number.isFinite(parsedLat) ||
+    !Number.isFinite(parsedLng)
+  ) {
+    return;
+  }
+
+  if (!adminPropertyMap) {
+    return;
+  }
+
+  /*
+   * Si ya existe marcador, solamente lo movemos.
+   */
+
+  if (adminPropertyMarker) {
+    adminPropertyMarker.setLatLng([
+      parsedLat,
+      parsedLng,
+    ]);
+  }
+
+  /*
+   * Si no existe, lo creamos.
+   */
+
+  else {
+    adminPropertyMarker =
+      L.marker(
+        [
+          parsedLat,
+          parsedLng,
+        ],
+        {
+          draggable: true,
+        }
+      ).addTo(
+        adminPropertyMap
+      );
+
+    /*
+     * El administrador puede arrastrar
+     * el marcador.
+     */
+
+    adminPropertyMarker.on(
+      "dragend",
+      function (event) {
+        if (
+          !event ||
+          !event.target
+        ) {
+          return;
+        }
+
+        const position =
+          event.target.getLatLng();
+
+        if (!position) {
+          return;
+        }
+
+        updateAdminPropertyCoordinates(
+          position.lat,
+          position.lng
+        );
+      }
+    );
+  }
+
+  /*
+   * Guardar coordenadas.
+   */
+
+  updateAdminPropertyCoordinates(
+    parsedLat,
+    parsedLng
   );
 
-  const lng = Number(
-    document.getElementById(
-      "prop_longitud"
-    )?.value
-  );
+  /*
+   * Centrar mapa.
+   */
 
-  return {
-    latitud: Number.isFinite(lat)
-      ? lat
-      : null,
-
-    longitud: Number.isFinite(lng)
-      ? lng
-      : null,
-  };
+  if (centerMap) {
+    adminPropertyMap.setView(
+      [
+        parsedLat,
+        parsedLng,
+      ],
+      15
+    );
+  }
 }
+
+
+/* ============================================================
+   INICIALIZAR MAPA
+   ============================================================ */
+
+function initAdminPropertyMap(
+  lat = null,
+  lng = null
+) {
+  const mapElement =
+    document.getElementById(
+      "adminPropertyMap"
+    );
+
+  /*
+   * El formulario todavía no existe.
+   */
+
+  if (!mapElement) {
+    return false;
+  }
+
+  /*
+   * Comprobar Leaflet.
+   */
+
+  if (
+    typeof L === "undefined"
+  ) {
+    console.error(
+      "[admin map] Leaflet no está cargado."
+    );
+
+    return false;
+  }
+
+  /*
+   * Evitar que 0,0 sea considerado
+   * una coordenada real.
+   */
+
+  const parsedLat =
+    Number(lat);
+
+  const parsedLng =
+    Number(lng);
+
+  const validCoordinates =
+    Number.isFinite(parsedLat) &&
+    Number.isFinite(parsedLng) &&
+    parsedLat !== 0 &&
+    parsedLng !== 0 &&
+    parsedLat >= -90 &&
+    parsedLat <= 90 &&
+    parsedLng >= -180 &&
+    parsedLng <= 180;
+
+  const initialLat =
+    validCoordinates
+      ? parsedLat
+      : ADMIN_DEFAULT_LAT;
+
+  const initialLng =
+    validCoordinates
+      ? parsedLng
+      : ADMIN_DEFAULT_LNG;
+
+
+  /* ----------------------------------------------------------
+     Eliminar mapa anterior
+     ---------------------------------------------------------- */
+
+  if (adminPropertyMap) {
+    try {
+      adminPropertyMap.remove();
+    } catch (error) {
+      console.warn(
+        "[admin map] Error eliminando mapa anterior:",
+        error
+      );
+    }
+
+    adminPropertyMap = null;
+    adminPropertyMarker = null;
+  }
+
+
+  /* ----------------------------------------------------------
+     Crear mapa
+     ---------------------------------------------------------- */
+
+  try {
+    adminPropertyMap =
+      L.map(
+        mapElement,
+        {
+          zoomControl: true,
+          attributionControl: true,
+        }
+      );
+
+    adminPropertyMap.setView(
+      [
+        initialLat,
+        initialLng,
+      ],
+      validCoordinates
+        ? 15
+        : 11
+    );
+
+
+    /* --------------------------------------------------------
+       Capa OpenStreetMap
+       -------------------------------------------------------- */
+
+    L.tileLayer(
+      "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+      {
+        maxZoom: 19,
+        attribution:
+          "&copy; OpenStreetMap contributors",
+      }
+    )
+      .addTo(
+        adminPropertyMap
+      );
+
+
+    /* --------------------------------------------------------
+       Error de carga de tiles
+       -------------------------------------------------------- */
+
+    adminPropertyMap.on(
+      "tileerror",
+      function (event) {
+        console.error(
+          "[admin map] Error cargando mapa:",
+          event
+        );
+      }
+    );
+
+
+    /* --------------------------------------------------------
+       Marcador existente
+       -------------------------------------------------------- */
+
+    if (validCoordinates) {
+      setAdminPropertyMarker(
+        initialLat,
+        initialLng,
+        false
+      );
+    }
+
+
+    /* --------------------------------------------------------
+       Clic en el mapa
+       -------------------------------------------------------- */
+
+    adminPropertyMap.on(
+      "click",
+      function (event) {
+        if (
+          !event ||
+          !event.latlng
+        ) {
+          return;
+        }
+
+        setAdminPropertyMarker(
+          event.latlng.lat,
+          event.latlng.lng,
+          true
+        );
+      }
+    );
+
+
+    /* --------------------------------------------------------
+       Corregir tamaño del mapa
+       -------------------------------------------------------- */
+
+    setTimeout(
+      function () {
+        if (adminPropertyMap) {
+          adminPropertyMap.invalidateSize();
+        }
+      },
+      250
+    );
+
+    console.log(
+      "[admin map] Mapa inicializado correctamente."
+    );
+
+    return true;
+
+  } catch (error) {
+    console.error(
+      "[admin map] Error inicializando mapa:",
+      error
+    );
+
+    adminPropertyMap = null;
+    adminPropertyMarker = null;
+
+    return false;
+  }
+}
+
+
+
+/* ============================================================
+   INICIAR OBSERVACIÓN DEL MAPA
+   ============================================================ */
 
 /* ============================================================
    UTILIDADES
@@ -1730,17 +1992,51 @@ async function editarPropiedad(id) {
 
   openMod("emod");
 }
-
 function buildEditForm(p) {
-  const target = document.getElementById("ef");
+  const target =
+    document.getElementById("ef");
 
   if (!target) {
     return;
   }
 
-  target.innerHTML = propertyFormHTML(p, "edit");
+  target.innerHTML =
+    propertyFormHTML(
+      p,
+      "edit"
+    );
 
-  bindPropertyForm("edit", p);
+  bindPropertyForm(
+    "edit",
+    p
+  );
+
+  /*
+   * El formulario ya fue creado.
+   * Ahora inicializamos el mapa con
+   * las coordenadas de la propiedad.
+   */
+
+  const lat =
+    p &&
+    Number.isFinite(
+      Number(p.latitud)
+    )
+      ? Number(p.latitud)
+      : null;
+
+  const lng =
+    p &&
+    Number.isFinite(
+      Number(p.longitud)
+    )
+      ? Number(p.longitud)
+      : null;
+
+  initAdminPropertyMap(
+    lat,
+    lng
+  );
 }
 
 /* ============================================================
@@ -1748,26 +2044,46 @@ function buildEditForm(p) {
    ============================================================ */
 
 function buildNewForm() {
-  const nf = document.getElementById("nf");
+  const nf =
+    document.getElementById("nf");
 
   if (!nf) {
     return;
   }
 
+  nf.innerHTML =
+    propertyFormHTML(
+      {},
+      "new"
+    );
+
+  const marker =
+    document.createElement("span");
+
+  marker.id =
+    "newFormReady";
+
+  marker.style.display =
+    "none";
+
+  nf.appendChild(
+    marker
+  );
+
+  bindPropertyForm(
+    "new",
+    {}
+  );
+
   /*
-   * Cada reconstrucción comienza limpia.
+   * El formulario ya existe.
+   * Ahora inicializamos el mapa.
    */
-  nf.innerHTML = propertyFormHTML({}, "new");
 
-  const marker = document.createElement("span");
-
-  marker.id = "newFormReady";
-
-  marker.style.display = "none";
-
-  nf.appendChild(marker);
-
-  bindPropertyForm("new", {});
+  initAdminPropertyMap(
+    null,
+    null
+  );
 }
 
 /* ============================================================
@@ -1775,41 +2091,851 @@ function buildNewForm() {
    ============================================================ */
 
 function propertyFormHTML(p = {}, mode = "new") {
-  const tipo = String(p.tipo || p.type || "terreno").toLowerCase();
-  const d = p.detalles && typeof p.detalles === "object" ? p.detalles : {};
+  const tipo = String(
+    p.tipo ||
+    p.type ||
+    "terreno"
+  ).toLowerCase();
+
+  const d =
+    p.detalles &&
+    typeof p.detalles === "object"
+      ? p.detalles
+      : {};
+
   const house =
-    ["casa", "hacienda", "rancho", "departamento", "villa"].some((x) =>
-      tipo.includes(x),
-    ) ||
+    [
+      "casa",
+      "hacienda",
+      "rancho",
+      "departamento",
+      "villa",
+    ].some((x) => tipo.includes(x)) ||
     Number(p.construccion_m2 || 0) > 0 ||
     d.recamaras != null ||
     d.banos != null;
-  const v = (k) => p[k] ?? "";
-  return `<div class="template-banner"><strong>PLANTILLA:</strong><span>${house ? "🏠 TERRENO CON CASA" : "🌿 SOLO TERRENO"}</span><small>Los datos existentes se cargan automáticamente.</small></div><div class="g2">
- <div class="fg gfull"><label>TÍTULO <span>*</span></label><input id="${mode}_titulo" class="fi2" value="${esc(v("titulo") || p.title || "")}"></div>
- <div class="fg"><label>TIPO <span>*</span></label><select id="${mode}_tipo" class="fsel">${["terreno", "casa", "hacienda", "rancho", "departamento", "local comercial", "oficina", "bodega", "industrial", "otro"].map((x) => option(x, tipo)).join("")}</select></div>
- <div class="fg"><label>MUNICIPIO / CIUDAD <span>*</span></label><input id="${mode}_municipio" class="fi2" value="${esc(v("municipio"))}"></div>
- <div class="fg"><label class="fl">Ubicación de la propiedad</label><div class="property-location-help">Toca el mapa para colocar el punto exacto de la propiedad.También puedes arrastrar el marcador para corregirlo.</div><div class="property-location-map"><div id="adminPropertyMap"></div></div><inputtype="hidden"id="prop_latitud"value=""><inputtype="hidden"id="prop_longitud"value=""><divid="adminPropertyCoordinates"class="property-location-coordinates">Sin ubicación seleccionada</div></div>setTimeout(() => {initAdminPropertyMap();}, 100);
- <div class="fg"><label>DIRECCIÓN</label><input id="${mode}_direccion" class="fi2" value="${esc(v("direccion"))}"></div>
- <div class="fg"><label>SUPERFICIE</label><input id="${mode}_superficie" class="fi2" type="number" value="${esc(v("superficie"))}"></div>
- <div class="fg"><label>UNIDAD SUPERFICIE</label><select id="${mode}_unidad_superficie" class="fsel">${option("m2", p.unidad_superficie || "m2")}${option("ha", p.unidad_superficie || "m2")}</select></div>
- <div class="fg"><label>FRENTE</label><input id="${mode}_frente" class="fi2" type="number" value="${esc(v("frente"))}"></div><div class="fg"><label>FONDO</label><input id="${mode}_fondo" class="fi2" type="number" value="${esc(v("fondo"))}"></div>
- <div class="fg"><label>PRECIO ACTUAL <span>*</span></label><input id="${mode}_precio" class="fi2" type="number" value="${esc(p.precio_actual ?? p.precio ?? "")}"></div><div class="fg"><label>PRECIO DE MERCADO</label><input id="${mode}_precio_mercado" class="fi2" type="number" value="${esc(v("precio_mercado"))}"></div>
- <div class="fg"><label>PRECIO ESPERADO</label><input id="${mode}_precio_esperado" class="fi2" type="number" value="${esc(v("precio_esperado"))}"></div><div class="fg"><label>UNIDAD PRECIO</label><select id="${mode}_unidad_precio" class="fsel">${option("m2", p.unidad_precio || "m2")}${option("total", p.unidad_precio || "m2")}${option("ha", p.unidad_precio || "m2")}</select></div>
- <div class="fg"><label>MONEDA</label><select id="${mode}_moneda" class="fsel">${option("MXN", p.moneda || "MXN")}${option("USD", p.moneda || "MXN")}</select></div><div class="fg"><label>RENDIMIENTO (%)</label><input id="${mode}_rendimiento" class="fi2" type="number" step="0.01" value="${esc(v("rendimiento"))}"></div>
- <div class="fg"><label>ESTATUS LEGAL</label><input id="${mode}_estatus_legal" class="fi2" value="${esc(p.estatus_legal || "Sin revisar")}"></div><div class="fg"><label>ESTADO</label><select id="${mode}_estado" class="fsel">${option("activa", p.estado || "activa")}${option("inactiva", p.estado || "activa")}</select></div>
- <div class="fg"><label class="checkline"><input id="${mode}_destacada" type="checkbox" ${p.destacada ? "checked" : ""}> DESTACADA</label></div><div class="fg"><label class="checkline"><input id="${mode}_certeza_legal" type="checkbox" ${p.certeza_legal ? "checked" : ""}> CERTEZA LEGAL</label></div>
- ${house ? `<div class="fg gfull"><div class="template-title">🏠 DATOS DE LA CASA</div></div><div class="fg"><label>CONSTRUCCIÓN (m²)</label><input id="${mode}_construccion_m2" class="fi2" type="number" value="${esc(p.construccion_m2 ?? "")}"></div><div class="fg"><label>RECÁMARAS</label><input id="${mode}_recamaras" class="fi2" type="number" value="${esc(d.recamaras ?? "")}"></div><div class="fg"><label>BAÑOS</label><input id="${mode}_banos" class="fi2" type="number" step="0.5" value="${esc(d.banos ?? "")}"></div><div class="fg"><label>ESTACIONAMIENTOS</label><input id="${mode}_estacionamientos" class="fi2" type="number" value="${esc(d.estacionamientos ?? "")}"></div><div class="fg"><label>PLANTAS</label><input id="${mode}_plantas" class="fi2" type="number" value="${esc(d.plantas ?? "")}"></div>` : `<div class="fg gfull"><div class="template-title">🌿 DATOS DEL TERRENO</div></div>`}
- <div class="fg gfull"><label>DESCRIPCIÓN</label><textarea id="${mode}_descripcion" class="fta">${esc(p.descripcion || "")}</textarea></div><div class="fg gfull"><label>DESCRIPCIÓN PROFESIONAL</label><textarea id="${mode}_descripcion_pro" class="fta">${esc(p.descripcion_pro || "")}</textarea></div>
- <div class="fg gfull"><label>CARACTERÍSTICAS (JSON o texto)</label><textarea id="${mode}_caracteristicas" class="fta">${esc(typeof p.caracteristicas === "string" ? p.caracteristicas : JSON.stringify(p.caracteristicas || {}))}</textarea></div><div class="fg gfull"><label>SERVICIOS CERCANOS (JSON o texto)</label><textarea id="${mode}_servicios_cercanos" class="fta">${esc(typeof p.servicios_cercanos === "string" ? p.servicios_cercanos : JSON.stringify(p.servicios_cercanos || {}))}</textarea></div>
- <div class="fg"><label>CONTACTO NOMBRE</label><input id="${mode}_contacto_nombre" class="fi2" value="${esc(p.contacto_nombre || "")}"></div><div class="fg"><label>CONTACTO TELÉFONO</label><input id="${mode}_contacto_telefono" class="fi2" value="${esc(p.contacto_telefono || "")}"></div><div class="fg"><label>WHATSAPP</label><input id="${mode}_contacto_whatsapp" class="fi2" value="${esc(p.contacto_whatsapp || "")}"></div><div class="fg"><label>CONTACTO EMAIL</label><input id="${mode}_contacto_email" class="fi2" value="${esc(p.contacto_email || "")}"></div>
- <div class="fg"><label>DUEÑO</label><input id="${mode}_dueno_nombre" class="fi2" value="${esc(p.dueno_nombre || "")}"></div><div class="fg"><label>TELÉFONO DUEÑO</label><input id="${mode}_dueno_telefono" class="fi2" value="${esc(p.dueno_telefono || "")}"></div><div class="fg"><label>EMAIL DUEÑO</label><input id="${mode}_dueno_email" class="fi2" value="${esc(p.dueno_email || "")}"></div>
- <div class="fg"><label>TOUR 360</label><input id="${mode}_tour_360" class="fi2" value="${esc(p.tour_360 || "")}"></div><div class="fg"><label>PAQUETE</label><input id="${mode}_paquete" class="fi2" value="${esc(p.paquete || "basico")}"></div><div class="fg"><label>PRECIO SESIÓN</label><input id="${mode}_precio_sesion" class="fi2" type="number" value="${esc(p.precio_sesion ?? 0)}"></div><div class="fg"><label>FECHA SESIÓN</label><input id="${mode}_sesion_fecha" class="fi2" type="date" value="${esc(p.sesion_fecha || "")}"></div><div class="fg"><label>COMISIÓN (%)</label><input id="${mode}_comision_porcentaje" class="fi2" type="number" value="${esc(p.comision_porcentaje ?? 5)}"></div><div class="fg"><label class="checkline"><input id="${mode}_sesion_pagada" type="checkbox" ${p.sesion_pagada ? "checked" : ""}> SESIÓN PAGADA</label></div>
- <div class="fg gfull"><div class="ups"><div class="upt">FOTOGRAFÍAS</div><div class="dz" id="${mode}_dropImages"><input type="file" multiple accept="image/*" id="${mode}_images"><div class="dzi">📷</div><div class="dzl">Arrastra imágenes o <strong>selecciona archivos</strong></div></div><div class="pgrid" id="${mode}_imageGrid"></div></div></div>
- <div class="fg gfull"><div class="ups"><div class="upt">DOCUMENTOS / ARCHIVOS</div><div class="dz" id="${mode}_dropFiles"><input type="file" multiple id="${mode}_files"><div class="dzi">📎</div><div class="dzl">Arrastra archivos o <strong>selecciona archivos</strong></div></div><div class="fl2" id="${mode}_fileList"></div></div></div>
- <div class="fg gfull"><div class="ups"><div class="upt">ENLACES</div><div class="lar"><input id="${mode}_linkInput" class="fi2" placeholder="https://..."><button type="button" class="labtn" onclick="addLink('${mode}')">+ Agregar</button></div><div id="${mode}_linkList"></div></div></div></div>`;
-}
 
+  const v = (key) =>
+    p[key] ?? "";
+
+  const latitud =
+    Number.isFinite(Number(p.latitud))
+      ? Number(p.latitud)
+      : null;
+
+  const longitud =
+    Number.isFinite(Number(p.longitud))
+      ? Number(p.longitud)
+      : null;
+
+  return `
+    <div class="template-banner">
+      <strong>PLANTILLA:</strong>
+
+      <span>
+        ${
+          house
+            ? "🏠 TERRENO CON CASA"
+            : "🌿 SOLO TERRENO"
+        }
+      </span>
+
+      <small>
+        Los datos existentes se cargan automáticamente.
+      </small>
+    </div>
+
+    <div class="g2">
+
+      <div class="fg gfull">
+        <label>
+          TÍTULO <span>*</span>
+        </label>
+
+        <input
+          id="${mode}_titulo"
+          class="fi2"
+          value="${esc(
+            v("titulo") ||
+            p.title ||
+            ""
+          )}"
+        >
+      </div>
+
+      <div class="fg">
+        <label>
+          TIPO <span>*</span>
+        </label>
+
+        <select
+          id="${mode}_tipo"
+          class="fsel"
+        >
+          ${[
+            "terreno",
+            "casa",
+            "hacienda",
+            "rancho",
+            "departamento",
+            "local comercial",
+            "oficina",
+            "bodega",
+            "industrial",
+            "otro",
+          ]
+            .map((x) =>
+              option(x, tipo)
+            )
+            .join("")}
+        </select>
+      </div>
+
+      <div class="fg">
+        <label>
+          MUNICIPIO / CIUDAD <span>*</span>
+        </label>
+
+        <input
+          id="${mode}_municipio"
+          class="fi2"
+          value="${esc(
+            v("municipio")
+          )}"
+        >
+      </div>
+
+      <!-- =====================================================
+           UBICACIÓN EN MAPA
+           ===================================================== -->
+
+      <div class="fg gfull">
+
+        <label>
+          UBICACIÓN DE LA PROPIEDAD
+        </label>
+
+        <div class="property-location-help">
+          Toca el mapa para colocar el punto exacto.
+          También puedes arrastrar el marcador.
+        </div>
+
+        <div class="property-location-map">
+          <div
+            id="${mode}_adminPropertyMap"
+          ></div>
+        </div>
+
+        <input
+          type="hidden"
+          id="${mode}_latitud"
+          value="${
+            latitud !== null
+              ? latitud
+              : ""
+          }"
+        >
+
+        <input
+          type="hidden"
+          id="${mode}_longitud"
+          value="${
+            longitud !== null
+              ? longitud
+              : ""
+          }"
+        >
+
+        <div
+          id="${mode}_adminPropertyCoordinates"
+          class="property-location-coordinates"
+        >
+          ${
+            latitud !== null &&
+            longitud !== null
+              ? `Coordenadas: ${latitud.toFixed(
+                  6
+                )}, ${longitud.toFixed(
+                  6
+                )}`
+              : "Sin ubicación seleccionada"
+          }
+        </div>
+
+      </div>
+
+      <div class="fg">
+        <label>DIRECCIÓN</label>
+
+        <input
+          id="${mode}_direccion"
+          class="fi2"
+          value="${esc(
+            v("direccion")
+          )}"
+        >
+      </div>
+
+      <div class="fg">
+        <label>SUPERFICIE</label>
+
+        <input
+          id="${mode}_superficie"
+          class="fi2"
+          type="number"
+          value="${esc(
+            v("superficie")
+          )}"
+        >
+      </div>
+
+      <div class="fg">
+        <label>UNIDAD SUPERFICIE</label>
+
+        <select
+          id="${mode}_unidad_superficie"
+          class="fsel"
+        >
+          ${option(
+            "m2",
+            p.unidad_superficie || "m2"
+          )}
+
+          ${option(
+            "ha",
+            p.unidad_superficie || "m2"
+          )}
+        </select>
+      </div>
+
+      <div class="fg">
+        <label>FRENTE</label>
+
+        <input
+          id="${mode}_frente"
+          class="fi2"
+          type="number"
+          value="${esc(
+            v("frente")
+          )}"
+        >
+      </div>
+
+      <div class="fg">
+        <label>FONDO</label>
+
+        <input
+          id="${mode}_fondo"
+          class="fi2"
+          type="number"
+          value="${esc(
+            v("fondo")
+          )}"
+        >
+      </div>
+
+      <div class="fg">
+        <label>
+          PRECIO ACTUAL <span>*</span>
+        </label>
+
+        <input
+          id="${mode}_precio"
+          class="fi2"
+          type="number"
+          value="${esc(
+            p.precio_actual ??
+            p.precio ??
+            ""
+          )}"
+        >
+      </div>
+
+      <div class="fg">
+        <label>
+          PRECIO DE MERCADO
+        </label>
+
+        <input
+          id="${mode}_precio_mercado"
+          class="fi2"
+          type="number"
+          value="${esc(
+            v("precio_mercado")
+          )}"
+        >
+      </div>
+
+      <div class="fg">
+        <label>
+          PRECIO ESPERADO
+        </label>
+
+        <input
+          id="${mode}_precio_esperado"
+          class="fi2"
+          type="number"
+          value="${esc(
+            v("precio_esperado")
+          )}"
+        >
+      </div>
+
+      <div class="fg">
+        <label>
+          UNIDAD PRECIO
+        </label>
+
+        <select
+          id="${mode}_unidad_precio"
+          class="fsel"
+        >
+          ${option(
+            "m2",
+            p.unidad_precio || "m2"
+          )}
+
+          ${option(
+            "total",
+            p.unidad_precio || "m2"
+          )}
+
+          ${option(
+            "ha",
+            p.unidad_precio || "m2"
+          )}
+        </select>
+      </div>
+
+      <div class="fg">
+        <label>MONEDA</label>
+
+        <select
+          id="${mode}_moneda"
+          class="fsel"
+        >
+          ${option(
+            "MXN",
+            p.moneda || "MXN"
+          )}
+
+          ${option(
+            "USD",
+            p.moneda || "MXN"
+          )}
+        </select>
+      </div>
+
+      <div class="fg">
+        <label>
+          RENDIMIENTO (%)
+        </label>
+
+        <input
+          id="${mode}_rendimiento"
+          class="fi2"
+          type="number"
+          step="0.01"
+          value="${esc(
+            v("rendimiento")
+          )}"
+        >
+      </div>
+
+      <div class="fg">
+        <label>
+          ESTATUS LEGAL
+        </label>
+
+        <input
+          id="${mode}_estatus_legal"
+          class="fi2"
+          value="${esc(
+            p.estatus_legal ||
+            "Sin revisar"
+          )}"
+        >
+      </div>
+
+      <div class="fg">
+        <label>ESTADO</label>
+
+        <select
+          id="${mode}_estado"
+          class="fsel"
+        >
+          ${option(
+            "activa",
+            p.estado || "activa"
+          )}
+
+          ${option(
+            "inactiva",
+            p.estado || "activa"
+          )}
+        </select>
+      </div>
+
+      <div class="fg">
+        <label class="checkline">
+          <input
+            id="${mode}_destacada"
+            type="checkbox"
+            ${
+              p.destacada
+                ? "checked"
+                : ""
+            }
+          >
+
+          DESTACADA
+        </label>
+      </div>
+
+      <div class="fg">
+        <label class="checkline">
+          <input
+            id="${mode}_certeza_legal"
+            type="checkbox"
+            ${
+              p.certeza_legal
+                ? "checked"
+                : ""
+            }
+          >
+
+          CERTEZA LEGAL
+        </label>
+      </div>
+
+      ${
+        house
+          ? `
+            <div class="fg gfull">
+              <div class="template-title">
+                🏠 DATOS DE LA CASA
+              </div>
+            </div>
+
+            <div class="fg">
+              <label>
+                CONSTRUCCIÓN (m²)
+              </label>
+
+              <input
+                id="${mode}_construccion_m2"
+                class="fi2"
+                type="number"
+                value="${esc(
+                  p.construccion_m2 ??
+                  ""
+                )}"
+              >
+            </div>
+
+            <div class="fg">
+              <label>RECÁMARAS</label>
+
+              <input
+                id="${mode}_recamaras"
+                class="fi2"
+                type="number"
+                value="${esc(
+                  d.recamaras ??
+                  ""
+                )}"
+              >
+            </div>
+
+            <div class="fg">
+              <label>BAÑOS</label>
+
+              <input
+                id="${mode}_banos"
+                class="fi2"
+                type="number"
+                step="0.5"
+                value="${esc(
+                  d.banos ??
+                  ""
+                )}"
+              >
+            </div>
+
+            <div class="fg">
+              <label>
+                ESTACIONAMIENTOS
+              </label>
+
+              <input
+                id="${mode}_estacionamientos"
+                class="fi2"
+                type="number"
+                value="${esc(
+                  d.estacionamientos ??
+                  ""
+                )}"
+              >
+            </div>
+
+            <div class="fg">
+              <label>PLANTAS</label>
+
+              <input
+                id="${mode}_plantas"
+                class="fi2"
+                type="number"
+                value="${esc(
+                  d.plantas ??
+                  ""
+                )}"
+              >
+            </div>
+          `
+          : `
+            <div class="fg gfull">
+              <div class="template-title">
+                🌿 DATOS DEL TERRENO
+              </div>
+            </div>
+          `
+      }
+
+      <div class="fg gfull">
+        <label>DESCRIPCIÓN</label>
+
+        <textarea
+          id="${mode}_descripcion"
+          class="fta"
+        >${esc(
+          p.descripcion || ""
+        )}</textarea>
+      </div>
+
+      <div class="fg gfull">
+        <label>
+          DESCRIPCIÓN PROFESIONAL
+        </label>
+
+        <textarea
+          id="${mode}_descripcion_pro"
+          class="fta"
+        >${esc(
+          p.descripcion_pro || ""
+        )}</textarea>
+      </div>
+
+      <div class="fg gfull">
+        <label>
+          CARACTERÍSTICAS (JSON o texto)
+        </label>
+
+        <textarea
+          id="${mode}_caracteristicas"
+          class="fta"
+        >${esc(
+          typeof p.caracteristicas === "string"
+            ? p.caracteristicas
+            : JSON.stringify(
+                p.caracteristicas || {}
+              )
+        )}</textarea>
+      </div>
+
+      <div class="fg gfull">
+        <label>
+          SERVICIOS CERCANOS (JSON o texto)
+        </label>
+
+        <textarea
+          id="${mode}_servicios_cercanos"
+          class="fta"
+        >${esc(
+          typeof p.servicios_cercanos === "string"
+            ? p.servicios_cercanos
+            : JSON.stringify(
+                p.servicios_cercanos || {}
+              )
+        )}</textarea>
+      </div>
+
+      <div class="fg">
+        <label>CONTACTO NOMBRE</label>
+
+        <input
+          id="${mode}_contacto_nombre"
+          class="fi2"
+          value="${esc(
+            p.contacto_nombre || ""
+          )}"
+        >
+      </div>
+
+      <div class="fg">
+        <label>
+          CONTACTO TELÉFONO
+        </label>
+
+        <input
+          id="${mode}_contacto_telefono"
+          class="fi2"
+          value="${esc(
+            p.contacto_telefono || ""
+          )}"
+        >
+      </div>
+
+      <div class="fg">
+        <label>WHATSAPP</label>
+
+        <input
+          id="${mode}_contacto_whatsapp"
+          class="fi2"
+          value="${esc(
+            p.contacto_whatsapp || ""
+          )}"
+        >
+      </div>
+
+      <div class="fg">
+        <label>CONTACTO EMAIL</label>
+
+        <input
+          id="${mode}_contacto_email"
+          class="fi2"
+          value="${esc(
+            p.contacto_email || ""
+          )}"
+        >
+      </div>
+
+      <div class="fg">
+        <label>DUEÑO</label>
+
+        <input
+          id="${mode}_dueno_nombre"
+          class="fi2"
+          value="${esc(
+            p.dueno_nombre || ""
+          )}"
+        >
+      </div>
+
+      <div class="fg">
+        <label>
+          TELÉFONO DUEÑO
+        </label>
+
+        <input
+          id="${mode}_dueno_telefono"
+          class="fi2"
+          value="${esc(
+            p.dueno_telefono || ""
+          )}"
+        >
+      </div>
+
+      <div class="fg">
+        <label>EMAIL DUEÑO</label>
+
+        <input
+          id="${mode}_dueno_email"
+          class="fi2"
+          value="${esc(
+            p.dueno_email || ""
+          )}"
+        >
+      </div>
+
+      <div class="fg">
+        <label>TOUR 360</label>
+
+        <input
+          id="${mode}_tour_360"
+          class="fi2"
+          value="${esc(
+            p.tour_360 || ""
+          )}"
+        >
+      </div>
+
+      <div class="fg">
+        <label>PAQUETE</label>
+
+        <input
+          id="${mode}_paquete"
+          class="fi2"
+          value="${esc(
+            p.paquete ||
+            "basico"
+          )}"
+        >
+      </div>
+
+      <div class="fg">
+        <label>
+          PRECIO SESIÓN
+        </label>
+
+        <input
+          id="${mode}_precio_sesion"
+          class="fi2"
+          type="number"
+          value="${esc(
+            p.precio_sesion ??
+            0
+          )}"
+        >
+      </div>
+
+      <div class="fg">
+        <label>
+          FECHA SESIÓN
+        </label>
+
+        <input
+          id="${mode}_sesion_fecha"
+          class="fi2"
+          type="date"
+          value="${esc(
+            p.sesion_fecha ||
+            ""
+          )}"
+        >
+      </div>
+
+      <div class="fg">
+        <label>
+          COMISIÓN (%)
+        </label>
+
+        <input
+          id="${mode}_comision_porcentaje"
+          class="fi2"
+          type="number"
+          value="${esc(
+            p.comision_porcentaje ??
+            5
+          )}"
+        >
+      </div>
+
+      <div class="fg">
+        <label class="checkline">
+          <input
+            id="${mode}_sesion_pagada"
+            type="checkbox"
+            ${
+              p.sesion_pagada
+                ? "checked"
+                : ""
+            }
+          >
+
+          SESIÓN PAGADA
+        </label>
+      </div>
+
+      <div class="fg gfull">
+        <div class="ups">
+          <div class="upt">
+            FOTOGRAFÍAS
+          </div>
+
+          <div
+            class="dz"
+            id="${mode}_dropImages"
+          >
+            <input
+              type="file"
+              multiple
+              accept="image/*"
+              id="${mode}_images"
+            >
+
+            <div class="dzi">📷</div>
+
+            <div class="dzl">
+              Arrastra imágenes o
+              <strong>
+                selecciona archivos
+              </strong>
+            </div>
+          </div>
+
+          <div
+            class="pgrid"
+            id="${mode}_imageGrid"
+          ></div>
+        </div>
+      </div>
+
+      <div class="fg gfull">
+        <div class="ups">
+          <div class="upt">
+            DOCUMENTOS / ARCHIVOS
+          </div>
+
+          <div
+            class="dz"
+            id="${mode}_dropFiles"
+          >
+            <input
+              type="file"
+              multiple
+              id="${mode}_files"
+            >
+
+            <div class="dzi">📎</div>
+
+            <div class="dzl">
+              Arrastra archivos o
+              <strong>
+                selecciona archivos
+              </strong>
+            </div>
+          </div>
+
+          <div
+            class="fl2"
+            id="${mode}_fileList"
+          ></div>
+        </div>
+      </div>
+
+      <div class="fg gfull">
+        <div class="ups">
+
+          <div class="upt">
+            ENLACES
+          </div>
+
+          <div class="lar">
+            <input
+              id="${mode}_linkInput"
+              class="fi2"
+              placeholder="https://..."
+            >
+
+            <button
+              type="button"
+              class="labtn"
+              onclick="addLink('${mode}')"
+            >
+              + Agregar
+            </button>
+          </div>
+
+          <div
+            id="${mode}_linkList"
+          ></div>
+
+        </div>
+      </div>
+
+    </div>
+  `;
+}
 function option(label, current) {
   const selected =
     String(current || "").toLowerCase() === String(label).toLowerCase()
@@ -1864,6 +2990,24 @@ function bindPropertyForm(mode, p) {
   renderImages(mode);
   renderFiles(mode);
   renderLinks(mode);
+   
+  const latitud =
+    Number.isFinite(Number(p?.latitud))
+      ? Number(p.latitud)
+      : null;
+
+  const longitud =
+    Number.isFinite(Number(p?.longitud))
+      ? Number(p.longitud)
+      : null;
+
+  setTimeout(() => {
+    initAdminPropertyMap(
+      latitud,
+      longitud,
+      mode
+    );
+  }, 100);
 }
 
 /* ============================================================
@@ -2366,6 +3510,16 @@ function collectPropertyForm(mode, statusOverride = null) {
     tipo,
 
     municipio: valueOf(`${mode}_municipio`),
+
+        latitud:
+      getAdminPropertyCoordinates(
+        mode
+      ).latitud,
+
+    longitud:
+      getAdminPropertyCoordinates(
+        mode
+      ).longitud,
 
     direccion: valueOf(`${mode}_direccion`) || null,
 
@@ -3750,10 +4904,15 @@ async function initAdmin() {
     }
 
     setupNotifications();
+
     s.channel("admin-live-properties")
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: TABLE_PROPERTIES },
+        {
+          event: "*",
+          schema: "public",
+          table: TABLE_PROPERTIES,
+        },
         async () => {
           await cargarPropiedades();
           await cargarDashboard();
@@ -3761,10 +4920,15 @@ async function initAdmin() {
         },
       )
       .subscribe();
+
     s.channel("admin-live-submissions")
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: TABLE_SUBMISSIONS },
+        {
+          event: "*",
+          schema: "public",
+          table: TABLE_SUBMISSIONS,
+        },
         async () => {
           await cargarPendientes();
           await cargarDashboard();
@@ -3772,42 +4936,26 @@ async function initAdmin() {
       )
       .subscribe();
 
-    /*
-     * Construir formulario nuevo.
-     */
     buildNewForm();
 
-    /*
-     * Cargar propiedades.
-     */
     await cargarPropiedades();
 
-    /*
-     * Cargar pendientes.
-     */
     await cargarPendientes();
 
-    /*
-     * Construir dashboard.
-     */
     await cargarDashboard();
 
-    /*
-     * Dashboard inicial.
-     */
     goTo("dashboard");
 
-    /*
-     * Escuchar cambios
-     * de autenticación.
-     */
     setupAuthListener();
 
     console.log("EYESITE Admin iniciado correctamente.");
   } catch (error) {
     console.error("[initAdmin]", error);
 
-    toast(error?.message || "No se pudo iniciar el panel.");
+    toast(
+      error?.message ||
+      "No se pudo iniciar el panel."
+    );
   }
 }
 
