@@ -2442,7 +2442,44 @@
         color: var(--tx) !important;
       }
     </style>
+    <link
+  rel="stylesheet"
+  href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+     />
+   <style>
+    .property-location-map {
+    width: 100%;
+    height: 320px;
+    border: 1px solid #303030;
+    border-radius: 12px;
+    overflow: hidden;
+    background: #0D0D0D;
+    margin-top: 10px;
+  }
+
+  .property-location-map #adminPropertyMap {
+    width: 100%;
+    height: 100%;
+  }
+
+  .property-location-help {
+    color: #999;
+    font-size: 12px;
+    line-height: 1.5;
+    margin-top: 8px;
+  }
+
+  .property-location-coordinates {
+    color: #C9A84C;
+    font-size: 11px;
+    margin-top: 8px;
+  }
+  </style>
+
   </head>
+  <script
+  src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js">
+</script>
 
   <body>
     <!-- =====================================================

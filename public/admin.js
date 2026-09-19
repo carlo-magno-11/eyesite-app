@@ -44,6 +44,190 @@ let toastTimer = null;
 let confirmCallback = null;
 
 /* ============================================================
+   MAPA DE UBICACIÓN DE PROPIEDAD
+   ============================================================ */
+
+let adminPropertyMap = null;
+let adminPropertyMarker = null;
+
+const ADMIN_DEFAULT_LAT = 20.9674;
+const ADMIN_DEFAULT_LNG = -89.5926;
+
+function initAdminPropertyMap(lat = null, lng = null) {
+  const mapElement = document.getElementById("adminPropertyMap");
+
+  if (!mapElement) {
+    return;
+  }
+
+  const hasCoordinates =
+    Number.isFinite(Number(lat)) &&
+    Number.isFinite(Number(lng));
+
+  const initialLat = hasCoordinates
+    ? Number(lat)
+    : ADMIN_DEFAULT_LAT;
+
+  const initialLng = hasCoordinates
+    ? Number(lng)
+    : ADMIN_DEFAULT_LNG;
+
+  if (adminPropertyMap) {
+    adminPropertyMap.remove();
+
+    adminPropertyMap = null;
+    adminPropertyMarker = null;
+  }
+
+  adminPropertyMap = L.map("adminPropertyMap", {
+    zoomControl: true,
+    attributionControl: true,
+  }).setView(
+    [initialLat, initialLng],
+    hasCoordinates ? 15 : 11
+  );
+
+  L.tileLayer(
+    "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+    {
+      maxZoom: 19,
+      attribution: "&copy; OpenStreetMap contributors",
+    }
+  ).addTo(adminPropertyMap);
+
+  if (hasCoordinates) {
+    setAdminPropertyMarker(
+      initialLat,
+      initialLng,
+      false
+    );
+  }
+
+  adminPropertyMap.on("click", (event) => {
+    setAdminPropertyMarker(
+      event.latlng.lat,
+      event.latlng.lng,
+      true
+    );
+  });
+
+  setTimeout(() => {
+    adminPropertyMap?.invalidateSize();
+  }, 150);
+}
+
+function setAdminPropertyMarker(
+  lat,
+  lng,
+  centerMap = true
+) {
+  lat = Number(lat);
+  lng = Number(lng);
+
+  if (
+    !Number.isFinite(lat) ||
+    !Number.isFinite(lng)
+  ) {
+    return;
+  }
+
+  if (!adminPropertyMap) {
+    return;
+  }
+
+  if (adminPropertyMarker) {
+    adminPropertyMarker.setLatLng([lat, lng]);
+  } else {
+    adminPropertyMarker = L.marker(
+      [lat, lng],
+      {
+        draggable: true,
+      }
+    ).addTo(adminPropertyMap);
+
+    adminPropertyMarker.on(
+      "dragend",
+      (event) => {
+        const position =
+          event.target.getLatLng();
+
+        updateAdminPropertyCoordinates(
+          position.lat,
+          position.lng
+        );
+      }
+    );
+  }
+
+  updateAdminPropertyCoordinates(
+    lat,
+    lng
+  );
+
+  if (centerMap) {
+    adminPropertyMap.setView(
+      [lat, lng],
+      15
+    );
+  }
+}
+
+function updateAdminPropertyCoordinates(
+  lat,
+  lng
+) {
+  const latInput =
+    document.getElementById("prop_latitud");
+
+  const lngInput =
+    document.getElementById("prop_longitud");
+
+  if (latInput) {
+    latInput.value =
+      Number(lat).toFixed(8);
+  }
+
+  if (lngInput) {
+    lngInput.value =
+      Number(lng).toFixed(8);
+  }
+
+  const coordinates =
+    document.getElementById(
+      "adminPropertyCoordinates"
+    );
+
+  if (coordinates) {
+    coordinates.textContent =
+      `Coordenadas: ${Number(lat).toFixed(6)}, ${Number(lng).toFixed(6)}`;
+  }
+}
+
+function getAdminPropertyCoordinates() {
+  const lat = Number(
+    document.getElementById(
+      "prop_latitud"
+    )?.value
+  );
+
+  const lng = Number(
+    document.getElementById(
+      "prop_longitud"
+    )?.value
+  );
+
+  return {
+    latitud: Number.isFinite(lat)
+      ? lat
+      : null,
+
+    longitud: Number.isFinite(lng)
+      ? lng
+      : null,
+  };
+}
+
+/* ============================================================
    UTILIDADES
    ============================================================ */
 
@@ -567,7 +751,7 @@ function goTo(section) {
     const marker = document.getElementById("newFormReady");
 
     if (!marker) {
-      buildNewForm();
+      buildNewForm();    
     }
   }
 }
@@ -1605,6 +1789,7 @@ function propertyFormHTML(p = {}, mode = "new") {
  <div class="fg gfull"><label>TÍTULO <span>*</span></label><input id="${mode}_titulo" class="fi2" value="${esc(v("titulo") || p.title || "")}"></div>
  <div class="fg"><label>TIPO <span>*</span></label><select id="${mode}_tipo" class="fsel">${["terreno", "casa", "hacienda", "rancho", "departamento", "local comercial", "oficina", "bodega", "industrial", "otro"].map((x) => option(x, tipo)).join("")}</select></div>
  <div class="fg"><label>MUNICIPIO / CIUDAD <span>*</span></label><input id="${mode}_municipio" class="fi2" value="${esc(v("municipio"))}"></div>
+ <div class="fg"><label class="fl">Ubicación de la propiedad</label><div class="property-location-help">Toca el mapa para colocar el punto exacto de la propiedad.También puedes arrastrar el marcador para corregirlo.</div><div class="property-location-map"><div id="adminPropertyMap"></div></div><inputtype="hidden"id="prop_latitud"value=""><inputtype="hidden"id="prop_longitud"value=""><divid="adminPropertyCoordinates"class="property-location-coordinates">Sin ubicación seleccionada</div></div>setTimeout(() => {initAdminPropertyMap();}, 100);
  <div class="fg"><label>DIRECCIÓN</label><input id="${mode}_direccion" class="fi2" value="${esc(v("direccion"))}"></div>
  <div class="fg"><label>SUPERFICIE</label><input id="${mode}_superficie" class="fi2" type="number" value="${esc(v("superficie"))}"></div>
  <div class="fg"><label>UNIDAD SUPERFICIE</label><select id="${mode}_unidad_superficie" class="fsel">${option("m2", p.unidad_superficie || "m2")}${option("ha", p.unidad_superficie || "m2")}</select></div>
@@ -2259,28 +2444,156 @@ function collectPropertyForm(mode, statusOverride = null) {
 }
 
 function validateProperty(data) {
-  if (!data.titulo) {
+  const estado = String(data.estado || "activa")
+    .trim()
+    .toLowerCase();
+
+  /*
+   * Una propiedad INACTIVA puede guardarse como borrador
+   * para que el administrador la termine después.
+   *
+   * La validación completa solamente bloquea PUBLICAR / ACTIVAR.
+   */
+  if (estado !== "activa") {
+    return true;
+  }
+
+  /* ==========================================================
+     CAMPOS OBLIGATORIOS PARA PUBLICAR
+     ========================================================== */
+
+  if (!data.titulo || !data.titulo.trim()) {
     toast("El título es obligatorio.");
-
     return false;
   }
 
-  if (!data.tipo) {
+  if (!data.tipo || !data.tipo.trim()) {
     toast("Selecciona el tipo de propiedad.");
-
     return false;
   }
 
-  if (!data.municipio) {
+  if (!data.municipio || !data.municipio.trim()) {
     toast("Indica el municipio o ciudad.");
-
     return false;
   }
 
-  if (data.precio_actual === null || Number.isNaN(data.precio_actual)) {
-    toast("Indica el precio.");
-
+  if (
+    data.superficie === null ||
+    !Number.isFinite(Number(data.superficie)) ||
+    Number(data.superficie) <= 0
+  ) {
+    toast("La superficie debe ser mayor que 0.");
     return false;
+  }
+
+  if (
+    data.precio_actual === null ||
+    !Number.isFinite(Number(data.precio_actual)) ||
+    Number(data.precio_actual) <= 0
+  ) {
+    toast("El precio actual debe ser mayor que 0.");
+    return false;
+  }
+
+  if (!data.descripcion || !data.descripcion.trim()) {
+    toast("La descripción es obligatoria para publicar.");
+    return false;
+  }
+
+  const legal = String(data.estatus_legal || "")
+    .trim()
+    .toLowerCase();
+
+  if (!legal || legal === "sin revisar") {
+    toast("Debes indicar el estatus legal antes de publicar.");
+    return false;
+  }
+
+  /* ==========================================================
+     FOTO PRINCIPAL / PORTADA
+     La primera imagen se utiliza como portada.
+     ========================================================== */
+
+  const imagenesDisponibles =
+    propiedadEditando
+      ? editImagenes
+      : nuevasImagenes;
+
+  const tieneImagen = Array.isArray(imagenesDisponibles)
+    ? imagenesDisponibles.some((item) => {
+        if (!item) {
+          return false;
+        }
+
+        if (typeof item === "string") {
+          return item.trim() !== "";
+        }
+
+        return Boolean(
+          item.file ||
+          item.url ||
+          item.publicUrl
+        );
+      })
+    : false;
+
+  if (!tieneImagen) {
+    toast("Debes agregar al menos una fotografía. La primera será la portada.");
+    return false;
+  }
+
+  /* ==========================================================
+     VALIDACIÓN ESPECIAL PARA CASA
+     No se exige para terrenos.
+     ========================================================== */
+
+  const tipo = String(data.tipo || "")
+    .trim()
+    .toLowerCase();
+
+  const esCasa =
+    tipo.includes("casa") ||
+    tipo.includes("hacienda") ||
+    tipo.includes("rancho") ||
+    tipo.includes("departamento") ||
+    tipo.includes("villa");
+
+  if (esCasa) {
+    const detalles =
+      data.detalles &&
+      typeof data.detalles === "object"
+        ? data.detalles
+        : {};
+
+    const construccion = Number(data.construccion_m2);
+
+    if (
+      !Number.isFinite(construccion) ||
+      construccion <= 0
+    ) {
+      toast("En una propiedad con casa, la construcción debe ser mayor que 0 m².");
+      return false;
+    }
+
+    const recamaras = Number(detalles.recamaras);
+
+    if (
+      !Number.isFinite(recamaras) ||
+      recamaras < 1
+    ) {
+      toast("En una propiedad con casa debes indicar las recámaras.");
+      return false;
+    }
+
+    const banos = Number(detalles.banos);
+
+    if (
+      !Number.isFinite(banos) ||
+      banos < 1
+    ) {
+      toast("En una propiedad con casa debes indicar los baños.");
+      return false;
+    }
   }
 
   return true;
