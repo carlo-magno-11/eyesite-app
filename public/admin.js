@@ -4564,6 +4564,9 @@ function renderUsuarios() {
 
         <td class="p">
           ${esc(email)}
+          <div class="user-verification ${usuario.email_confirmed_at ? "verified" : "unverified"}">
+            ${esc(verificacion)}
+          </div>
         </td>
 
         <td>
