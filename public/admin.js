@@ -4712,12 +4712,90 @@ async function suspenderUsuario(id) {
    NOTIFICACIONES Y ANUNCIOS
    ============================================================ */
 
+function actualizarTemporizadorComunicacion() {
+  const el = document.getElementById("nt_timer");
+  const when = valueOf("nt_programada");
+  if (!el) return;
+  if (!when) {
+    el.textContent = "Envío inmediato";
+    return;
+  }
+  const target = new Date(when).getTime();
+  const diff = target - Date.now();
+  if (diff <= 0) {
+    el.textContent = "Se enviará/publicará al procesar el próximo ciclo.";
+    return;
+  }
+  const total = Math.floor(diff / 1000);
+  const d = Math.floor(total / 86400);
+  const h = Math.floor((total % 86400) / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const sec = total % 60;
+  el.textContent = `Programado en ${d ? d + "d " : ""}${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}:${String(sec).padStart(2,"0")}`;
+}
+
+function anuncioStoragePaths(anuncio) {
+  const urls = [
+    anuncio?.imagen_url,
+    ...(Array.isArray(anuncio?.imagenes) ? anuncio.imagenes : []),
+  ].filter(Boolean);
+  return [...new Set(urls.map((url) => {
+    try {
+      const marker = "/storage/v1/object/public/eyesite-media/";
+      const i = String(url).indexOf(marker);
+      return i >= 0 ? String(url).slice(i + marker.length) : null;
+    } catch (_) {
+      return null;
+    }
+  }).filter(Boolean))];
+}
+
+async function eliminarNotificacionAdmin(id) {
+  if (!confirm("¿Eliminar esta notificación? Esta acción no se puede deshacer.")) return;
+  try {
+    const { error } = await s.rpc("admin_delete_notification", { p_notification_id: id });
+    if (error) throw error;
+    toast("Notificación eliminada.");
+    await cargarNotificacionesAdmin();
+  } catch (e) {
+    console.error("[eliminar notificación]", e);
+    toast(e?.message || "No se pudo eliminar la notificación.");
+  }
+}
+
+async function eliminarAnuncioAdmin(id) {
+  if (!confirm("¿Eliminar este anuncio y sus imágenes? Esta acción no se puede deshacer.")) return;
+  try {
+    const { data: anuncio, error: readError } = await s
+      .from("anuncios")
+      .select("id,imagen_url,imagenes")
+      .eq("id", id)
+      .maybeSingle();
+    if (readError) throw readError;
+
+    const paths = anuncioStoragePaths(anuncio);
+    if (paths.length) {
+      const { error: storageError } = await s.storage.from(BUCKET_IMAGES).remove(paths);
+      if (storageError) throw storageError;
+    }
+
+    const { error } = await s.rpc("admin_delete_announcement", { p_announcement_id: id });
+    if (error) throw error;
+
+    toast("Anuncio eliminado.");
+    await cargarAnunciosAdmin();
+  } catch (e) {
+    console.error("[eliminar anuncio]", e);
+    toast(e?.message || "No se pudo eliminar el anuncio.");
+  }
+}
+
 async function cargarNotificacionesAdmin() {
   const { data, error } = await s
     .from("notificaciones")
-    .select("*")
+    .select("id,user_id,titulo,mensaje,tipo,leida,created_at,programada_para,estado_envio,sent_at,push_sent_at,push_error")
     .order("created_at", { ascending: false })
-    .limit(50);
+    .limit(100);
 
   if (error) {
     console.error("[notificaciones]", error);
@@ -4733,19 +4811,23 @@ async function cargarNotificacionesAdmin() {
           <td class="p">${esc(n.titulo)}</td>
           <td>${esc(n.tipo || "info")}</td>
           <td>${n.user_id ? esc(n.user_id) : "TODOS"}</td>
+          <td>${n.programada_para && new Date(n.programada_para).getTime() > Date.now() ? "PROGRAMADA" : esc(n.estado_envio || "sent")}</td>
+          <td>${n.programada_para ? dateTimeMX(n.programada_para) : "-"}</td>
+          <td>${n.push_sent_at ? "PUSH ✓" : (n.push_error ? "PUSH ERROR" : "-")}</td>
           <td>${esc(n.mensaje)}</td>
+          <td><button class="bs" onclick="eliminarNotificacionAdmin('${esc(n.id)}')">Eliminar</button></td>
         </tr>`
-      ).join("") || '<tr><td colspan="5">No hay notificaciones.</td></tr>';
+      ).join("") || '<tr><td colspan="9">No hay notificaciones.</td></tr>';
   }
 }
 
 async function cargarAnunciosAdmin() {
   const { data, error } = await s
     .from("anuncios")
-    .select("id,titulo,mensaje,tipo,activa,published_at,created_at,imagen_url,imagenes,enlace,enlace_label,fecha_expiracion,prioridad")
+    .select("id,titulo,mensaje,tipo,activa,published_at,created_at,imagen_url,imagenes,enlace,enlace_label,fecha_expiracion,prioridad,programada_para,estado_publicacion,push_sent_at,push_error")
     .order("prioridad", { ascending: false })
-    .order("published_at", { ascending: false })
-    .limit(50);
+    .order("programada_para", { ascending: false })
+    .limit(100);
 
   if (error) {
     console.error("[anuncios]", error);
@@ -4757,22 +4839,22 @@ async function cargarAnunciosAdmin() {
     b.innerHTML =
       (data || []).map((a) =>
         `<tr>
-          <td>${dateTimeMX(a.published_at || a.created_at)}</td>
+          <td>${dateTimeMX(a.programada_para || a.published_at || a.created_at)}</td>
           <td>
             ${a.imagen_url ? `<img src="${esc(a.imagen_url)}" alt="" style="width:64px;height:42px;object-fit:cover;border-radius:7px;border:1px solid var(--so2);display:block;margin-bottom:5px">` : ""}
             <span class="p">${esc(a.titulo)}</span>
           </td>
           <td>${esc(a.tipo)}</td>
           <td>${a.prioridad ?? 0}</td>
+          <td>${a.estado_publicacion === "pendiente" ? "PROGRAMADO" : (a.activa ? "ACTIVO" : "INACTIVO")}</td>
           <td>${a.fecha_expiracion ? dateTimeMX(a.fecha_expiracion) : "Sin caducidad"}</td>
-          <td>${a.activa ? "ACTIVO" : "INACTIVO"}</td>
+          <td>${a.push_sent_at ? "PUSH ✓" : (a.push_error ? "PUSH ERROR" : "-")}</td>
           <td>
-            <button class="bs" onclick="cambiarEstadoAnuncio('${esc(a.id)}', ${!a.activa})">
-              ${a.activa ? "Desactivar" : "Activar"}
-            </button>
+            <button class="bs" onclick="cambiarEstadoAnuncio('${esc(a.id)}', ${!a.activa})">${a.activa ? "Desactivar" : "Activar"}</button>
+            <button class="bs" onclick="eliminarAnuncioAdmin('${esc(a.id)}')">Eliminar</button>
           </td>
         </tr>`
-      ).join("") || '<tr><td colspan="7">No hay anuncios.</td></tr>';
+      ).join("") || '<tr><td colspan="8">No hay anuncios.</td></tr>';
   }
 }
 
@@ -4787,6 +4869,7 @@ async function enviarComunicacionAdmin() {
   const enlaceLabel = valueOf("nt_enlace_label").trim() || "VER MÁS";
   const prioridad = Number(valueOf("nt_prioridad") || 0);
   const expira = valueOf("nt_expira").trim();
+  const programada = valueOf("nt_programada").trim();
   const coverInput = document.getElementById("nt_imagen");
   const galleryInput = document.getElementById("nt_imagenes");
 
@@ -4794,9 +4877,18 @@ async function enviarComunicacionAdmin() {
     toast("Título y mensaje son obligatorios.");
     return;
   }
-
   if (modo === "notification" && destino === "one" && !userId) {
     toast("Indica el UUID del usuario.");
+    return;
+  }
+
+  const scheduledAt = programada ? new Date(programada) : new Date();
+  if (Number.isNaN(scheduledAt.getTime())) {
+    toast("La fecha programada no es válida.");
+    return;
+  }
+  if (scheduledAt.getTime() < Date.now() - 5000) {
+    toast("La fecha programada ya pasó.");
     return;
   }
 
@@ -4805,69 +4897,58 @@ async function enviarComunicacionAdmin() {
       const announcementId = crypto.randomUUID();
       const cover = coverInput?.files?.[0] || null;
       const gallery = galleryInput?.files ? [...galleryInput.files] : [];
-      const uploaded = [];
+      const uploadedPaths = [];
 
       if (cover) {
-        const item = await uploadFile(
-          BUCKET_IMAGES,
-          cover,
-          `announcements/${announcementId}`,
-        );
-        uploaded.push(item.path);
+        const item = await uploadFile(BUCKET_IMAGES, cover, `announcements/${announcementId}`);
+        uploadedPaths.push(item.path);
       }
-
       for (const file of gallery) {
-        const item = await uploadFile(
-          BUCKET_IMAGES,
-          file,
-          `announcements/${announcementId}`,
-        );
-        uploaded.push(item);
+        const item = await uploadFile(BUCKET_IMAGES, file, `announcements/${announcementId}`);
+        uploadedPaths.push(item.path);
       }
 
-      const imagenes = uploaded
-        .map((item) => typeof item === "string" ? s.storage.from(BUCKET_IMAGES).getPublicUrl(item).data?.publicUrl : item?.url)
+      const imagenes = uploadedPaths
+        .map((path) => s.storage.from(BUCKET_IMAGES).getPublicUrl(path).data?.publicUrl)
         .filter(Boolean);
 
+      const isScheduled = scheduledAt.getTime() > Date.now() + 5000;
       const { error } = await s.from("anuncios").insert({
         id: announcementId,
         titulo,
         mensaje,
         tipo,
-        activa: true,
-        published_at: new Date().toISOString(),
+        activa: !isScheduled,
+        published_at: isScheduled ? scheduledAt.toISOString() : new Date().toISOString(),
+        programada_para: scheduledAt.toISOString(),
+        publicada_en: isScheduled ? null : new Date().toISOString(),
+        estado_publicacion: isScheduled ? "pendiente" : "publicado",
         created_by: currentUser?.id || null,
-        imagen_url: cover && imagenes[0] ? imagenes[0] : null,
+        imagen_url: imagenes[0] || null,
         imagenes,
         enlace: enlace || null,
         enlace_label: enlace ? enlaceLabel : null,
         fecha_expiracion: expira ? new Date(expira).toISOString() : null,
         prioridad: Number.isFinite(prioridad) ? prioridad : 0,
       });
-
       if (error) throw error;
 
-      // Un anuncio es global y vive una sola vez. El push es una comunicación adicional.
-      try {
-        const { error: pushError } = await s.functions.invoke("send-notification", {
-          body: { titulo, mensaje, tipo, user_id: null },
-        });
-        if (pushError) console.warn("[push anuncio]", pushError);
-      } catch (e) {
-        console.warn("[push anuncio]", e);
+      if (!isScheduled) {
+        try {
+          const { error: pushError } = await s.functions.invoke("send-notification", {
+            body: { titulo, mensaje, tipo, user_id: null },
+          });
+          if (pushError) console.warn("[push anuncio]", pushError);
+        } catch (e) {
+          console.warn("[push anuncio]", e);
+        }
       }
 
-      toast("Anuncio publicado correctamente.");
+      toast(isScheduled ? "Anuncio programado." : "Anuncio publicado correctamente.");
     } else {
       let ids = [];
-
       if (destino === "all") {
-        const { data, error } = await s
-          .from(TABLE_PROFILES)
-          .select("id")
-          .eq("estado", "activa")
-          .neq("role", "admin");
-
+        const { data, error } = await s.from(TABLE_PROFILES).select("id").eq("estado", "activa").neq("role", "admin");
         if (error) throw error;
         ids = (data || []).map((u) => u.id);
       } else {
@@ -4876,6 +4957,7 @@ async function enviarComunicacionAdmin() {
 
       const batchId = crypto.randomUUID();
       if (ids.length) {
+        const scheduledState = scheduledAt.getTime() > Date.now() + 5000 ? "pendiente" : "sent";
         const { error } = await s.from("notificaciones").insert(
           ids.map((id) => ({
             user_id: id,
@@ -4884,25 +4966,29 @@ async function enviarComunicacionAdmin() {
             tipo,
             leida: false,
             event_key: `admin:${batchId}:${id}`,
+            programada_para: scheduledAt.toISOString(),
+            estado_envio: scheduledState,
+            sent_at: scheduledState === "sent" ? new Date().toISOString() : null,
           })),
         );
-
         if (error) throw error;
       }
 
-      try {
-        const { error: pushError } = await s.functions.invoke("send-notification", {
-          body: { titulo, mensaje, tipo, user_id: destino === "one" ? userId : null },
-        });
-        if (pushError) console.warn("[push]", pushError);
-      } catch (e) {
-        console.warn("[push]", e);
+      if (scheduledAt.getTime() <= Date.now() + 5000) {
+        try {
+          const { error: pushError } = await s.functions.invoke("send-notification", {
+            body: { titulo, mensaje, tipo, user_id: destino === "one" ? userId : null },
+          });
+          if (pushError) console.warn("[push]", pushError);
+        } catch (e) {
+          console.warn("[push]", e);
+        }
       }
 
-      toast("Notificación creada correctamente.");
+      toast(scheduledAt.getTime() > Date.now() + 5000 ? "Notificación programada." : "Notificación enviada.");
     }
 
-    ["nt_titulo","nt_mensaje","nt_enlace","nt_enlace_label","nt_expira","nt_prioridad","nt_user"].forEach((id) => {
+    ["nt_titulo","nt_mensaje","nt_enlace","nt_enlace_label","nt_expira","nt_programada","nt_prioridad","nt_user"].forEach((id) => {
       const el = document.getElementById(id);
       if (el) el.value = "";
     });
@@ -4919,13 +5005,12 @@ async function enviarComunicacionAdmin() {
 
 async function cambiarEstadoAnuncio(id, activo) {
   try {
-    const { error } = await s
-      .from("anuncios")
-      .update({ activa: !!activo, updated_at: new Date().toISOString() })
-      .eq("id", id);
-
+    const { error } = await s.from("anuncios").update({
+      activa: !!activo,
+      estado_publicacion: activo ? "publicado" : "cancelado",
+      updated_at: new Date().toISOString(),
+    }).eq("id", id);
     if (error) throw error;
-
     toast(activo ? "Anuncio activado." : "Anuncio desactivado.");
     await cargarAnunciosAdmin();
   } catch (e) {
@@ -4941,13 +5026,13 @@ function setupNotifications() {
   const type = document.getElementById("nt_tipo");
   const destinationWrap = document.getElementById("nt_destino_wrap");
   const sendButton = document.getElementById("nt_send_btn");
+  const schedule = document.getElementById("nt_programada");
 
   if (d && w) {
     d.addEventListener("change", () => {
       w.style.display = d.value === "one" ? "block" : "none";
     });
   }
-
   if (mode) {
     mode.addEventListener("change", () => {
       const isAnnouncement = mode.value === "announcement";
@@ -4961,10 +5046,12 @@ function setupNotifications() {
       }
     });
   }
-
+  if (schedule) {
+    schedule.addEventListener("input", actualizarTemporizadorComunicacion);
+    setInterval(actualizarTemporizadorComunicacion, 1000);
+  }
   cargarNotificacionesAdmin();
   cargarAnunciosAdmin();
-
   s.channel("admin-live-communications")
     .on("postgres_changes", { event: "*", schema: "public", table: "notificaciones" }, cargarNotificacionesAdmin)
     .on("postgres_changes", { event: "*", schema: "public", table: "anuncios" }, cargarAnunciosAdmin)
