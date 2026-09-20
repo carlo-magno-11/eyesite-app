@@ -31,7 +31,7 @@ export function useAnnouncements() {
       console.error("[EYESITE] announcements load error:", error);
       setItems([]);
     } else {
-      setItems(data ?? []);
+      const now = Date.now();\n      setItems((data ?? []).filter((item) => !item.fecha_expiracion || new Date(item.fecha_expiracion).getTime() > now));
     }
 
     setLoading(false);
