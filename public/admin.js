@@ -49,36 +49,22 @@ let confirmCallback = null;
 
 let adminPropertyMap = null;
 let adminPropertyMarker = null;
+let adminPropertyMapMode = null;
 
 const ADMIN_DEFAULT_LAT = 20.9674;
 const ADMIN_DEFAULT_LNG = -89.5926;
 
 
 /* ============================================================
-   OBTENER COORDENADAS ACTUALES
+   OBTENER COORDENADAS
    ============================================================ */
 
-function getAdminPropertyCoordinates() {
-  const latElement =
-    document.getElementById("prop_latitud");
+function getAdminPropertyCoordinates(mode = "new") {
+  const latElement = document.getElementById(`${mode}_latitud`);
+  const lngElement = document.getElementById(`${mode}_longitud`);
 
-  const lngElement =
-    document.getElementById("prop_longitud");
-
-  const lat =
-    latElement
-      ? Number(latElement.value)
-      : NaN;
-
-  const lng =
-    lngElement
-      ? Number(lngElement.value)
-      : NaN;
-
-  /*
-   * 0,0 no se considera una ubicación válida
-   * para EYESITE.
-   */
+  const lat = latElement ? Number(latElement.value) : NaN;
+  const lng = lngElement ? Number(lngElement.value) : NaN;
 
   const validLat =
     Number.isFinite(lat) &&
@@ -93,32 +79,19 @@ function getAdminPropertyCoordinates() {
     lng !== 0;
 
   return {
-    latitud:
-      validLat
-        ? lat
-        : null,
-
-    longitud:
-      validLng
-        ? lng
-        : null,
+    latitud: validLat ? lat : null,
+    longitud: validLng ? lng : null,
   };
 }
 
 
 /* ============================================================
-   ACTUALIZAR COORDENADAS EN EL FORMULARIO
+   ACTUALIZAR COORDENADAS
    ============================================================ */
 
-function updateAdminPropertyCoordinates(
-  lat,
-  lng
-) {
-  const parsedLat =
-    Number(lat);
-
-  const parsedLng =
-    Number(lng);
+function updateAdminPropertyCoordinates(mode, lat, lng) {
+  const parsedLat = Number(lat);
+  const parsedLng = Number(lng);
 
   if (
     !Number.isFinite(parsedLat) ||
@@ -127,30 +100,20 @@ function updateAdminPropertyCoordinates(
     return;
   }
 
-  const latInput =
-    document.getElementById(
-      "prop_latitud"
-    );
-
-  const lngInput =
-    document.getElementById(
-      "prop_longitud"
-    );
+  const latInput = document.getElementById(`${mode}_latitud`);
+  const lngInput = document.getElementById(`${mode}_longitud`);
 
   if (latInput) {
-    latInput.value =
-      parsedLat.toFixed(8);
+    latInput.value = parsedLat.toFixed(8);
   }
 
   if (lngInput) {
-    lngInput.value =
-      parsedLng.toFixed(8);
+    lngInput.value = parsedLng.toFixed(8);
   }
 
-  const coordinates =
-    document.getElementById(
-      "adminPropertyCoordinates"
-    );
+  const coordinates = document.getElementById(
+    `${mode}_adminPropertyCoordinates`
+  );
 
   if (coordinates) {
     coordinates.textContent =
@@ -167,15 +130,13 @@ function updateAdminPropertyCoordinates(
    ============================================================ */
 
 function setAdminPropertyMarker(
+  mode,
   lat,
   lng,
   centerMap = true
 ) {
-  const parsedLat =
-    Number(lat);
-
-  const parsedLng =
-    Number(lng);
+  const parsedLat = Number(lat);
+  const parsedLng = Number(lng);
 
   if (
     !Number.isFinite(parsedLat) ||
@@ -188,47 +149,26 @@ function setAdminPropertyMarker(
     return;
   }
 
-  /*
-   * Si ya existe marcador, solamente lo movemos.
-   */
-
   if (adminPropertyMarker) {
     adminPropertyMarker.setLatLng([
       parsedLat,
       parsedLng,
     ]);
-  }
-
-  /*
-   * Si no existe, lo creamos.
-   */
-
-  else {
-    adminPropertyMarker =
-      L.marker(
-        [
-          parsedLat,
-          parsedLng,
-        ],
-        {
-          draggable: true,
-        }
-      ).addTo(
-        adminPropertyMap
-      );
-
-    /*
-     * El administrador puede arrastrar
-     * el marcador.
-     */
+  } else {
+    adminPropertyMarker = L.marker(
+      [
+        parsedLat,
+        parsedLng,
+      ],
+      {
+        draggable: true,
+      }
+    ).addTo(adminPropertyMap);
 
     adminPropertyMarker.on(
       "dragend",
       function (event) {
-        if (
-          !event ||
-          !event.target
-        ) {
+        if (!event || !event.target) {
           return;
         }
 
@@ -240,6 +180,7 @@ function setAdminPropertyMarker(
         }
 
         updateAdminPropertyCoordinates(
+          mode,
           position.lat,
           position.lng
         );
@@ -247,18 +188,11 @@ function setAdminPropertyMarker(
     );
   }
 
-  /*
-   * Guardar coordenadas.
-   */
-
   updateAdminPropertyCoordinates(
+    mode,
     parsedLat,
     parsedLng
   );
-
-  /*
-   * Centrar mapa.
-   */
 
   if (centerMap) {
     adminPropertyMap.setView(
@@ -278,28 +212,25 @@ function setAdminPropertyMarker(
 
 function initAdminPropertyMap(
   lat = null,
-  lng = null
+  lng = null,
+  mode = "new"
 ) {
-  const mapElement =
-    document.getElementById(
-      "adminPropertyMap"
-    );
+  const mapId =
+    `${mode}_adminPropertyMap`;
 
-  /*
-   * El formulario todavía no existe.
-   */
+  const mapElement =
+    document.getElementById(mapId);
 
   if (!mapElement) {
+    console.warn(
+      "[admin map] No existe:",
+      mapId
+    );
+
     return false;
   }
 
-  /*
-   * Comprobar Leaflet.
-   */
-
-  if (
-    typeof L === "undefined"
-  ) {
+  if (typeof L === "undefined") {
     console.error(
       "[admin map] Leaflet no está cargado."
     );
@@ -307,16 +238,8 @@ function initAdminPropertyMap(
     return false;
   }
 
-  /*
-   * Evitar que 0,0 sea considerado
-   * una coordenada real.
-   */
-
-  const parsedLat =
-    Number(lat);
-
-  const parsedLng =
-    Number(lng);
+  const parsedLat = Number(lat);
+  const parsedLng = Number(lng);
 
   const validCoordinates =
     Number.isFinite(parsedLat) &&
@@ -338,9 +261,8 @@ function initAdminPropertyMap(
       ? parsedLng
       : ADMIN_DEFAULT_LNG;
 
-
   /* ----------------------------------------------------------
-     Eliminar mapa anterior
+     ELIMINAR MAPA ANTERIOR
      ---------------------------------------------------------- */
 
   if (adminPropertyMap) {
@@ -357,9 +279,10 @@ function initAdminPropertyMap(
     adminPropertyMarker = null;
   }
 
+  adminPropertyMapMode = mode;
 
   /* ----------------------------------------------------------
-     Crear mapa
+     CREAR MAPA
      ---------------------------------------------------------- */
 
   try {
@@ -377,14 +300,11 @@ function initAdminPropertyMap(
         initialLat,
         initialLng,
       ],
-      validCoordinates
-        ? 15
-        : 11
+      validCoordinates ? 15 : 11
     );
 
-
     /* --------------------------------------------------------
-       Capa OpenStreetMap
+       OPEN STREET MAP
        -------------------------------------------------------- */
 
     L.tileLayer(
@@ -394,55 +314,23 @@ function initAdminPropertyMap(
         attribution:
           "&copy; OpenStreetMap contributors",
       }
-    )
-      .addTo(
-        adminPropertyMap
-      );
-
-
-    /* --------------------------------------------------------
-       Error de carga de tiles
-       -------------------------------------------------------- */
-
-    adminPropertyMap.on(
-      "tileerror",
-      function (event) {
-        console.error(
-          "[admin map] Error cargando mapa:",
-          event
-        );
-      }
+    ).addTo(
+      adminPropertyMap
     );
 
-
     /* --------------------------------------------------------
-       Marcador existente
-       -------------------------------------------------------- */
-
-    if (validCoordinates) {
-      setAdminPropertyMarker(
-        initialLat,
-        initialLng,
-        false
-      );
-    }
-
-
-    /* --------------------------------------------------------
-       Clic en el mapa
+       CLICK EN MAPA
        -------------------------------------------------------- */
 
     adminPropertyMap.on(
       "click",
       function (event) {
-        if (
-          !event ||
-          !event.latlng
-        ) {
+        if (!event || !event.latlng) {
           return;
         }
 
         setAdminPropertyMarker(
+          mode,
           event.latlng.lat,
           event.latlng.lng,
           true
@@ -450,9 +338,21 @@ function initAdminPropertyMap(
       }
     );
 
+    /* --------------------------------------------------------
+       MARCADOR EXISTENTE
+       -------------------------------------------------------- */
+
+    if (validCoordinates) {
+      setAdminPropertyMarker(
+        mode,
+        initialLat,
+        initialLng,
+        false
+      );
+    }
 
     /* --------------------------------------------------------
-       Corregir tamaño del mapa
+       CORREGIR TAMAÑO
        -------------------------------------------------------- */
 
     setTimeout(
@@ -461,11 +361,12 @@ function initAdminPropertyMap(
           adminPropertyMap.invalidateSize();
         }
       },
-      250
+      300
     );
 
     console.log(
-      "[admin map] Mapa inicializado correctamente."
+      "[admin map] Mapa inicializado:",
+      mode
     );
 
     return true;
@@ -482,8 +383,6 @@ function initAdminPropertyMap(
     return false;
   }
 }
-
-
 
 /* ============================================================
    INICIAR OBSERVACIÓN DEL MAPA
@@ -1010,11 +909,36 @@ function goTo(section) {
   }
 
   if (section === "nueva") {
-    const marker = document.getElementById("newFormReady");
+  const marker =
+    document.getElementById("newFormReady");
 
-    if (!marker) {
-      buildNewForm();    
-    }
+  if (!marker) {
+    buildNewForm();
+  }
+
+  setTimeout(() => {
+    const latElement =
+      document.getElementById("new_latitud");
+
+    const lngElement =
+      document.getElementById("new_longitud");
+
+    const lat =
+      latElement
+        ? Number(latElement.value)
+        : null;
+
+    const lng =
+      lngElement
+        ? Number(lngElement.value)
+        : null;
+
+    initAdminPropertyMap(
+      lat,
+      lng,
+      "new"
+    );
+    }, 100);
   }
 }
 
@@ -2001,15 +1925,23 @@ function buildEditForm(p) {
   }
 
   target.innerHTML =
-    propertyFormHTML(
-      p,
-      "edit"
-    );
-
-  bindPropertyForm(
-    "edit",
-    p
+  propertyFormHTML(
+    p,
+    "edit"
   );
+
+bindPropertyForm(
+  "edit",
+  p
+);
+
+setTimeout(() => {
+  initAdminPropertyMap(
+    p.latitud,
+    p.longitud,
+    "edit"
+  );
+}, 100);
 
   /*
    * El formulario ya fue creado.
@@ -2038,6 +1970,8 @@ function buildEditForm(p) {
     lng
   );
 }
+
+
 
 /* ============================================================
    NUEVA PROPIEDAD
@@ -2075,15 +2009,7 @@ function buildNewForm() {
     {}
   );
 
-  /*
-   * El formulario ya existe.
-   * Ahora inicializamos el mapa.
-   */
-
-  initAdminPropertyMap(
-    null,
-    null
-  );
+  
 }
 
 /* ============================================================
