@@ -4643,100 +4643,212 @@ async function suspenderUsuario(id) {
 }
 
 /* ============================================================
-   NOTIFICACIONES
+   NOTIFICACIONES Y ANUNCIOS
    ============================================================ */
+
 async function cargarNotificacionesAdmin() {
   const { data, error } = await s
     .from("notificaciones")
     .select("*")
     .order("created_at", { ascending: false })
     .limit(50);
-  if (error) return;
+
+  if (error) {
+    console.error("[notificaciones]", error);
+    return;
+  }
+
   const b = document.getElementById("ntb");
-  if (b)
+  if (b) {
     b.innerHTML =
-      (data || [])
-        .map(
-          (n) =>
-            `<tr><td>${dateTimeMX(n.created_at)}</td><td class="p">${esc(n.titulo)}</td><td>${esc(n.tipo || "info")}</td><td>${n.user_id ? "Usuario" : "TODOS"}</td><td>${esc(n.mensaje)}</td></tr>`,
-        )
-        .join("") || '<tr><td colspan="5">No hay notificaciones.</td></tr>';
+      (data || []).map((n) =>
+        `<tr>
+          <td>${dateTimeMX(n.created_at)}</td>
+          <td class="p">${esc(n.titulo)}</td>
+          <td>${esc(n.tipo || "info")}</td>
+          <td>${n.user_id ? esc(n.user_id) : "TODOS"}</td>
+          <td>${esc(n.mensaje)}</td>
+        </tr>`
+      ).join("") || '<tr><td colspan="5">No hay notificaciones.</td></tr>';
+  }
 }
-async function crearNotificacionAdmin() {
-  const titulo = valueOf("nt_titulo"),
-    mensaje = valueOf("nt_mensaje"),
-    tipo = valueOf("nt_tipo") || "info",
-    destino = valueOf("nt_destino") || "all",
-    userId = valueOf("nt_user");
+
+async function cargarAnunciosAdmin() {
+  const { data, error } = await s
+    .from("anuncios")
+    .select("id,titulo,mensaje,tipo,activa,published_at,created_at")
+    .order("published_at", { ascending: false })
+    .limit(50);
+
+  if (error) {
+    console.error("[anuncios]", error);
+    return;
+  }
+
+  const b = document.getElementById("anb");
+  if (b) {
+    b.innerHTML =
+      (data || []).map((a) =>
+        `<tr>
+          <td>${dateTimeMX(a.published_at || a.created_at)}</td>
+          <td class="p">${esc(a.titulo)}</td>
+          <td>${esc(a.tipo)}</td>
+          <td>${a.activa ? "ACTIVO" : "INACTIVO"}</td>
+          <td>
+            <button class="bs" onclick="cambiarEstadoAnuncio('${esc(a.id)}', ${!a.activa})">
+              ${a.activa ? "Desactivar" : "Activar"}
+            </button>
+          </td>
+        </tr>`
+      ).join("") || '<tr><td colspan="5">No hay anuncios.</td></tr>';
+  }
+}
+
+async function enviarComunicacionAdmin() {
+  const modo = valueOf("nt_modo") || "notification";
+  const titulo = valueOf("nt_titulo").trim();
+  const mensaje = valueOf("nt_mensaje").trim();
+  const tipo = valueOf("nt_tipo") || "informacion";
+  const destino = valueOf("nt_destino") || "all";
+  const userId = valueOf("nt_user").trim();
+
   if (!titulo || !mensaje) {
     toast("Título y mensaje son obligatorios.");
     return;
   }
-  if (destino === "one" && !userId) {
+
+  if (modo === "notification" && destino === "one" && !userId) {
     toast("Indica el UUID del usuario.");
     return;
   }
+
   try {
-    let ids = [];
-    if (destino === "all") {
-      const { data, error } = await s
-        .from(TABLE_PROFILES)
-        .select("id")
-        .eq("estado", "activa")
-        .neq("role", "admin");
+    if (modo === "announcement") {
+      const { error } = await s.from("anuncios").insert({
+        titulo,
+        mensaje,
+        tipo,
+        activa: true,
+        published_at: new Date().toISOString(),
+        created_by: currentUser?.id || null,
+      });
+
       if (error) throw error;
-      ids = (data || []).map((u) => u.id);
-    } else ids = [userId];
-    if (ids.length) {
-      const { error } = await s
-        .from("notificaciones")
-        .insert(
+
+      toast("Anuncio publicado correctamente.");
+    } else {
+      let ids = [];
+
+      if (destino === "all") {
+        const { data, error } = await s
+          .from(TABLE_PROFILES)
+          .select("id")
+          .eq("estado", "activa")
+          .neq("role", "admin");
+
+        if (error) throw error;
+        ids = (data || []).map((u) => u.id);
+      } else {
+        ids = [userId];
+      }
+
+      const batchId = crypto.randomUUID();
+      if (ids.length) {
+        const { error } = await s.from("notificaciones").insert(
           ids.map((id) => ({
             user_id: id,
             titulo,
             mensaje,
             tipo,
             leida: false,
+            event_key: `admin:${batchId}:${id}`,
           })),
         );
-      if (error) throw error;
+
+        if (error) throw error;
+      }
+
+      try {
+        const { error: pushError } = await s.functions.invoke("send-notification", {
+          body: {
+            titulo,
+            mensaje,
+            tipo,
+            user_id: destino === "one" ? userId : null,
+          },
+        });
+        if (pushError) console.warn("[push]", pushError);
+      } catch (e) {
+        console.warn("[push]", e);
+      }
+
+      toast("Notificación creada correctamente.");
     }
-    try {
-      await s.functions.invoke("send-notification", {
-        body: {
-          titulo,
-          mensaje,
-          tipo,
-          user_id: destino === "one" ? userId : null,
-        },
-      });
-    } catch (e) {
-      console.warn("[push]", e);
-    }
-    toast("Notificación enviada correctamente.");
-    document.getElementById("nt_titulo").value = "";
-    document.getElementById("nt_mensaje").value = "";
+
+    const title = document.getElementById("nt_titulo");
+    const message = document.getElementById("nt_mensaje");
+    if (title) title.value = "";
+    if (message) message.value = "";
+
     await cargarNotificacionesAdmin();
+    await cargarAnunciosAdmin();
   } catch (e) {
-    console.error(e);
-    toast(e?.message || "No se pudo enviar la notificación.");
+    console.error("[comunicacion]", e);
+    toast(e?.message || "No se pudo guardar la comunicación.");
   }
 }
+
+async function cambiarEstadoAnuncio(id, activo) {
+  try {
+    const { error } = await s
+      .from("anuncios")
+      .update({ activa: !!activo, updated_at: new Date().toISOString() })
+      .eq("id", id);
+
+    if (error) throw error;
+
+    toast(activo ? "Anuncio activado." : "Anuncio desactivado.");
+    await cargarAnunciosAdmin();
+  } catch (e) {
+    console.error("[anuncio estado]", e);
+    toast(e?.message || "No se pudo cambiar el anuncio.");
+  }
+}
+
 function setupNotifications() {
-  const d = document.getElementById("nt_destino"),
-    w = document.getElementById("nt_user_wrap");
-  if (d && w)
-    d.addEventListener(
-      "change",
-      () => (w.style.display = d.value === "one" ? "block" : "none"),
-    );
+  const d = document.getElementById("nt_destino");
+  const w = document.getElementById("nt_user_wrap");
+  const mode = document.getElementById("nt_modo");
+  const type = document.getElementById("nt_tipo");
+  const destinationWrap = document.getElementById("nt_destino_wrap");
+  const sendButton = document.getElementById("nt_send_btn");
+
+  if (d && w) {
+    d.addEventListener("change", () => {
+      w.style.display = d.value === "one" ? "block" : "none";
+    });
+  }
+
+  if (mode) {
+    mode.addEventListener("change", () => {
+      const isAnnouncement = mode.value === "announcement";
+      if (destinationWrap) destinationWrap.style.display = isAnnouncement ? "none" : "block";
+      if (w) w.style.display = "none";
+      if (sendButton) sendButton.textContent = isAnnouncement ? "📢 PUBLICAR ANUNCIO" : "🔔 ENVIAR NOTIFICACIÓN";
+      if (type) {
+        type.innerHTML = isAnnouncement
+          ? '<option value="informacion">Información</option><option value="noticia">Noticia</option><option value="promocion">Promoción</option><option value="aviso">Aviso</option><option value="anuncio">Anuncio</option>'
+          : '<option value="informacion">Información</option><option value="noticia">Noticia</option><option value="propiedad">Propiedad</option>';
+      }
+    });
+  }
+
   cargarNotificacionesAdmin();
-  s.channel("admin-live-notifications")
-    .on(
-      "postgres_changes",
-      { event: "*", schema: "public", table: "notificaciones" },
-      cargarNotificacionesAdmin,
-    )
+  cargarAnunciosAdmin();
+
+  s.channel("admin-live-communications")
+    .on("postgres_changes", { event: "*", schema: "public", table: "notificaciones" }, cargarNotificacionesAdmin)
+    .on("postgres_changes", { event: "*", schema: "public", table: "anuncios" }, cargarAnunciosAdmin)
     .subscribe();
 }
 
