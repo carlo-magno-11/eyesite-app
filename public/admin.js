@@ -4244,13 +4244,16 @@ async function cambiarEstadoPendiente(id, estado) {
       }
 
       try {
-        if (solicitud?.user_id) {
+        const solicitudRechazo = pendientes.find(
+          (item) => String(item.id) === String(id),
+        );
+        if (solicitudRechazo?.user_id) {
           const { error: pushError } = await s.functions.invoke("send-notification", {
             body: {
               titulo: "Solicitud rechazada",
               mensaje: motivo.trim(),
               tipo: "solicitud",
-              user_id: solicitud.user_id,
+              user_id: solicitudRechazo.user_id,
             },
           });
           if (pushError) console.warn("[push rechazo]", pushError);
