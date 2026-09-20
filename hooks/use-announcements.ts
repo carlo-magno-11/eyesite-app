@@ -11,6 +11,15 @@ export type Announcement = {
   published_at: string;
   created_at: string;
   updated_at: string;
+  imagen_url: string | null;
+  imagenes: string[];
+  enlace: string | null;
+  enlace_label: string | null;
+  fecha_expiracion: string | null;
+  prioridad: number;
+  programada_para: string;
+  estado_publicacion: string;
+  publicada_en: string | null;
 };
 
 export function useAnnouncements() {
@@ -24,6 +33,8 @@ export function useAnnouncements() {
       .from("anuncios")
       .select("id,titulo,mensaje,tipo,activa,published_at,created_at,updated_at,imagen_url,imagenes,enlace,enlace_label,fecha_expiracion,prioridad")
       .eq("activa", true)
+      .eq("estado_publicacion", "publicado")
+      .lte("programada_para", new Date().toISOString())
       .order("published_at", { ascending: false })
       .limit(100);
 
@@ -31,7 +42,8 @@ export function useAnnouncements() {
       console.error("[EYESITE] announcements load error:", error);
       setItems([]);
     } else {
-      const now = Date.now();\n      setItems((data ?? []).filter((item) => !item.fecha_expiracion || new Date(item.fecha_expiracion).getTime() > now));
+      const now = Date.now();
+      setItems((data ?? []).filter((item) => !item.fecha_expiracion || new Date(item.fecha_expiracion).getTime() > now));
     }
 
     setLoading(false);
