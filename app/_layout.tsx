@@ -4,6 +4,7 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ThemeProvider } from "@/lib/theme-provider";
 import { useAuth } from "@/hooks/useAuth";
+import { registerPushToken } from "@/hooks/use-notifications";
 import { useEffect } from "react";
 import { View, ActivityIndicator, Text, StatusBar } from "react-native";
 import * as Sentry from "@sentry/react-native";
@@ -115,6 +116,12 @@ function AuthGate({ children }: { children: React.ReactNode }) {
         router.replace("/(auth)/create-profile" as never);
     }
   }, [session, profile, loading, termsOk, current, router, segments]);
+
+  useEffect(() => {
+    if (session?.user?.id && profile?.estado === "activa") {
+      void registerPushToken(session.user.id);
+    }
+  }, [session?.user?.id, profile?.estado]);
 
   if (loading) return <Splash />;
   return <>{children}</>;
