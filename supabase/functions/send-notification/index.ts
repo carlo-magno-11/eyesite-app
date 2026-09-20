@@ -53,7 +53,9 @@ Deno.serve(async (req) => {
       .not("expo_push_token", "is", null)
       .neq("expo_push_token", "");
 
-    if (targetUserId) {
+    if (targetUserIds.length) {
+      query = query.in("id", targetUserIds);
+    } else if (targetUserId) {
       query = query.eq("id", targetUserId);
     } else {
       query = query.neq("role", "admin");
