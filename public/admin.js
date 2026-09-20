@@ -4450,7 +4450,8 @@ function renderUsuarios() {
 
   tbody.innerHTML = usuarios
     .map((usuario) => {
-      const estado = normalizeStatus(usuario.estado || usuario.status);
+      const rawEstado = String(usuario.estado || usuario.status || "").toLowerCase();
+      const estado = rawEstado === "sin_perfil" ? "sin_perfil" : normalizeStatus(rawEstado);
 
       const role = usuario.role || usuario.rol || "cliente";
 
@@ -4462,6 +4463,7 @@ function renderUsuarios() {
         "—";
 
       const email = usuario.email || "—";
+      const verificacion = usuario.email_confirmed_at ? "✓ correo verificado" : "⚠ correo sin verificar";
 
       /*
        * IMPORTANTE:
@@ -4475,7 +4477,9 @@ function renderUsuarios() {
        PENDIENTE
        -------------------------------------------------------- */
 
-      if (estado === "pendiente") {
+      if (estado === "sin_perfil") {
+        acciones = `<span class="badge brj2">PERFIL INCOMPLETO</span>`;
+      } else if (estado === "pendiente") {
         acciones = `
         <button
           class="bs bap2"
