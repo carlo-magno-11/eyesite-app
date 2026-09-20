@@ -4208,6 +4208,22 @@ async function cambiarEstadoPendiente(id, estado) {
       }
 
       console.info("[admin] solicitud aprobada:", data);
+
+      try {
+        if (solicitud.user_id) {
+          const { error: pushError } = await s.functions.invoke("send-notification", {
+            body: {
+              titulo: "Propiedad aprobada",
+              mensaje: `Tu propiedad "${solicitud.titulo || "Sin título"}" fue aprobada y publicada.`,
+              tipo: "propiedad",
+              user_id: solicitud.user_id,
+            },
+          });
+          if (pushError) console.warn("[push aprobación]", pushError);
+        }
+      } catch (pushError) {
+        console.warn("[push aprobación]", pushError);
+      }
     } else if (estado === "rechazado") {
       const motivo = prompt("Motivo del rechazo:");
 
@@ -4225,6 +4241,22 @@ async function cambiarEstadoPendiente(id, estado) {
 
       if (error) {
         throw error;
+      }
+
+      try {
+        if (solicitud?.user_id) {
+          const { error: pushError } = await s.functions.invoke("send-notification", {
+            body: {
+              titulo: "Solicitud rechazada",
+              mensaje: motivo.trim(),
+              tipo: "solicitud",
+              user_id: solicitud.user_id,
+            },
+          });
+          if (pushError) console.warn("[push rechazo]", pushError);
+        }
+      } catch (pushError) {
+        console.warn("[push rechazo]", pushError);
       }
     } else {
       throw new Error("Estado de solicitud no válido.");
