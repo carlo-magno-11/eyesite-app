@@ -4403,12 +4403,7 @@ async function cargarUsuarios() {
   tbody.innerHTML = emptyRow(5, "⏳", "Cargando usuarios...");
 
   try {
-    const { data, error } = await s
-      .from(TABLE_PROFILES)
-      .select("*")
-      .order("created_at", {
-        ascending: false,
-      });
+    const { data, error } = await s.rpc("admin_list_profiles");
 
     if (error) {
       throw error;
