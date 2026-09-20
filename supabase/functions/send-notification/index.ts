@@ -43,7 +43,8 @@ Deno.serve(async (req) => {
     }
 
     const body = await req.json();
-    const targetUserId = body.user_id ? String(body.user_id) : null;\n    const targetUserIds = Array.isArray(body.user_ids) ? body.user_ids.map((id: unknown) => String(id)).filter(Boolean) : [];
+    const targetUserId = body.user_id ? String(body.user_id) : null;
+    const targetUserIds = Array.isArray(body.user_ids) ? body.user_ids.map((id: unknown) => String(id)).filter(Boolean) : [];
 
     let query = adminClient
       .from("profiles")
