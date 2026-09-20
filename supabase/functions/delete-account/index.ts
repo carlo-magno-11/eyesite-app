@@ -7,36 +7,24 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-Deno.serve(async (req: Request) => {
-  if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
-  }
+const json = (body: unknown, status = 200) =>
+  new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
 
-  if (req.method !== "POST") {
-    return new Response(JSON.stringify({ error: "Method not allowed" }), {
-      status: 405,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  }
+Deno.serve(async (req: Request) => {
+  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+  if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
   const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-  if (!supabaseUrl || !serviceRoleKey) {
-    return new Response(JSON.stringify({ error: "Server configuration error" }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  }
+  if (!supabaseUrl || !serviceRoleKey) return json({ error: "Server configuration error" }, 500);
 
   const authHeader = req.headers.get("Authorization");
-  if (!authHeader?.startsWith("Bearer ")) {
-    return new Response(JSON.stringify({ error: "Missing authorization" }), {
-      status: 401,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  }
+  if (!authHeader?.startsWith("Bearer ")) return json({ error: "Missing authorization" }, 401);
 
-  const token = authHeader.replace("Bearer ", "").trim();
+  const token = authHeader.slice("Bearer ".length).trim();
   const admin = createClient(supabaseUrl, serviceRoleKey, {
     auth: { autoRefreshToken: false, persistSession: false },
   });
@@ -46,73 +34,71 @@ Deno.serve(async (req: Request) => {
   });
 
   const { data: { user }, error: userError } = await userClient.auth.getUser(token);
-  if (userError || !user) {
-    return new Response(JSON.stringify({ error: "Invalid session" }), {
-      status: 401,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  }
+  if (userError || !user) return json({ error: "Invalid session" }, 401);
 
   const userId = user.id;
 
   try {
-    // Capture the user's property IDs before deleting rows.
     const { data: ownedProperties, error: propertyError } = await admin
       .from("propiedades")
       .select("id")
       .eq("user_id", userId);
     if (propertyError) throw propertyError;
 
-    // Remove user-generated media from private staging.
-    const stagingRoot = `${userId}`;
+    const stagingRoot = userId;
     const { data: stagingFolders, error: folderError } = await admin.storage
       .from("eyesite-staging")
       .list(stagingRoot, { limit: 1000 });
-    if (!folderError && stagingFolders) {
-      const stagingPaths: string[] = [];
-      for (const entry of stagingFolders) {
-        const prefix = `${stagingRoot}/${entry.name}`;
-        const { data: files } = await admin.storage.from("eyesite-staging").list(prefix, { limit: 1000 });
-        for (const file of files ?? []) stagingPaths.push(`${prefix}/${file.name}`);
-      }
-      if (stagingPaths.length) {
-        await admin.storage.from("eyesite-staging").remove(stagingPaths);
-      }
+    if (folderError && !/not found/i.test(folderError.message || "")) throw folderError;
+
+    const stagingPaths: string[] = [];
+    for (const entry of stagingFolders ?? []) {
+      const prefix = `${stagingRoot}/${entry.name}`;
+      const { data: files, error } = await admin.storage.from("eyesite-staging").list(prefix, { limit: 1000 });
+      if (error) throw error;
+      for (const file of files ?? []) stagingPaths.push(`${prefix}/${file.name}`);
+    }
+    if (stagingPaths.length) {
+      const { error } = await admin.storage.from("eyesite-staging").remove(stagingPaths);
+      if (error) throw error;
     }
 
-    // Remove public media belonging to properties created by this account.
     const publicPaths: string[] = [];
     for (const property of ownedProperties ?? []) {
       const prefix = `properties/${property.id}`;
-      const { data: folders } = await admin.storage.from("eyesite-media").list(prefix, { limit: 1000 });
+      const { data: folders, error: folderError2 } = await admin.storage.from("eyesite-media").list(prefix, { limit: 1000 });
+      if (folderError2 && !/not found/i.test(folderError2.message || "")) throw folderError2;
       for (const entry of folders ?? []) {
-        const { data: files } = await admin.storage.from("eyesite-media").list(`${prefix}/${entry.name}`, { limit: 1000 });
+        const { data: files, error } = await admin.storage.from("eyesite-media").list(`${prefix}/${entry.name}`, { limit: 1000 });
+        if (error) throw error;
         for (const file of files ?? []) publicPaths.push(`${prefix}/${entry.name}/${file.name}`);
       }
     }
     if (publicPaths.length) {
-      await admin.storage.from("eyesite-media").remove(publicPaths);
+      const { error } = await admin.storage.from("eyesite-media").remove(publicPaths);
+      if (error) throw error;
     }
 
-    // Remove application data first; auth.users is deleted last.
-    await admin.from("favoritos").delete().eq("user_id", userId);
-    await admin.from("notificaciones").delete().eq("user_id", userId);
-    await admin.from("solicitudes_propiedades").delete().eq("user_id", userId);
-    await admin.from("propiedades").delete().eq("user_id", userId);
-    await admin.from("profiles").delete().eq("id", userId);
+    const deletes = [
+      admin.from("favoritos").delete().eq("user_id", userId),
+      admin.from("notificaciones").delete().eq("user_id", userId),
+      admin.from("solicitudes_propiedades").delete().eq("user_id", userId),
+      admin.from("propiedades").delete().eq("user_id", userId),
+      admin.from("profiles").delete().eq("id", userId),
+    ];
+    for (const operation of deletes) {
+      const { error } = await operation;
+      if (error) throw error;
+    }
 
     const { error: deleteUserError } = await admin.auth.admin.deleteUser(userId);
     if (deleteUserError) throw deleteUserError;
 
-    return new Response(JSON.stringify({ ok: true }), {
-      status: 200,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return json({ ok: true });
   } catch (error) {
     console.error("delete-account failed", error);
-    return new Response(JSON.stringify({ error: "No fue posible completar la eliminación. Contacta a EYESITE." }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return json({
+      error: "No fue posible completar la eliminación. No se eliminó la cuenta de Auth si ocurrió un error antes de ese paso.",
+    }, 500);
   }
 });
