@@ -3882,6 +3882,7 @@ async function saveEdit() {
   }
 
   const data = collectPropertyForm("edit");
+  const oldPrice = Number(propiedadEditando?.precio_actual ?? propiedadEditando?.precio ?? 0);
 
   if (!validateProperty(data)) {
     return;
@@ -3928,6 +3929,36 @@ async function saveEdit() {
 
         if (error) {
           throw error;
+        }
+
+        if (oldPrice > 0 && Number(data.precio_actual ?? 0) > 0 && Number(data.precio_actual) < oldPrice) {
+          try {
+            const { data: favorites } = await s
+              .from("favoritos")
+              .select("user_id")
+              .eq("property_id", propiedadEditando.id);
+
+            const userIds = [
+              ...new Set([
+                ...(favorites || []).map((item) => item.user_id).filter(Boolean),
+                propiedadEditando.user_id,
+              ].filter(Boolean)),
+            ];
+
+            if (userIds.length) {
+              const { error: pushError } = await s.functions.invoke("send-notification", {
+                body: {
+                  titulo: "Bajó el precio de una propiedad que sigues",
+                  mensaje: `"${data.titulo || propiedadEditando.titulo || "Propiedad"}" bajó de ${oldPrice.toLocaleString("es-MX")} a ${Number(data.precio_actual).toLocaleString("es-MX")}.`,
+                  tipo: "precio",
+                  user_ids: userIds,
+                },
+              });
+              if (pushError) console.warn("[push precio]", pushError);
+            }
+          } catch (pushError) {
+            console.warn("[push precio]", pushError);
+          }
         }
 
         toast("Cambios guardados correctamente.");
