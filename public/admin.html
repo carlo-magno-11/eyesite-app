@@ -2764,67 +2764,73 @@
            NOTIFICACIONES
            ================================================= -->
           <section class="sec" id="sec-notificaciones">
-            <div class="fp">
-              <div class="fpt">NOTIFICACIONES Y ANUNCIOS</div>
-              <div class="fps">
-                Envía avisos dentro de EYESITE y notificaciones push cuando el
-                usuario tenga activadas.
-              </div>
-              <div class="g2">
-                <div class="fg">
-                  <label>TÍTULO</label><input id="nt_titulo" class="fi2" />
-                </div>
-                <div class="fg">
-                  <label>TIPO</label
-                  ><select id="nt_tipo" class="fsel">
-                    <option value="info">Información</option>
-                    <option value="noticia">Noticia</option>
-                    <option value="anuncio">Anuncio</option>
-                    <option value="propiedad">Propiedad</option>
-                  </select>
-                </div>
-                <div class="fg gfull">
-                  <label>MENSAJE</label
-                  ><textarea id="nt_mensaje" class="fta"></textarea>
-                </div>
-                <div class="fg gfull">
-                  <label>DESTINO</label
-                  ><select id="nt_destino" class="fsel">
-                    <option value="all">Todos los usuarios</option>
-                    <option value="one">Usuario específico</option>
-                  </select>
-                </div>
-                <div class="fg gfull" id="nt_user_wrap" style="display: none">
-                  <label>UUID DEL USUARIO</label
-                  ><input id="nt_user" class="fi2" />
-                </div>
-              </div>
-              <div class="ff">
-                <button class="btn btn-g" onclick="crearNotificacionAdmin()">
-                  🔔 ENVIAR NOTIFICACIÓN
-                </button>
-              </div>
-              <div class="tw">
-                <div class="th">
-                  <div class="tt">Últimas notificaciones</div>
-                </div>
-                <div class="table-scroll">
-                  <table>
-                    <thead>
-                      <tr>
-                        <th>Fecha</th>
-                        <th>Título</th>
-                        <th>Tipo</th>
-                        <th>Usuario</th>
-                        <th>Mensaje</th>
-                      </tr>
-                    </thead>
-                    <tbody id="ntb"></tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-          </section>
+  <div class="fp">
+    <div class="fpt">COMUNICACIÓN</div>
+    <div class="fps">Administra notificaciones individuales y anuncios generales sin perder el historial existente.</div>
+
+    <div class="g2">
+      <div class="fg">
+        <label>FUNCIÓN</label>
+        <select id="nt_modo" class="fsel">
+          <option value="notification">🔔 Notificación</option>
+          <option value="announcement">📢 Anuncio</option>
+        </select>
+      </div>
+      <div class="fg">
+        <label>TIPO</label>
+        <select id="nt_tipo" class="fsel">
+          <option value="informacion">Información</option>
+          <option value="noticia">Noticia</option>
+          <option value="promocion">Promoción</option>
+          <option value="aviso">Aviso</option>
+          <option value="anuncio">Anuncio</option>
+          <option value="propiedad">Propiedad</option>
+        </select>
+      </div>
+      <div class="fg">
+        <label>TÍTULO</label><input id="nt_titulo" class="fi2" />
+      </div>
+      <div class="fg" id="nt_destino_wrap">
+        <label>DESTINO</label>
+        <select id="nt_destino" class="fsel">
+          <option value="all">Todos los usuarios</option>
+          <option value="one">Usuario específico</option>
+        </select>
+      </div>
+      <div class="fg gfull" id="nt_user_wrap" style="display:none">
+        <label>UUID DEL USUARIO</label><input id="nt_user" class="fi2" placeholder="UUID del usuario" />
+      </div>
+      <div class="fg gfull">
+        <label>MENSAJE</label><textarea id="nt_mensaje" class="fta"></textarea>
+      </div>
+    </div>
+
+    <div class="ff">
+      <button class="btn btn-g" id="nt_send_btn" onclick="enviarComunicacionAdmin()">🔔 ENVIAR NOTIFICACIÓN</button>
+    </div>
+
+    <div class="tw" style="margin-top:20px">
+      <div class="th"><div class="tt">Historial de notificaciones</div></div>
+      <div class="table-scroll"><table>
+        <thead><tr><th>Fecha</th><th>Título</th><th>Tipo</th><th>Usuario</th><th>Mensaje</th></tr></thead>
+        <tbody id="ntb"></tbody>
+      </table></div>
+    </div>
+
+    <div class="tw" style="margin-top:20px">
+      <div class="th">
+        <div>
+          <div class="tt">Anuncios publicados</div>
+          <div style="color:var(--mu);font-size:10px;margin-top:4px">Los anuncios generales no generan una copia por usuario.</div>
+        </div>
+      </div>
+      <div class="table-scroll"><table>
+        <thead><tr><th>Fecha</th><th>Título</th><th>Tipo</th><th>Estado</th><th>Acciones</th></tr></thead>
+        <tbody id="anb"></tbody>
+      </table></div>
+    </div>
+  </div>
+</section>
 
           <!-- =================================================
            USUARIOS
