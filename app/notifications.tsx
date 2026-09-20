@@ -119,7 +119,20 @@ export default function NotificationsScreen() {
                 <Ionicons name="megaphone-outline" size={18} color="#C9A84C" />
               </View>
               <Text style={s.ty}>{String(item.tipo || "informacion").toUpperCase()}</Text>
+              {item.imagen_url ? <Image source={{ uri: item.imagen_url }} style={s.heroImage} /> : null}
+              {Array.isArray(item.imagenes) && item.imagenes.length > 1 ? (
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.gallery}>
+                  {item.imagenes.map((uri, index) => (
+                    <Image key={`${item.id}-${index}`} source={{ uri }} style={s.galleryImage} />
+                  ))}
+                </ScrollView>
+              ) : null}
               <Text style={s.m}>{item.mensaje}</Text>
+              {item.enlace ? (
+                <Pressable onPress={() => Linking.openURL(item.enlace!)} style={s.linkButton}>
+                  <Text style={s.linkText}>{item.enlace_label || "VER MÁS"}</Text>
+                </Pressable>
+              ) : null}
               <Text style={s.d}>{item.published_at ? new Date(item.published_at).toLocaleString("es-MX") : ""}</Text>
             </View>
           )}
@@ -154,7 +167,7 @@ const s = StyleSheet.create({
   ty:{color:"#C9A84C",fontSize:10,fontWeight:"800",marginTop:6},
   m:{color:"#C0C0C0",fontSize:14,lineHeight:21,marginTop:8},
   d:{color:"#777",fontSize:10,marginTop:10},
-  e:{alignItems:"center",padding:50},
+  heroImage:{width:"100%",height:190,borderRadius:10,marginTop:12,backgroundColor:"#222"},\n  gallery:{gap:8,paddingTop:10},\n  galleryImage:{width:150,height:100,borderRadius:9,backgroundColor:"#222"},\n  linkButton:{marginTop:14,alignSelf:"flex-start",paddingVertical:9,paddingHorizontal:14,borderRadius:9,backgroundColor:"#C9A84C"},\n  linkText:{color:"#0E0E0E",fontSize:11,fontWeight:"800"},\n  e:{alignItems:"center",padding:50},
   i:{fontSize:50},
   et:{color:"#FFF",fontSize:18,fontWeight:"700",marginTop:15},
   es:{color:"#888",textAlign:"center",marginTop:8,lineHeight:20}
