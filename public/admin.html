@@ -2766,86 +2766,40 @@
           <section class="sec" id="sec-notificaciones">
   <div class="fp">
     <div class="fpt">COMUNICACIÓN</div>
-    <div class="fps">Notificaciones individuales y anuncios generales con imágenes, galería, enlace y caducidad.</div>
+    <div class="fps">Notificaciones y anuncios con imágenes, galería, enlaces, prioridad, caducidad y programación.</div>
 
     <div class="g2">
-      <div class="fg">
-        <label>FUNCIÓN</label>
-        <select id="nt_modo" class="fsel">
-          <option value="notification">🔔 Notificación</option>
-          <option value="announcement">📢 Anuncio</option>
-        </select>
-      </div>
-      <div class="fg">
-        <label>TIPO</label>
-        <select id="nt_tipo" class="fsel">
-          <option value="informacion">Información</option>
-          <option value="noticia">Noticia</option>
-          <option value="promocion">Promoción</option>
-          <option value="aviso">Aviso</option>
-          <option value="anuncio">Anuncio</option>
-          <option value="propiedad">Propiedad</option>
-        </select>
-      </div>
-      <div class="fg">
-        <label>TÍTULO</label><input id="nt_titulo" class="fi2" maxlength="120" />
-      </div>
-      <div class="fg" id="nt_destino_wrap">
-        <label>DESTINO</label>
-        <select id="nt_destino" class="fsel">
-          <option value="all">Todos los usuarios</option>
-          <option value="one">Usuario específico</option>
-        </select>
-      </div>
-      <div class="fg gfull" id="nt_user_wrap" style="display:none">
-        <label>UUID DEL USUARIO</label><input id="nt_user" class="fi2" placeholder="UUID del usuario" />
-      </div>
-      <div class="fg gfull">
-        <label>MENSAJE</label><textarea id="nt_mensaje" class="fta" maxlength="2000"></textarea>
-      </div>
-      <div class="fg">
-        <label>IMAGEN DE PORTADA (ANUNCIO)</label>
-        <input id="nt_imagen" class="fi2" type="file" accept="image/jpeg,image/png,image/webp,image/gif" />
-      </div>
-      <div class="fg">
-        <label>GALERÍA DEL ANUNCIO</label>
-        <input id="nt_imagenes" class="fi2" type="file" multiple accept="image/jpeg,image/png,image/webp,image/gif" />
-      </div>
-      <div class="fg">
-        <label>ENLACE OPCIONAL</label><input id="nt_enlace" class="fi2" type="url" placeholder="https://..." />
-      </div>
-      <div class="fg">
-        <label>TEXTO DEL BOTÓN</label><input id="nt_enlace_label" class="fi2" placeholder="VER MÁS" maxlength="40" />
-      </div>
-      <div class="fg">
-        <label>CADUCIDAD</label><input id="nt_expira" class="fi2" type="datetime-local" />
-      </div>
-      <div class="fg">
-        <label>PRIORIDAD</label><input id="nt_prioridad" class="fi2" type="number" min="0" max="100" value="0" />
-      </div>
+      <div class="fg"><label>FUNCIÓN</label><select id="nt_modo" class="fsel"><option value="notification">🔔 Notificación</option><option value="announcement">📢 Anuncio</option></select></div>
+      <div class="fg"><label>TIPO</label><select id="nt_tipo" class="fsel"><option value="informacion">Información</option><option value="noticia">Noticia</option><option value="promocion">Promoción</option><option value="aviso">Aviso</option><option value="anuncio">Anuncio</option><option value="propiedad">Propiedad</option></select></div>
+      <div class="fg"><label>TÍTULO</label><input id="nt_titulo" class="fi2" maxlength="120"></div>
+      <div class="fg" id="nt_destino_wrap"><label>DESTINO</label><select id="nt_destino" class="fsel"><option value="all">Todos los usuarios</option><option value="one">Usuario específico</option></select></div>
+      <div class="fg gfull" id="nt_user_wrap" style="display:none"><label>UUID DEL USUARIO</label><input id="nt_user" class="fi2" placeholder="UUID del usuario"></div>
+      <div class="fg gfull"><label>MENSAJE</label><textarea id="nt_mensaje" class="fta" maxlength="2000"></textarea></div>
+
+      <div class="fg"><label>IMAGEN DE PORTADA</label><input id="nt_imagen" class="fi2" type="file" accept="image/jpeg,image/png,image/webp,image/gif"></div>
+      <div class="fg"><label>GALERÍA</label><input id="nt_imagenes" class="fi2" type="file" multiple accept="image/jpeg,image/png,image/webp,image/gif"></div>
+      <div class="fg"><label>ENLACE</label><input id="nt_enlace" class="fi2" type="url" placeholder="https://..."></div>
+      <div class="fg"><label>TEXTO DEL BOTÓN</label><input id="nt_enlace_label" class="fi2" placeholder="VER MÁS" maxlength="40"></div>
+      <div class="fg"><label>PROGRAMAR ENVÍO / PUBLICACIÓN</label><input id="nt_programada" class="fi2" type="datetime-local"></div>
+      <div class="fg"><label>CADUCIDAD DEL ANUNCIO</label><input id="nt_expira" class="fi2" type="datetime-local"></div>
+      <div class="fg"><label>PRIORIDAD</label><input id="nt_prioridad" class="fi2" type="number" min="0" max="100" value="0"></div>
+      <div class="fg"><label>CRONÓMETRO</label><div id="nt_timer" style="padding:11px;border:1px solid var(--gb);border-radius:8px;color:var(--gold);font-weight:800">Envío inmediato</div></div>
     </div>
 
-    <div class="ff">
-      <button class="btn btn-g" id="nt_send_btn" onclick="enviarComunicacionAdmin()">🔔 ENVIAR NOTIFICACIÓN</button>
-    </div>
+    <div class="ff"><button class="btn btn-g" id="nt_send_btn" onclick="enviarComunicacionAdmin()">🔔 ENVIAR NOTIFICACIÓN</button></div>
 
     <div class="tw" style="margin-top:20px">
       <div class="th"><div class="tt">Historial de notificaciones</div></div>
       <div class="table-scroll"><table>
-        <thead><tr><th>Fecha</th><th>Título</th><th>Tipo</th><th>Usuario</th><th>Mensaje</th></tr></thead>
+        <thead><tr><th>Fecha</th><th>Título</th><th>Tipo</th><th>Usuario</th><th>Estado</th><th>Programada</th><th>Push</th><th>Mensaje</th><th>Acciones</th></tr></thead>
         <tbody id="ntb"></tbody>
       </table></div>
     </div>
 
     <div class="tw" style="margin-top:20px">
-      <div class="th">
-        <div>
-          <div class="tt">Anuncios publicados</div>
-          <div style="color:var(--mu);font-size:10px;margin-top:4px">Un anuncio se guarda una sola vez y puede llevar portada, galería, enlace y fecha de caducidad.</div>
-        </div>
-      </div>
+      <div class="th"><div><div class="tt">Anuncios publicados y programados</div><div style="color:var(--mu);font-size:10px;margin-top:4px">Los anuncios programados se publican automáticamente y pueden caducar.</div></div></div>
       <div class="table-scroll"><table>
-        <thead><tr><th>Fecha</th><th>Portada</th><th>Título</th><th>Tipo</th><th>Prioridad</th><th>Caducidad</th><th>Estado</th><th>Acciones</th></tr></thead>
+        <thead><tr><th>Programada</th><th>Portada / título</th><th>Tipo</th><th>Prioridad</th><th>Estado</th><th>Caducidad</th><th>Push</th><th>Acciones</th></tr></thead>
         <tbody id="anb"></tbody>
       </table></div>
     </div>
