@@ -34,38 +34,25 @@ export function useNotifications(userId?: string) {
       .order("created_at", { ascending: false })
       .limit(100);
 
-    if (!error) {
-      setItems(data ?? []);
-    } else {
-      console.error("[EYESITE] notifications load error:", error);
-    }
+    if (!error) setItems(data ?? []);
+    else console.error("[EYESITE] notifications load error:", error);
 
     setLoading(false);
   }, [userId]);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      void load();
-    }, 0);
+    const timer = setTimeout(() => void load(), 0);
 
-    if (!userId) {
-      return () => clearTimeout(timer);
-    }
+    if (!userId) return () => clearTimeout(timer);
 
     const channel = supabase
       .channel(`user-notifications-${userId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "notificaciones",
-          filter: `user_id=eq.${userId}`,
-        },
-        () => {
-          void load();
-        },
-      )
+      .on("postgres_changes", {
+        event: "*",
+        schema: "public",
+        table: "notificaciones",
+        filter: `user_id=eq.${userId}`,
+      }, () => void load())
       .subscribe();
 
     return () => {
@@ -74,59 +61,41 @@ export function useNotifications(userId?: string) {
     };
   }, [userId, load]);
 
-  const markRead = useCallback(
-    async (id: string) => {
-      if (!userId) return;
+  const markRead = useCallback(async (id: string) => {
+    if (!userId) return;
 
-      const { error } = await supabase
-        .from("notificaciones")
-        .update({ leida: true })
-        .eq("id", id)
-        .eq("user_id", userId);
+    const { data, error } = await supabase.rpc("marcar_notificacion_leida", {
+      p_notification_id: id,
+    });
 
-      if (error) {
-        console.error("[EYESITE] mark notification read error:", error);
-        return;
-      }
+    if (error) {
+      console.error("[EYESITE] mark notification read error:", error);
+      return;
+    }
 
-      setItems((current) =>
-        current.map((notification) =>
-          notification.id === id
-            ? { ...notification, leida: true }
-            : notification,
-        ),
-      );
-    },
-    [userId],
-  );
+    if (!data) return;
+
+    setItems(current =>
+      current.map(notification =>
+        notification.id === id ? { ...notification, leida: true } : notification,
+      ),
+    );
+  }, [userId]);
 
   return {
     items,
     loading,
-    unread: items.filter((notification) => !notification.leida).length,
+    unread: items.filter(notification => !notification.leida).length,
     markRead,
     refetch: load,
   };
 }
 
-/**
- * Registra el token Expo Push.
- *
- * En Expo Go Android no se intenta cargar expo-notifications,
- * porque las notificaciones push remotas no están disponibles ahí.
- *
- * En una Development Build / producción sí se carga el módulo
- * y se registra el token normalmente.
- */
 export async function registerPushToken(userId?: string) {
-  if (!userId || Platform.OS === "web") {
-    return null;
-  }
+  if (!userId || Platform.OS === "web") return null;
 
   if (isExpoGo) {
-    console.info(
-      "[EYESITE] Push remoto omitido: Expo Go no soporta push remoto en Android.",
-    );
+    console.info("[EYESITE] Push remoto omitido: Expo Go no soporta push remoto en Android.");
     return null;
   }
 
@@ -143,14 +112,10 @@ export async function registerPushToken(userId?: string) {
     }
 
     let permission = await Notifications.getPermissionsAsync();
-
     if (permission.status !== "granted") {
       permission = await Notifications.requestPermissionsAsync();
     }
-
-    if (permission.status !== "granted") {
-      return null;
-    }
+    if (permission.status !== "granted") return null;
 
     const projectId =
       Constants.expoConfig?.extra?.eas?.projectId ??
@@ -163,14 +128,10 @@ export async function registerPushToken(userId?: string) {
     if (result.data) {
       const { error } = await supabase
         .from("profiles")
-        .update({
-          expo_push_token: result.data,
-        })
+        .update({ expo_push_token: result.data })
         .eq("id", userId);
 
-      if (error) {
-        console.error("[EYESITE] push token save error:", error);
-      }
+      if (error) console.error("[EYESITE] push token save error:", error);
     }
 
     return result.data ?? null;
