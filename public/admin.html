@@ -2766,7 +2766,7 @@
           <section class="sec" id="sec-notificaciones">
   <div class="fp">
     <div class="fpt">COMUNICACIÓN</div>
-    <div class="fps">Administra notificaciones individuales y anuncios generales sin perder el historial existente.</div>
+    <div class="fps">Notificaciones individuales y anuncios generales con imágenes, galería, enlace y caducidad.</div>
 
     <div class="g2">
       <div class="fg">
@@ -2788,7 +2788,7 @@
         </select>
       </div>
       <div class="fg">
-        <label>TÍTULO</label><input id="nt_titulo" class="fi2" />
+        <label>TÍTULO</label><input id="nt_titulo" class="fi2" maxlength="120" />
       </div>
       <div class="fg" id="nt_destino_wrap">
         <label>DESTINO</label>
@@ -2801,7 +2801,27 @@
         <label>UUID DEL USUARIO</label><input id="nt_user" class="fi2" placeholder="UUID del usuario" />
       </div>
       <div class="fg gfull">
-        <label>MENSAJE</label><textarea id="nt_mensaje" class="fta"></textarea>
+        <label>MENSAJE</label><textarea id="nt_mensaje" class="fta" maxlength="2000"></textarea>
+      </div>
+      <div class="fg">
+        <label>IMAGEN DE PORTADA (ANUNCIO)</label>
+        <input id="nt_imagen" class="fi2" type="file" accept="image/jpeg,image/png,image/webp,image/gif" />
+      </div>
+      <div class="fg">
+        <label>GALERÍA DEL ANUNCIO</label>
+        <input id="nt_imagenes" class="fi2" type="file" multiple accept="image/jpeg,image/png,image/webp,image/gif" />
+      </div>
+      <div class="fg">
+        <label>ENLACE OPCIONAL</label><input id="nt_enlace" class="fi2" type="url" placeholder="https://..." />
+      </div>
+      <div class="fg">
+        <label>TEXTO DEL BOTÓN</label><input id="nt_enlace_label" class="fi2" placeholder="VER MÁS" maxlength="40" />
+      </div>
+      <div class="fg">
+        <label>CADUCIDAD</label><input id="nt_expira" class="fi2" type="datetime-local" />
+      </div>
+      <div class="fg">
+        <label>PRIORIDAD</label><input id="nt_prioridad" class="fi2" type="number" min="0" max="100" value="0" />
       </div>
     </div>
 
@@ -2821,11 +2841,11 @@
       <div class="th">
         <div>
           <div class="tt">Anuncios publicados</div>
-          <div style="color:var(--mu);font-size:10px;margin-top:4px">Los anuncios generales no generan una copia por usuario.</div>
+          <div style="color:var(--mu);font-size:10px;margin-top:4px">Un anuncio se guarda una sola vez y puede llevar portada, galería, enlace y fecha de caducidad.</div>
         </div>
       </div>
       <div class="table-scroll"><table>
-        <thead><tr><th>Fecha</th><th>Título</th><th>Tipo</th><th>Estado</th><th>Acciones</th></tr></thead>
+        <thead><tr><th>Fecha</th><th>Portada</th><th>Título</th><th>Tipo</th><th>Prioridad</th><th>Caducidad</th><th>Estado</th><th>Acciones</th></tr></thead>
         <tbody id="anb"></tbody>
       </table></div>
     </div>
