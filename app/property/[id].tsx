@@ -168,7 +168,62 @@ export default function PropertyDetailScreen() {
   property.municipio ??
   property.ubicacion ??
   '';
-  // (mediaList se construye arriba con useMemo: portada → video → galería)
+
+ const surfaceUnit =
+  property.surfaceUnit ??
+  property.unidad_superficie ??
+  'm²';
+
+ const expectedPrice = Number(
+  property.expectedPrice ??
+    property.precio_esperado ??
+    0
+ );
+
+ const frente = Number(property.frente ?? 0);
+ const fondo = Number(property.fondo ?? 0);
+
+ const detailEntries = Object.entries(property.detalles || {})
+  .filter(([_, value]) => value !== null && value !== undefined && String(value).trim() !== '');
+
+ const characteristicEntries = Object.entries(property.caracteristicas || {})
+  .filter(([_, value]) => value !== null && value !== undefined && String(value).trim() !== '');
+
+ const nearbyServiceEntries = Object.entries(property.servicios_cercanos || {})
+  .filter(([_, value]) => value !== null && value !== undefined && String(value).trim() !== '');
+
+ const formatDynamicValue = (value: any) => {
+  if (Array.isArray(value)) return value.join(', ');
+  if (typeof value === 'boolean') return value ? 'Sí' : 'No';
+  if (typeof value === 'object' && value !== null) return Object.values(value).join(', ');
+  return String(value);
+ };
+
+ const labelDynamicKey = (key: string) =>
+  key
+   .replace(/_/g, ' ')
+   .replace(/\b\w/g, (letter) => letter.toUpperCase());
+
+ const renderDynamicSection = (
+  titleSection: string,
+  entries: [string, any][],
+ ) => {
+  if (!entries.length) return null;
+
+  return (
+   <View style={styles.dataSection}>
+    <Text style={styles.sectionTitle}>{titleSection}</Text>
+    <View style={styles.dataGrid}>
+     {entries.map(([key, value]) => (
+      <View key={key} style={styles.dataCard}>
+       <Text style={styles.dataLabel}>{labelDynamicKey(key)}</Text>
+       <Text style={styles.dataValue}>{formatDynamicValue(value)}</Text>
+      </View>
+     ))}
+    </View>
+   </View>
+  );
+ };
 
   const handleWhatsApp = () => {
     const msg = encodeURIComponent(
@@ -349,12 +404,12 @@ export default function PropertyDetailScreen() {
             </View>
             <View style={styles.metricCard}>
               <Text style={styles.metricLabel}>Superficie</Text>
-              <Text style={styles.metricValue}>{formatSurface(surfaceM2)}</Text>
+              <Text style={styles.metricValue}>{formatSurface(surfaceM2, surfaceUnit)}</Text>
             </View>
             {constructionM2 > 0 && (
               <View style={styles.metricCard}>
                 <Text style={styles.metricLabel}>Construcción</Text>
-                <Text style={styles.metricValue}>{formatSurface(constructionM2)}</Text>
+                <Text style={styles.metricValue}>{formatSurface(constructionM2, 'm²')}</Text>
               </View>
             )}
           </View>
@@ -381,16 +436,80 @@ export default function PropertyDetailScreen() {
             <Text style={styles.descText}>{property.description || property.descripcion || 'Sin descripción disponible'}</Text>
           </View>
 
-          {/* Certeza legal */}
-          <View style={styles.legalNote}>
-            <Text style={styles.legalIcon}>⚖️</Text>
-            <View style={styles.legalContent}>
-              <Text style={styles.legalTitle}>Certeza Legal Garantizada</Text>
-              <Text style={styles.legalText}>
-                Esta propiedad cuenta con documentación legal verificada por el equipo Eyesite.
-              </Text>
+          {property.descripcion_pro ? (
+            <View style={styles.descSection}>
+              <Text style={styles.descTitle}>INFORMACIÓN PROFESIONAL</Text>
+              <Text style={styles.descText}>{property.descripcion_pro}</Text>
             </View>
+          ) : null}
+
+          {(property.direccion || property.ubicacion) && (
+            <View style={styles.descSection}>
+              <Text style={styles.descTitle}>UBICACIÓN</Text>
+              {property.direccion ? <Text style={styles.descText}>{property.direccion}</Text> : null}
+              {property.ubicacion && property.ubicacion !== location ? (
+                <Text style={styles.secondaryText}>{property.ubicacion}</Text>
+              ) : null}
+            </View>
+          )}
+
+          <View style={styles.metricsGrid}>
+            {frente > 0 && (
+              <View style={styles.metricCard}>
+                <Text style={styles.metricLabel}>Frente</Text>
+                <Text style={styles.metricValue}>{frente} m</Text>
+              </View>
+            )}
+            {fondo > 0 && (
+              <View style={styles.metricCard}>
+                <Text style={styles.metricLabel}>Fondo</Text>
+                <Text style={styles.metricValue}>{fondo} m</Text>
+              </View>
+            )}
+            {expectedPrice > 0 && (
+              <View style={styles.metricCard}>
+                <Text style={styles.metricLabel}>Precio esperado</Text>
+                <Text style={styles.metricValue}>{formatPrice(expectedPrice, priceUnit)}</Text>
+              </View>
+            )}
           </View>
+
+          {renderDynamicSection('CARACTERÍSTICAS', characteristicEntries)}
+          {renderDynamicSection('DETALLES', detailEntries)}
+          {renderDynamicSection('SERVICIOS CERCANOS', nearbyServiceEntries)}
+
+          {(property.estatus_legal || property.certeza_legal) ? (
+            <View style={styles.legalNote}>
+              <Text style={styles.legalIcon}>⚖️</Text>
+              <View style={styles.legalContent}>
+                <Text style={styles.legalTitle}>SITUACIÓN LEGAL</Text>
+                {property.estatus_legal ? (
+                  <Text style={styles.legalText}>Estatus: {property.estatus_legal}</Text>
+                ) : null}
+                {property.certeza_legal ? (
+                  <Text style={styles.legalText}>Certeza: {property.certeza_legal}</Text>
+                ) : null}
+              </View>
+            </View>
+          ) : null}
+
+          {property.enlaces && Array.isArray(property.enlaces) && property.enlaces.length > 0 ? (
+            <View style={styles.dataSection}>
+              <Text style={styles.sectionTitle}>ENLACES</Text>
+              {property.enlaces.map((link: any, index: number) => {
+                const url = typeof link === 'string' ? link : link?.url || link?.href;
+                const label = typeof link === 'string' ? link : link?.label || link?.titulo || url;
+                if (!url) return null;
+                return (
+                  <Pressable key={url || index} onPress={() => Linking.openURL(url)} style={styles.linkCard}>
+                    <Text style={styles.linkLabel}>{label}</Text>
+                    <Text style={styles.linkUrl}>{url}</Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          ) : null}
+
         </View>
       </ScrollView>
 
@@ -666,6 +785,65 @@ const styles = StyleSheet.create({
     color: '#F5F5F5',
     fontSize: 14,
     lineHeight: 22,
+  },
+  secondaryText: {
+    color: '#9A9A9A',
+    fontSize: 13,
+    lineHeight: 20,
+    marginTop: 6,
+  },
+  dataSection: {
+    marginBottom: 20,
+  },
+  sectionTitle: {
+    color: '#9A9A9A',
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 2,
+    marginBottom: 10,
+  },
+  dataGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  dataCard: {
+    width: '48%',
+    backgroundColor: '#1A1A1A',
+    borderRadius: 8,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#2A2A2A',
+  },
+  dataLabel: {
+    color: '#9A9A9A',
+    fontSize: 11,
+    marginBottom: 5,
+    textTransform: 'capitalize',
+  },
+  dataValue: {
+    color: '#F5F5F5',
+    fontSize: 14,
+    lineHeight: 20,
+    fontWeight: '600',
+  },
+  linkCard: {
+    backgroundColor: '#1A1A1A',
+    borderRadius: 8,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#2A2A2A',
+    marginBottom: 8,
+  },
+  linkLabel: {
+    color: '#C9A84C',
+    fontSize: 14,
+    fontWeight: '700',
+    marginBottom: 4,
+  },
+  linkUrl: {
+    color: '#9A9A9A',
+    fontSize: 12,
   },
   legalNote: {
     flexDirection: 'row',
