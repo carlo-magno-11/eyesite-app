@@ -44,28 +44,69 @@ export default function TermsScreen() {
   };
 
   const onAccept = async () => {
-    if (!allAccepted || saving) return;
-    setSaving(true);
-    try {
-      const payload: Record<string, any> = {
-        terminos_aceptados: true,
-        terminos_fecha: new Date().toISOString(),
-        terminos_version: 'v1.0',
-      };
-      if (user?.id) {
-        const { error } = await supabase.from('profiles').update(payload).eq('id', user.id);
-        if (error) {
-          console.error('[terms] update falló:', { code: error.code, message: error.message, details: error.details, hint: error.hint });
-          throw error;
-        }
-      }
-      router.replace(profile?.estado === 'pendiente' ? '/pending' : '/(tabs)');
-    } catch (e: any) {
-      console.error('[terms] ERROR REAL:', { code: e?.code, message: e?.message, details: e?.details, hint: e?.hint });
-    } finally {
-      setSaving(false);
+  if (!allAccepted || saving || !user?.id) return;
+
+  setSaving(true);
+
+  try {
+    const payload = {
+      terminos_aceptados: true,
+      terminos_fecha: new Date().toISOString(),
+      terminos_version: 'v1.0',
+    };
+
+    const { error: updateError } = await supabase
+      .from('profiles')
+      .update(payload)
+      .eq('id', user.id);
+
+    if (updateError) {
+      console.error('[terms] update falló:', {
+        code: updateError.code,
+        message: updateError.message,
+        details: updateError.details,
+        hint: updateError.hint,
+      });
+      throw updateError;
     }
-  };
+
+    // Volvemos a consultar el perfil para obtener el estado actualizado.
+    const { data: updatedProfile, error: profileError } = await supabase
+      .from('profiles')
+      .select('estado, terminos_aceptados')
+      .eq('id', user.id)
+      .single();
+
+    if (profileError) {
+      console.error('[terms] consulta de perfil falló:', {
+        code: profileError.code,
+        message: profileError.message,
+        details: profileError.details,
+        hint: profileError.hint,
+      });
+      throw profileError;
+    }
+
+    if (!updatedProfile?.terminos_aceptados) {
+      throw new Error('Los términos no quedaron guardados correctamente.');
+    }
+
+    if (updatedProfile.estado === 'pendiente') {
+      router.replace('/pending');
+    } else {
+      router.replace('/(tabs)');
+    }
+  } catch (e: any) {
+    console.error('[terms] ERROR REAL:', {
+      code: e?.code,
+      message: e?.message,
+      details: e?.details,
+      hint: e?.hint,
+    });
+  } finally {
+    setSaving(false);
+  }
+};
 
   return (
     <ScreenContainer edges={['top', 'bottom']} containerClassName="bg-background">

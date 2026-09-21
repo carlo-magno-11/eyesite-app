@@ -31,7 +31,7 @@ export function useAnnouncements() {
 
     const { data, error } = await supabase
       .from("anuncios")
-      .select("id,titulo,mensaje,tipo,activa,published_at,created_at,updated_at,imagen_url,imagenes,enlace,enlace_label,fecha_expiracion,prioridad")
+      .select("id,titulo,mensaje,tipo,activa,published_at,created_at,updated_at,imagen_url,imagenes,enlace,enlace_label,fecha_expiracion,prioridad,programada_para,estado_publicacion,publicada_en")
       .eq("activa", true)
       .eq("estado_publicacion", "publicado")
       .lte("programada_para", new Date().toISOString())
