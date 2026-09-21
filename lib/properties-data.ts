@@ -102,6 +102,9 @@ export const PROPERTY_TYPES = [
   'Casa',
   'Departamento',
   'Terreno',
+  'Hacienda',
+  'Rancho',
+  'Industrial',
   'Local',
   'Oficina',
 ] as const;
