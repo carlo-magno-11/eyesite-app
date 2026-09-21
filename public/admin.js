@@ -4160,6 +4160,10 @@ async function saveNew() {
 
           archivos: uploadedFiles,
 
+          pdfs: classifyPrivateFileItems(uploadedFiles).pdfs,
+
+          kmz_kml: classifyPrivateFileItems(uploadedFiles).kmzKml,
+
           fotos_pro: uploadedFotosPro
             .map((item) => typeof item === "string" ? item : item?.url)
             .filter(Boolean),
