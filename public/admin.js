@@ -3022,9 +3022,15 @@ function bindPropertyForm(mode, p) {
    ============================================================ */
 
 function handleFotosPro(mode, files) {
-  const valid = files.filter(
-    (file) => file && file.type && file.type.startsWith("image/"),
-  );
+  const valid = files.filter((file) => {
+    const extension = String(file?.name || "").split(".").pop().toLowerCase();
+    const mime = String(file?.type || "").toLowerCase();
+    return Boolean(
+      file &&
+      (mime.startsWith("image/") ||
+        ["jpg", "jpeg", "png", "webp", "gif"].includes(extension))
+    );
+  });
 
   if (!valid.length) return;
 
@@ -3073,14 +3079,14 @@ function removeFotosPro(mode, index) {
 function handleVideo(mode, file) {
   if (!file) return;
 
-  const allowed = [
-    "video/mp4",
-    "video/quicktime",
-    "video/x-m4v",
-    "video/m4v",
-  ];
+  const extension = String(file.name || "").split(".").pop().toLowerCase();
+  const allowedExtensions = ["mp4", "mov", "m4v"];
+  const mime = String(file.type || "").toLowerCase().trim();
 
-  if (!allowed.includes(String(file.type || "").toLowerCase())) {
+  if (
+    !allowedExtensions.includes(extension) &&
+    !["video/mp4", "video/quicktime", "video/x-m4v", "video/m4v"].includes(mime)
+  ) {
     toast("El video debe ser MP4, MOV o M4V.");
     return;
   }
@@ -3127,7 +3133,12 @@ function removeVideo(mode) {
 function handleVideoCover(mode, file) {
   if (!file) return;
 
-  if (!file.type || !file.type.startsWith("image/")) {
+  const extension = String(file.name || "").split(".").pop().toLowerCase();
+  const mime = String(file.type || "").toLowerCase();
+  if (
+    !mime.startsWith("image/") &&
+    !["jpg", "jpeg", "png", "webp", "gif"].includes(extension)
+  ) {
     toast("La portada del video debe ser una imagen.");
     return;
   }
@@ -3180,7 +3191,13 @@ function removeVideoCover(mode) {
 
 function handleImages(mode, files) {
   const valid = files.filter((file) => {
-    return file && file.type && file.type.startsWith("image/");
+    const extension = String(file?.name || "").split(".").pop().toLowerCase();
+    const mime = String(file?.type || "").toLowerCase();
+    return Boolean(
+      file &&
+      (mime.startsWith("image/") ||
+        ["jpg", "jpeg", "png", "webp", "gif"].includes(extension))
+    );
   });
 
   if (!valid.length) {
@@ -3620,7 +3637,6 @@ async function uploadFile(bucket, file, folder) {
     }
   }
 
-  const originalName = file.name || "archivo";
   const cleanName = originalName.replace(/[^\w.\-]+/g, "_").toLowerCase();
   const path = `${folder}/${Date.now()}_${Math.random()
     .toString(36)
@@ -4279,6 +4295,8 @@ function resetNew(showToast = true) {
   nuevasFotosPro = [];
   nuevosVideos = [];
   nuevaPortadaVideo = null;
+  nuevosPdfs = [];
+  nuevosKmzKml = [];
 
   const nf = document.getElementById("nf");
 
