@@ -21,6 +21,12 @@ export default function HomeScreen() {
   const { user } = useAuth();
   const { unread } = useNotifications(user?.id);
   const featuredProperties = properties.filter((p) => p.featured || p.destacada);
+  // Si todavía no hay propiedades marcadas como destacadas, mostramos las
+  // primeras oportunidades reales para evitar una sección vacía en producción.
+  const highlightedProperties =
+    featuredProperties.length > 0
+      ? featuredProperties
+      : properties.slice(0, 6);
 
   const handleCategoryPress = (key: string) => {
     router.push({ pathname: '/(tabs)/properties', params: { filter: key } } as any);
@@ -112,7 +118,7 @@ export default function HomeScreen() {
               <ActivityIndicator color="#C9A84C" size="large" />
             </View>
           ) : (
-            featuredProperties.map((property) => (
+            highlightedProperties.map((property) => (
               <PropertyCard key={property.id} property={property} />
             ))
           )}
