@@ -1914,7 +1914,9 @@ async function editarPropiedad(id) {
     },
   );
 
-  editEnlaces = normalizeArray(p.enlaces || p.links);\n  editPdfs = normalizeArray(p.pdfs || []);\n  editKmzKml = normalizeArray(p.kmz_kml || []);
+  editEnlaces = normalizeArray(p.enlaces || p.links);
+  editPdfs = normalizeArray(p.pdfs || []);
+  editKmzKml = normalizeArray(p.kmz_kml || []);
 
   editFotosPro = normalizeArray(p.fotos_pro || p.imagenes_pro).map((item) => {
     if (typeof item === "string") {
@@ -2885,6 +2887,7 @@ function propertyFormHTML(p = {}, mode = "new") {
             <input
               type="file"
               multiple
+              accept=".pdf,.zip,.kml,.kmz,.doc,.docx,.xls,.xlsx,.txt,image/jpeg,image/png"
               id="${mode}_files"
             >
 
@@ -3707,6 +3710,22 @@ async function uploadCollection(list, bucket, folder, progressCallback) {
   return output;
 }
 
+function classifyPrivateFileItems(items) {
+  const pdfs = [];
+  const kmzKml = [];
+  const archivos = [];
+  for (const item of Array.isArray(items) ? items : []) {
+    const value = typeof item === "string" ? item : (item?.url || item?.path || "");
+    const name = String(typeof item === "string" ? item : (item?.name || value)).toLowerCase();
+    if (!value) continue;
+    const normalized = { ...(typeof item === "object" && item ? item : {}), url: value };
+    archivos.push(normalized);
+    if (/\.pdf(?:$|[?#])/i.test(name)) pdfs.push(value);
+    if (/\.(kmz|kml)(?:$|[?#])/i.test(name)) kmzKml.push(value);
+  }
+  return { archivos, pdfs, kmzKml };
+}
+
 /* ============================================================
    FORMULARIO — DATOS
    ============================================================ */
@@ -4377,7 +4396,9 @@ async function saveEdit() {
                     : (propiedadEditando?.portada_url ? "foto" : null)
                 ),
 
-          enlaces: editEnlaces,\n          pdfs: [...new Set([...editPdfs, ...classifyPrivateFileItems(files).pdfs])],\n          kmz_kml: [...new Set([...editKmzKml, ...classifyPrivateFileItems(files).kmzKml])],
+          enlaces: editEnlaces,
+          pdfs: [...new Set([...editPdfs, ...classifyPrivateFileItems(files).pdfs])],
+          kmz_kml: [...new Set([...editKmzKml, ...classifyPrivateFileItems(files).kmzKml])],
         };
 
         const { error } = await s.rpc("admin_update_property", {
