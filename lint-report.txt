@@ -3,45 +3,56 @@
 > expo lint
 
 
-/home/runner/work/eyesite-app/eyesite-app/app/(tabs)/index.tsx
-  5:10  warning  'IconSymbol' is defined but never used  @typescript-eslint/no-unused-vars
-
 /home/runner/work/eyesite-app/eyesite-app/app/mi-cuenta.tsx
-  18:5  error  Error: Calling setState synchronously within an effect can trigger cascading renders
+  86:36  error  Error: Cannot access refs during render
 
-Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
-* Update external systems with the latest state from React.
-* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+React refs are values that are not needed for rendering. Refs should only be accessed outside of render, such as in event handlers or effects. Accessing a ref value (the `current` property) during render can cause your component not to update as expected (https://react.dev/reference/react/useRef).
 
-Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+/home/runner/work/eyesite-app/eyesite-app/app/mi-cuenta.tsx:86:36
+  84 |           <View style={styles.readonly}><Text style={styles.readonlyText}>{user?.email ?? "—"}</Text></View>
+  85 |           <Text style={styles.label}>NOMBRE</Text>
+> 86 |           <TextInput defaultValue={nombreRef.current} onChangeText={(value) => { nombreRef.current = value; }} style={styles.input} placeholder="Nombre completo" placeholderTextColor="#777" />
+     |                                    ^^^^^^^^^^^^^^^^^ Cannot access ref value during render
+  87 |           <Text style={styles.label}>TELÉFONO</Text>
+  88 |           <TextInput defaultValue={telefonoRef.current} onChangeText={(value) => { telefonoRef.current = value; }} keyboardType="phone-pad" style={styles.input} placeholder="Teléfono" placeholderTextColor="#777" />
+  89 |           <Text style={styles.label}>CIUDAD / ZONA</Text>                                                                                                                                                                            react-hooks/refs
+  88:36  error  Error: Cannot access refs during render
 
-/home/runner/work/eyesite-app/eyesite-app/app/mi-cuenta.tsx:18:5
-  16 |   useEffect(() => {
-  17 |     if (!profile) return;
-> 18 |     setNombre(profile.nombre ?? "");
-     |     ^^^^^^^^^ Avoid calling setState() directly within an effect
-  19 |     setTelefono(profile.telefono ?? "");
-  20 |     setCiudad(profile.ciudad ?? "");
-  21 |     setPresupuesto(profile.presupuesto != null ? String(profile.presupuesto) : "");  react-hooks/set-state-in-effect
+React refs are values that are not needed for rendering. Refs should only be accessed outside of render, such as in event handlers or effects. Accessing a ref value (the `current` property) during render can cause your component not to update as expected (https://react.dev/reference/react/useRef).
 
-/home/runner/work/eyesite-app/eyesite-app/app/my-properties.tsx
-  11:405  warning  React Hook useEffect has a missing dependency: 'user'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+/home/runner/work/eyesite-app/eyesite-app/app/mi-cuenta.tsx:88:36
+  86 |           <TextInput defaultValue={nombreRef.current} onChangeText={(value) => { nombreRef.current = value; }} style={styles.input} placeholder="Nombre completo" placeholderTextColor="#777" />
+  87 |           <Text style={styles.label}>TELÉFONO</Text>
+> 88 |           <TextInput defaultValue={telefonoRef.current} onChangeText={(value) => { telefonoRef.current = value; }} keyboardType="phone-pad" style={styles.input} placeholder="Teléfono" placeholderTextColor="#777" />
+     |                                    ^^^^^^^^^^^^^^^^^^^ Cannot access ref value during render
+  89 |           <Text style={styles.label}>CIUDAD / ZONA</Text>
+  90 |           <TextInput defaultValue={ciudadRef.current} onChangeText={(value) => { ciudadRef.current = value; }} style={styles.input} placeholder="Ciudad" placeholderTextColor="#777" />
+  91 |           <Text style={styles.label}>PRESUPUESTO</Text>                                                                                          react-hooks/refs
+  90:36  error  Error: Cannot access refs during render
 
-/home/runner/work/eyesite-app/eyesite-app/app/my-requests.tsx
-  11:423  warning  React Hook useEffect has a missing dependency: 'user'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+React refs are values that are not needed for rendering. Refs should only be accessed outside of render, such as in event handlers or effects. Accessing a ref value (the `current` property) during render can cause your component not to update as expected (https://react.dev/reference/react/useRef).
 
-/home/runner/work/eyesite-app/eyesite-app/app/property/[id].tsx
-  49:6  warning  React Hook useEffect has missing dependencies: 'property.archivos', 'property.kmz_kml', and 'property.pdfs'. Either include them or remove the dependency array  react-hooks/exhaustive-deps
+/home/runner/work/eyesite-app/eyesite-app/app/mi-cuenta.tsx:90:36
+  88 |           <TextInput defaultValue={telefonoRef.current} onChangeText={(value) => { telefonoRef.current = value; }} keyboardType="phone-pad" style={styles.input} placeholder="Teléfono" placeholderTextColor="#777" />
+  89 |           <Text style={styles.label}>CIUDAD / ZONA</Text>
+> 90 |           <TextInput defaultValue={ciudadRef.current} onChangeText={(value) => { ciudadRef.current = value; }} style={styles.input} placeholder="Ciudad" placeholderTextColor="#777" />
+     |                                    ^^^^^^^^^^^^^^^^^ Cannot access ref value during render
+  91 |           <Text style={styles.label}>PRESUPUESTO</Text>
+  92 |           <TextInput defaultValue={presupuestoRef.current} onChangeText={(value) => { presupuestoRef.current = value; }} keyboardType="numeric" style={styles.input} placeholder="Presupuesto" placeholderTextColor="#777" />
+  93 |           <Pressable onPress={saveProfile} disabled={saving} style={[styles.primary, saving && styles.disabled]}>  react-hooks/refs
+  92:36  error  Error: Cannot access refs during render
 
-/home/runner/work/eyesite-app/eyesite-app/app/settings.tsx
-  1:10  warning  'Alert' is defined but never used  @typescript-eslint/no-unused-vars
+React refs are values that are not needed for rendering. Refs should only be accessed outside of render, such as in event handlers or effects. Accessing a ref value (the `current` property) during render can cause your component not to update as expected (https://react.dev/reference/react/useRef).
 
-/home/runner/work/eyesite-app/eyesite-app/app/terms.tsx
-  21:17  warning  'profile' is assigned a value but never used  @typescript-eslint/no-unused-vars
+/home/runner/work/eyesite-app/eyesite-app/app/mi-cuenta.tsx:92:36
+  90 |           <TextInput defaultValue={ciudadRef.current} onChangeText={(value) => { ciudadRef.current = value; }} style={styles.input} placeholder="Ciudad" placeholderTextColor="#777" />
+  91 |           <Text style={styles.label}>PRESUPUESTO</Text>
+> 92 |           <TextInput defaultValue={presupuestoRef.current} onChangeText={(value) => { presupuestoRef.current = value; }} keyboardType="numeric" style={styles.input} placeholder="Presupuesto" placeholderTextColor="#777" />
+     |                                    ^^^^^^^^^^^^^^^^^^^^^^ Cannot access ref value during render
+  93 |           <Pressable onPress={saveProfile} disabled={saving} style={[styles.primary, saving && styles.disabled]}>
+  94 |             <Text style={styles.primaryText}>{saving ? "GUARDANDO..." : "GUARDAR PERFIL"}</Text>
+  95 |           </Pressable>                                                                                                                                                      react-hooks/refs
 
-/home/runner/work/eyesite-app/eyesite-app/components/property-card.tsx
-  8:24  warning  'isVideoUri' is defined but never used  @typescript-eslint/no-unused-vars
-
-✖ 8 problems (1 error, 7 warnings)
+✖ 4 problems (4 errors, 0 warnings)
 
  ELIFECYCLE  Command failed with exit code 1.
