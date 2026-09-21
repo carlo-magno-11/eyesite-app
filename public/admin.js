@@ -3249,7 +3249,7 @@ function renderImages(mode) {
               index === 0
                 ? `
                   <div class="pimain">
-                    PRINCIPAL
+                    PRINCIPAL · PORTADA
                   </div>
                 `
                 : ""
@@ -4180,13 +4180,19 @@ async function saveNew() {
 
           portada_url:
             uploadedVideoCover?.url ||
+            uploadedImages[0]?.url ||
+            uploadedImages[0] ||
             null,
 
           portada_tipo:
-            uploadedVideoCover ? "video" : null,
+            uploadedVideoCover
+              ? "video"
+              : (uploadedImages.length ? "foto" : null),
 
           tipo_portada:
-            uploadedVideoCover ? "video" : null,
+            uploadedVideoCover
+              ? "video"
+              : (uploadedImages.length ? "foto" : null),
 
           enlaces: Array.isArray(nuevosEnlaces) ? nuevosEnlaces : [],
 
