@@ -4442,29 +4442,18 @@ async function saveEdit() {
 
         if (oldPrice > 0 && Number(data.precio_actual ?? 0) > 0 && Number(data.precio_actual) < oldPrice) {
           try {
-            const { data: favorites } = await s
-              .from("favoritos")
-              .select("user_id")
-              .eq("property_id", propiedadEditando.id);
-
-            const userIds = [
-              ...new Set([
-                ...(favorites || []).map((item) => item.user_id).filter(Boolean),
-                propiedadEditando.user_id,
-              ].filter(Boolean)),
-            ];
-
-            if (userIds.length) {
-              const { error: pushError } = await s.functions.invoke("send-notification", {
-                body: {
-                  titulo: "Bajó el precio de una propiedad que sigues",
-                  mensaje: `"${data.titulo || propiedadEditando.titulo || "Propiedad"}" bajó de ${oldPrice.toLocaleString("es-MX")} a ${Number(data.precio_actual).toLocaleString("es-MX")}.`,
-                  tipo: "precio",
-                  user_ids: userIds,
-                },
-              });
-              if (pushError) console.warn("[push precio]", pushError);
-            }
+            const { error: pushError } = await s.functions.invoke("send-notification", {
+              body: {
+                titulo: "Bajó el precio de una propiedad que sigues",
+                mensaje: `"${data.titulo || propiedadEditando.titulo || "Propiedad"}" bajó de ${oldPrice.toLocaleString("es-MX")} a ${Number(data.precio_actual).toLocaleString("es-MX")}.`,
+                tipo: "precio",
+                property_id: propiedadEditando.id,
+                user_ids: propiedadEditando.user_id ? [propiedadEditando.user_id] : [],
+                in_app: true,
+                event_key: `property-price-drop:${propiedadEditando.id}:${Number(data.precio_actual)}`,
+              },
+            });
+            if (pushError) console.warn("[push precio]", pushError);
           } catch (pushError) {
             console.warn("[push precio]", pushError);
           }
