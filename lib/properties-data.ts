@@ -301,7 +301,7 @@ export const formatSurface = (
   surface: number,
   unit?: string
 ) => {
-  void unit;
+  const normalizedUnit = String(unit || 'm²').trim() || 'm²';
 
-  return `${surface} m²`;
+  return `${surface} ${normalizedUnit}`;
 };
