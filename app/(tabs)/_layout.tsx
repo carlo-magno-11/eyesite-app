@@ -41,8 +41,9 @@ export default function TabLayout() {
       <Tabs.Screen
         name="properties"
         options={{
-          title: "Propiedades",
-          tabBarIcon: ({ color }) => <IconSymbol size={24} name="building.2.fill" color={color} />,
+          // La pantalla sigue existiendo y se abre desde Inicio,
+          // pero ya no ocupa un lugar en la barra inferior.
+          href: null,
         }}
       />
       <Tabs.Screen
@@ -69,8 +70,8 @@ export default function TabLayout() {
       <Tabs.Screen
         name="account"
         options={{
-          title: "Cuenta",
-          tabBarIcon: ({ color }) => <IconSymbol size={24} name="person.circle.fill" color={color} />,
+          // Mi cuenta se abre desde el icono de usuario del encabezado.
+          href: null,
         }}
       />
       <Tabs.Screen
