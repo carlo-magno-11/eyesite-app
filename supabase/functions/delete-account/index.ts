@@ -63,19 +63,51 @@ Deno.serve(async (req: Request) => {
       if (error) throw error;
     }
 
-    const publicPaths: string[] = [];
-    for (const property of ownedProperties ?? []) {
-      const prefix = `properties/${property.id}`;
-      const { data: folders, error: folderError2 } = await admin.storage.from("eyesite-media").list(prefix, { limit: 1000 });
-      if (folderError2 && !/not found/i.test(folderError2.message || "")) throw folderError2;
-      for (const entry of folders ?? []) {
-        const { data: files, error } = await admin.storage.from("eyesite-media").list(`${prefix}/${entry.name}`, { limit: 1000 });
-        if (error) throw error;
-        for (const file of files ?? []) publicPaths.push(`${prefix}/${entry.name}/${file.name}`);
+    const collectPropertyStoragePaths = async (bucket: string, propertyId: string) => {
+      const paths: string[] = [];
+      const prefix = `properties/${propertyId}`;
+
+      const { data: entries, error } = await admin.storage
+        .from(bucket)
+        .list(prefix, { limit: 1000 });
+
+      if (error && !/not found/i.test(error.message || "")) throw error;
+
+      for (const entry of entries ?? []) {
+        const entryPath = `${prefix}/${entry.name}`;
+        const { data: children, error: childError } = await admin.storage
+          .from(bucket)
+          .list(entryPath, { limit: 1000 });
+
+        if (childError && !/not found/i.test(childError.message || "")) throw childError;
+
+        for (const child of children ?? []) {
+          paths.push(`${entryPath}/${child.name}`);
+        }
       }
+
+      return paths;
+    };
+
+    const publicPaths: string[] = [];
+    const privatePaths: string[] = [];
+
+    for (const property of ownedProperties ?? []) {
+      publicPaths.push(
+        ...(await collectPropertyStoragePaths("eyesite-media", property.id)),
+      );
+      privatePaths.push(
+        ...(await collectPropertyStoragePaths("eyesite-private", property.id)),
+      );
     }
+
     if (publicPaths.length) {
       const { error } = await admin.storage.from("eyesite-media").remove(publicPaths);
+      if (error) throw error;
+    }
+
+    if (privatePaths.length) {
+      const { error } = await admin.storage.from("eyesite-private").remove(privatePaths);
       if (error) throw error;
     }
 
