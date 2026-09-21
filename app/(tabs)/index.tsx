@@ -55,17 +55,21 @@ export default function HomeScreen() {
           <Text style={styles.logo}>EYESI<Text style={styles.logoPlus}>+</Text>E</Text>
           <View style={styles.headerButtons}>
             <Pressable
-              onPress={handleShareApp}
-              style={({ pressed }) => [styles.shareBtn, pressed && { opacity: 0.7 }]}
+              onPress={() => router.push('/mi-cuenta' as any)}
+              accessibilityRole="button"
+              accessibilityLabel="Mi cuenta"
+              style={({ pressed }) => [styles.contactBtn, pressed && { opacity: 0.7 }]}
             >
-              <IconSymbol name="square.and.arrow.up" size={16} color="#C9A84C" />
+              <Ionicons name="person-circle-outline" size={22} color="#C9A84C" />
             </Pressable>
             <Pressable
               onPress={() => router.push('/notifications' as any)}
+              accessibilityRole="button"
+              accessibilityLabel="Notificaciones"
               style={({ pressed }) => [styles.contactBtn, pressed && { opacity: 0.7 }]}
             >
               <View style={{ position: 'relative' }}>
-                <Ionicons name="notifications-outline" size={18} color="#C9A84C" />
+                <Ionicons name="notifications-outline" size={20} color="#C9A84C" />
                 {unread > 0 && <View style={styles.unreadBadge}><Text style={styles.unreadText}>{unread > 99 ? '99+' : unread}</Text></View>}
               </View>
             </Pressable>
@@ -168,15 +172,6 @@ const styles = StyleSheet.create({
   },
   logoPlus: {
     color: '#C9A84C',
-  },
-  shareBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: '#C9A84C',
-    justifyContent: 'center',
-    alignItems: 'center',
   },
   contactBtn: { position: 'relative',
     
