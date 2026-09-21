@@ -15,6 +15,7 @@ import { registerPushToken, useNotifications } from "@/hooks/use-notifications";
 import { useAnnouncements } from "@/hooks/use-announcements";
 import { Ionicons } from "@expo/vector-icons";
 import { useEffect, useMemo, useState } from "react";
+import { router } from "expo-router";
 import { supabase } from "@/lib/supabase";
 
 type Tab = "notifications" | "announcements";
@@ -35,6 +36,24 @@ export default function NotificationsScreen() {
     () => filter === "unread" ? items.filter((item) => !item.leida) : items,
     [filter, items],
   );
+
+  const handleNotificationPress = async (item: any) => {
+    if (!item.leida) {
+      await markRead(item.id);
+    }
+
+    const propertyId =
+      typeof item.data?.property_id === "string"
+        ? item.data.property_id
+        : null;
+
+    if (propertyId) {
+      router.push({
+        pathname: "/property/[id]",
+        params: { id: propertyId },
+      } as never);
+    }
+  };
 
   const markAllRead = async () => {
     const { error } = await supabase.rpc("marcar_todas_notificaciones_leidas");
@@ -95,7 +114,7 @@ export default function NotificationsScreen() {
                 </View>
               }
               renderItem={({ item }) => (
-                <Pressable onPress={() => !item.leida && markRead(item.id)} style={[s.c, !item.leida && s.u]}>
+                <Pressable onPress={() => void handleNotificationPress(item)} style={[s.c, !item.leida && s.u]}>
                   <View style={s.row}>
                     <Text style={s.ct}>{item.titulo}</Text>
                     {!item.leida && <View style={s.dot} />}
