@@ -4153,6 +4153,84 @@ async function verPendiente(id) {
   openMod("vmod");
 }
 
+
+/* ============================================================
+   PROMOCIÓN SEGURA DE MEDIOS DE SOLICITUD
+   ============================================================ */
+
+/**
+ * Antes de aprobar una solicitud, todos los medios que vienen
+ * de eyesite-staging deben pasar a eyesite-media.
+ *
+ * La Edge Function es deliberadamente separada de la RPC de
+ * aprobación: si algún medio falla, NO aprobamos la solicitud.
+ */
+async function promoverMediosSolicitud(requestId) {
+  const { data, error } = await s.functions.invoke(
+    "promote-submission-media",
+    {
+      body: {
+        request_id: requestId,
+      },
+    },
+  );
+
+  if (error) {
+    console.error("[media promotion] invoke error", error);
+    throw new Error(
+      error?.message ||
+      "No se pudieron promover los medios de la solicitud.",
+    );
+  }
+
+  if (!data?.promotion_complete) {
+    console.error("[media promotion] incomplete", data);
+
+    const details = Array.isArray(data?.errors)
+      ? data.errors
+          .map((item) => {
+            const field = item?.field
+              ? `${item.field}: `
+              : "";
+            return `${field}${item?.error || item?.code || "error desconocido"}`;
+          })
+          .join(" | ")
+      : "";
+
+    throw new Error(
+      details
+        ? `No se puede aprobar la solicitud porque sus medios no quedaron publicados: ${details}`
+        : "No se puede aprobar la solicitud porque sus medios no quedaron publicados.",
+    );
+  }
+
+  return Array.isArray(data?.public_media)
+    ? data.public_media
+    : [];
+}
+
+function mediaPublicUrls(publicMedia, fieldPrefix) {
+  return publicMedia
+    .filter(
+      (item) =>
+        String(item?.field || "").startsWith(fieldPrefix) &&
+        typeof item?.publicUrl === "string" &&
+        item.publicUrl.trim() !== "",
+    )
+    .map((item) => item.publicUrl.trim());
+}
+
+function firstMediaPublicUrl(publicMedia, field) {
+  const item = publicMedia.find(
+    (entry) =>
+      entry?.field === field &&
+      typeof entry?.publicUrl === "string" &&
+      entry.publicUrl.trim() !== "",
+  );
+
+  return item?.publicUrl?.trim() || null;
+}
+
 /* ============================================================
    APROBAR PENDIENTE
    ============================================================ */
@@ -4226,26 +4304,84 @@ async function cambiarEstadoPendiente(id, estado) {
         })
         .filter(Boolean);
 
+      /*
+       * PASO 1 — Promover medios.
+       *
+       * Nunca aprobamos primero y copiamos después: eso dejaría
+       * rutas de eyesite-staging almacenadas en propiedades.
+       */
+      const publicMedia = await promoverMediosSolicitud(id);
+
+      const publicFotos = mediaPublicUrls(
+        publicMedia,
+        "fotos[",
+      );
+
+      const publicFotosPro = mediaPublicUrls(
+        publicMedia,
+        "fotos_pro[",
+      );
+
+      const publicVideos = mediaPublicUrls(
+        publicMedia,
+        "videos[",
+      );
+
+      const publicVideoUrl =
+        firstMediaPublicUrl(
+          publicMedia,
+          "video_url",
+        ) ||
+        publicVideos[0] ||
+        null;
+
+      const publicPortadaUrl =
+        firstMediaPublicUrl(
+          publicMedia,
+          "portada_url",
+        ) ||
+        publicFotos[0] ||
+        null;
+
+      /*
+       * PASO 2 — Crear la propiedad solamente con referencias
+       * públicas definitivas.
+       */
       const { data, error } = await s.rpc("admin_approve_property_request", {
         p_request_id: id,
 
-        p_video_url: solicitud.video_url || null,
+        p_video_url: publicVideoUrl,
 
-        p_portada_url: solicitud.portada_url || null,
+        p_portada_url: publicPortadaUrl,
 
-        p_tipo_portada: solicitud.tipo_portada || null,
+        p_tipo_portada:
+          publicVideoUrl && !publicPortadaUrl
+            ? "video"
+            : (solicitud.tipo_portada || null),
 
-        p_fotos: fotos,
+        p_fotos: publicFotos.length
+          ? publicFotos
+          : fotos,
 
-        p_fotos_pro: fotosPro,
+        p_fotos_pro: publicFotosPro.length
+          ? publicFotosPro
+          : fotosPro,
       });
 
       if (error) {
         throw error;
       }
 
-      console.info("[admin] solicitud aprobada:", data);
+      console.info("[admin] solicitud aprobada con medios públicos:", {
+        requestId: id,
+        propertyId: data,
+        media: publicMedia,
+      });
 
+      /*
+       * La RPC ya crea la notificación persistente con event_key.
+       * Aquí solamente enviamos el push; no insertamos otra fila.
+       */
       try {
         if (solicitud.user_id) {
           const { error: pushError } = await s.functions.invoke("send-notification", {
