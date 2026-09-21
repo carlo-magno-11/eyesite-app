@@ -95,9 +95,6 @@ export default function CreateProfileScreen() {
         telefono: telefonoSoloNumeros,
         estado: 'pendiente',
         role: 'user',
-        terminos_aceptados: false,
-        terminos_fecha: null,
-        terminos_version: null,
         ciudad: ciudadLimpia,
         presupuesto: presupuestoLimpio ? Number(presupuestoLimpio.replace(/[^0-9.]/g, '')) || null : null,
       };
