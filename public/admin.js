@@ -3549,6 +3549,65 @@ async function uploadFile(bucket, file, folder) {
     throw new Error("Archivo inválido.");
   }
 
+  const MAX_MEDIA_BYTES = 200 * 1024 * 1024;
+  const MAX_PRIVATE_BYTES = 25 * 1024 * 1024;
+
+  const mime = String(file.type || "").toLowerCase();
+  const isMediaBucket = bucket === BUCKET_IMAGES;
+  const isPrivateBucket = bucket === BUCKET_FILES;
+
+  if (isMediaBucket) {
+    const allowedMedia =
+      mime.startsWith("image/") ||
+      [
+        "video/mp4",
+        "video/quicktime",
+        "video/x-m4v",
+        "video/m4v",
+      ].includes(mime);
+
+    if (!allowedMedia) {
+      throw new Error(
+        `Tipo de archivo no permitido en ${bucket}: ${mime || "MIME vacío"}.`,
+      );
+    }
+
+    if (Number(file.size || 0) > MAX_MEDIA_BYTES) {
+      throw new Error(
+        `El archivo supera el límite de ${formatBytes(MAX_MEDIA_BYTES)}.`,
+      );
+    }
+  }
+
+  if (isPrivateBucket) {
+    const allowedPrivate = [
+      "application/pdf",
+      "application/zip",
+      "application/x-zip-compressed",
+      "application/vnd.google-earth.kml+xml",
+      "application/vnd.google-earth.kmz",
+      "application/msword",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "application/vnd.ms-excel",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "text/plain",
+      "image/jpeg",
+      "image/png",
+    ];
+
+    if (mime && !allowedPrivate.includes(mime)) {
+      throw new Error(
+        `Tipo de archivo no permitido en ${bucket}: ${mime}.`,
+      );
+    }
+
+    if (Number(file.size || 0) > MAX_PRIVATE_BYTES) {
+      throw new Error(
+        `El archivo privado supera el límite de ${formatBytes(MAX_PRIVATE_BYTES)}.`,
+      );
+    }
+  }
+
   const originalName = file.name || "archivo";
 
   const cleanName = originalName.replace(/[^\w.\-]+/g, "_").toLowerCase();
@@ -3566,9 +3625,9 @@ async function uploadFile(bucket, file, folder) {
     throw error;
   }
 
-  const isPrivateBucket = bucket === "eyesite-private";
+  const privateUpload = bucket === BUCKET_FILES;
 return {
-  url: isPrivateBucket ? path :
+  url: privateUpload ? path :
     s.storage.from(bucket).getPublicUrl(path).data?.publicUrl || "",
   path,
   name: originalName,
