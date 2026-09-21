@@ -498,7 +498,7 @@ export default function PropertyDetailScreen() {
                   <Text style={styles.legalText}>Estatus: {property.estatus_legal}</Text>
                 ) : null}
                 {property.certeza_legal ? (
-                  <Text style={styles.legalText}>Certeza legal: Verificada por EYESITE</Text>
+                  <Text style={styles.legalText}>Certeza legal: Sí</Text>
                 ) : null}
               </View>
             </View>
