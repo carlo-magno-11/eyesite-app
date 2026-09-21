@@ -5,7 +5,7 @@ import { router } from 'expo-router';
 import { Property, formatPrice, formatSurface, getReturnColor } from '@/lib/properties-data';
 import { useFavorites } from '@/hooks/use-favorites';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { getFirstImage,isVideoUri, } from '@/lib/property-media';
+import { getFirstImage } from '@/lib/property-media';
 
 interface PropertyCardProps {
   property: Property;
