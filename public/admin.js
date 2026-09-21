@@ -33,10 +33,16 @@ let pendienteViendo = null;
 let nuevasImagenes = [];
 let nuevosArchivos = [];
 let nuevosEnlaces = [];
+let nuevasFotosPro = [];
+let nuevosVideos = [];
+let nuevaPortadaVideo = null;
 
 let editImagenes = [];
 let editArchivos = [];
 let editEnlaces = [];
+let editFotosPro = [];
+let editVideos = [];
+let editPortadaVideo = null;
 
 let currentUser = null;
 
@@ -1906,6 +1912,34 @@ async function editarPropiedad(id) {
 
   editEnlaces = normalizeArray(p.enlaces || p.links);
 
+  editFotosPro = normalizeArray(p.fotos_pro || p.imagenes_pro).map((item) => {
+    if (typeof item === "string") {
+      return { url: item, existing: true };
+    }
+    return { ...item, existing: true };
+  });
+
+  editVideos = normalizeArray(p.videos || []).map((item) => {
+    if (typeof item === "string") {
+      return { url: item, existing: true };
+    }
+    return { ...item, existing: true };
+  });
+
+  const existingVideo =
+    p.video_url ||
+    editVideos.find((item) => item?.url)?.url ||
+    null;
+
+  if (existingVideo && !editVideos.some((item) => item?.url === existingVideo)) {
+    editVideos.unshift({ url: existingVideo, existing: true });
+  }
+
+  editPortadaVideo =
+    (String(p.tipo_portada || p.portada_tipo || "").toLowerCase() === "video")
+      ? (p.portada_url || null)
+      : null;
+
   const subtitle = document.getElementById("emsub");
 
   if (subtitle) {
@@ -2799,6 +2833,44 @@ function propertyFormHTML(p = {}, mode = "new") {
       <div class="fg gfull">
         <div class="ups">
           <div class="upt">
+            FOTOGRAFÍAS PROFESIONALES
+          </div>
+          <div class="dz">
+            <input type="file" multiple accept="image/*" id="${mode}_fotosPro">
+            <div class="dzi">🖼️</div>
+            <div class="dzl">Agrega fotografías profesionales.</div>
+          </div>
+          <div class="pgrid" id="${mode}_fotosProGrid"></div>
+        </div>
+      </div>
+
+      <div class="fg gfull">
+        <div class="ups">
+          <div class="upt">VIDEO DE LA PROPIEDAD</div>
+          <div class="dz">
+            <input type="file" accept="video/mp4,video/quicktime,video/x-m4v,video/m4v" id="${mode}_video">
+            <div class="dzi">🎬</div>
+            <div class="dzl">MP4 / MOV / M4V — máximo 200 MB.</div>
+          </div>
+          <div class="fl2" id="${mode}_videoList"></div>
+        </div>
+      </div>
+
+      <div class="fg gfull">
+        <div class="ups">
+          <div class="upt">PORTADA DEL VIDEO</div>
+          <div class="dz">
+            <input type="file" accept="image/*" id="${mode}_videoCover">
+            <div class="dzi">🎞️</div>
+            <div class="dzl">Imagen que aparecerá como portada del video.</div>
+          </div>
+          <div class="fl2" id="${mode}_videoCoverList"></div>
+        </div>
+      </div>
+
+      <div class="fg gfull">
+        <div class="ups">
+          <div class="upt">
             DOCUMENTOS / ARCHIVOS
           </div>
 
@@ -2888,6 +2960,9 @@ function bindPropertyForm(mode, p) {
   const imageInput = document.getElementById(`${mode}_images`);
 
   const fileInput = document.getElementById(`${mode}_files`);
+  const fotosProInput = document.getElementById(`${mode}_fotosPro`);
+  const videoInput = document.getElementById(`${mode}_video`);
+  const videoCoverInput = document.getElementById(`${mode}_videoCover`);
 
   if (imageInput) {
     imageInput.addEventListener("change", (event) => {
@@ -2909,6 +2984,27 @@ function bindPropertyForm(mode, p) {
     });
   }
 
+  if (fotosProInput) {
+    fotosProInput.addEventListener("change", (event) => {
+      handleFotosPro(mode, [...event.target.files]);
+      event.target.value = "";
+    });
+  }
+
+  if (videoInput) {
+    videoInput.addEventListener("change", (event) => {
+      handleVideo(mode, event.target.files?.[0] || null);
+      event.target.value = "";
+    });
+  }
+
+  if (videoCoverInput) {
+    videoCoverInput.addEventListener("change", (event) => {
+      handleVideoCover(mode, event.target.files?.[0] || null);
+      event.target.value = "";
+    });
+  }
+
   setupDropZone(mode, "images");
 
   setupDropZone(mode, "files");
@@ -2916,6 +3012,9 @@ function bindPropertyForm(mode, p) {
   renderImages(mode);
   renderFiles(mode);
   renderLinks(mode);
+  renderFotosPro(mode);
+  renderVideo(mode);
+  renderVideoCover(mode);
    
   const latitud =
     Number.isFinite(Number(p?.latitud))
@@ -2934,6 +3033,164 @@ function bindPropertyForm(mode, p) {
       mode
     );
   }, 100);
+}
+
+
+/* ============================================================
+   FOTOS PROFESIONALES / VIDEO / PORTADA DE VIDEO
+   ============================================================ */
+
+function handleFotosPro(mode, files) {
+  const valid = files.filter(
+    (file) => file && file.type && file.type.startsWith("image/"),
+  );
+
+  if (!valid.length) return;
+
+  const target = mode === "new" ? nuevasFotosPro : editFotosPro;
+
+  target.push(
+    ...valid.map((file) => ({
+      file,
+      existing: false,
+    })),
+  );
+
+  renderFotosPro(mode);
+}
+
+function renderFotosPro(mode) {
+  const target = document.getElementById(`${mode}_fotosProGrid`);
+  if (!target) return;
+
+  const list = mode === "new" ? nuevasFotosPro : editFotosPro;
+
+  target.innerHTML = list.map((item, index) => {
+    const file = item instanceof File ? item : item?.file;
+    const url = file
+      ? URL.createObjectURL(file)
+      : (typeof item === "string" ? item : item?.url || item?.publicUrl || "");
+
+    if (!url) return "";
+
+    return `
+      <div class="pi">
+        <img src="${esc(url)}" alt="">
+        <button type="button" class="pidel" onclick="removeFotosPro('${mode}', ${index})">✕</button>
+      </div>
+    `;
+  }).join("");
+}
+
+function removeFotosPro(mode, index) {
+  const list = mode === "new" ? nuevasFotosPro : editFotosPro;
+  if (index < 0 || index >= list.length) return;
+  list.splice(index, 1);
+  renderFotosPro(mode);
+}
+
+function handleVideo(mode, file) {
+  if (!file) return;
+
+  const allowed = [
+    "video/mp4",
+    "video/quicktime",
+    "video/x-m4v",
+    "video/m4v",
+  ];
+
+  if (!allowed.includes(String(file.type || "").toLowerCase())) {
+    toast("El video debe ser MP4, MOV o M4V.");
+    return;
+  }
+
+  const target = mode === "new" ? nuevosVideos : editVideos;
+  target.splice(0, target.length, {
+    file,
+    existing: false,
+  });
+
+  renderVideo(mode);
+}
+
+function renderVideo(mode) {
+  const target = document.getElementById(`${mode}_videoList`);
+  if (!target) return;
+
+  const list = mode === "new" ? nuevosVideos : editVideos;
+  const item = list[0];
+
+  if (!item) {
+    target.innerHTML = "";
+    return;
+  }
+
+  const file = item instanceof File ? item : item?.file;
+  const name = file?.name || item?.name || item?.url || "Video";
+
+  target.innerHTML = `
+    <div class="fir">
+      <span class="fii">🎬</span>
+      <span class="fin">${esc(name)}</span>
+      <button type="button" class="fdel" onclick="removeVideo('${mode}')">✕</button>
+    </div>
+  `;
+}
+
+function removeVideo(mode) {
+  const list = mode === "new" ? nuevosVideos : editVideos;
+  list.splice(0, list.length);
+  renderVideo(mode);
+}
+
+function handleVideoCover(mode, file) {
+  if (!file) return;
+
+  if (!file.type || !file.type.startsWith("image/")) {
+    toast("La portada del video debe ser una imagen.");
+    return;
+  }
+
+  if (mode === "new") {
+    nuevaPortadaVideo = file;
+  } else {
+    editPortadaVideo = file;
+  }
+
+  renderVideoCover(mode);
+}
+
+function renderVideoCover(mode) {
+  const target = document.getElementById(`${mode}_videoCoverList`);
+  if (!target) return;
+
+  const item = mode === "new" ? nuevaPortadaVideo : editPortadaVideo;
+
+  if (!item) {
+    target.innerHTML = "";
+    return;
+  }
+
+  const file = item instanceof File ? item : null;
+  const url = file
+    ? URL.createObjectURL(file)
+    : (typeof item === "string" ? item : item?.url || item?.publicUrl || "");
+
+  target.innerHTML = `
+    <div class="pi">
+      <img src="${esc(url)}" alt="">
+      <button type="button" class="pidel" onclick="removeVideoCover('${mode}')">✕</button>
+    </div>
+  `;
+}
+
+function removeVideoCover(mode) {
+  if (mode === "new") {
+    nuevaPortadaVideo = null;
+  } else {
+    editPortadaVideo = null;
+  }
+  renderVideoCover(mode);
 }
 
 /* ============================================================
@@ -3433,6 +3690,18 @@ function collectPropertyForm(mode, statusOverride = null) {
   const data = {
     titulo: valueOf(`${mode}_titulo`),
 
+    fotos_pro: [],
+
+    videos: [],
+
+    video_url: null,
+
+    portada_url: null,
+
+    portada_tipo: null,
+
+    tipo_portada: null,
+
     tipo,
 
     municipio: valueOf(`${mode}_municipio`),
@@ -3740,6 +4009,22 @@ async function saveNew() {
           progLabel.textContent = "Subiendo archivos...";
         }
 
+        const uploadedFotosPro = await uploadCollection(
+          nuevasFotosPro,
+          BUCKET_IMAGES,
+          "properties/pro",
+        );
+
+        const uploadedVideos = await uploadCollection(
+          nuevosVideos,
+          BUCKET_IMAGES,
+          "properties/videos",
+        );
+
+        const uploadedVideoCover = nuevaPortadaVideo
+          ? await uploadFile(BUCKET_IMAGES, nuevaPortadaVideo, "properties/video-covers")
+          : null;
+
         const uploadedFiles = await uploadCollection(
           nuevosArchivos,
           BUCKET_FILES,
@@ -3769,6 +4054,29 @@ async function saveNew() {
           imagenes: uploadedImages,
 
           archivos: uploadedFiles,
+
+          fotos_pro: uploadedFotosPro
+            .map((item) => typeof item === "string" ? item : item?.url)
+            .filter(Boolean),
+
+          videos: uploadedVideos
+            .map((item) => typeof item === "string" ? item : item?.url)
+            .filter(Boolean),
+
+          video_url:
+            uploadedVideos[0]?.url ||
+            uploadedVideos[0] ||
+            null,
+
+          portada_url:
+            uploadedVideoCover?.url ||
+            null,
+
+          portada_tipo:
+            uploadedVideoCover ? "video" : null,
+
+          tipo_portada:
+            uploadedVideoCover ? "video" : null,
 
           enlaces: Array.isArray(nuevosEnlaces) ? nuevosEnlaces : [],
 
@@ -3852,6 +4160,9 @@ function resetNew(showToast = true) {
   nuevasImagenes = [];
   nuevosArchivos = [];
   nuevosEnlaces = [];
+  nuevasFotosPro = [];
+  nuevosVideos = [];
+  nuevaPortadaVideo = null;
 
   const nf = document.getElementById("nf");
 
@@ -3903,6 +4214,27 @@ async function saveEdit() {
           `properties/${propiedadEditando.id}`,
         );
 
+        const fotosPro = await uploadCollection(
+          editFotosPro,
+          BUCKET_IMAGES,
+          `properties/${propiedadEditando.id}/pro`,
+        );
+
+        const videos = await uploadCollection(
+          editVideos,
+          BUCKET_IMAGES,
+          `properties/${propiedadEditando.id}/videos`,
+        );
+
+        let videoCover = null;
+        if (editPortadaVideo instanceof File) {
+          videoCover = await uploadFile(
+            BUCKET_IMAGES,
+            editPortadaVideo,
+            `properties/${propiedadEditando.id}/video-covers`,
+          );
+        }
+
         const files = await uploadCollection(
           editArchivos,
           BUCKET_FILES,
@@ -3917,6 +4249,29 @@ async function saveEdit() {
           imagenes: images,
 
           archivos: files,
+
+          fotos_pro: fotosPro
+            .map((item) => typeof item === "string" ? item : item?.url)
+            .filter(Boolean),
+
+          videos: videos
+            .map((item) => typeof item === "string" ? item : item?.url)
+            .filter(Boolean),
+
+          video_url:
+            videos[0]?.url ||
+            videos[0] ||
+            null,
+
+          portada_url:
+            videoCover?.url ||
+            (typeof editPortadaVideo === "string" ? editPortadaVideo : null),
+
+          portada_tipo:
+            (videoCover || editPortadaVideo) ? "video" : null,
+
+          tipo_portada:
+            (videoCover || editPortadaVideo) ? "video" : null,
 
           enlaces: editEnlaces,
         };
@@ -3970,6 +4325,9 @@ async function saveEdit() {
         editImagenes = [];
         editArchivos = [];
         editEnlaces = [];
+        editFotosPro = [];
+        editVideos = [];
+        editPortadaVideo = null;
 
         await cargarPropiedades();
 
