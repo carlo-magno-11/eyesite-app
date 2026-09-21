@@ -45,7 +45,18 @@ export function normalizeMediaUrl(
     return `${SUPABASE_URL}${input}`;
   }
 
-  // Ruta que ya contiene el bucket.
+  // Nunca convertir una ruta privada o de staging en una
+  // URL pública. Si una propiedad todavía contiene una
+  // referencia antigua a estos buckets, la omitimos hasta
+  // que el medio sea promovido correctamente.
+  if (
+    input.startsWith('eyesite-staging/') ||
+    input.startsWith('eyesite-private/')
+  ) {
+    return null;
+  }
+
+  // Ruta que ya contiene el bucket público definitivo.
   if (
     input.startsWith(
       `${PUBLIC_MEDIA_BUCKET}/`
@@ -54,7 +65,8 @@ export function normalizeMediaUrl(
     return `${SUPABASE_URL}/storage/v1/object/public/${input}`;
   }
 
-  // Ruta relativa dentro de eyesite-media.
+  // Ruta relativa: por contrato de publicación, una ruta
+  // relativa se interpreta únicamente dentro de eyesite-media.
   return `${PUBLIC_MEDIA_BASE}/${input.replace(/^\/+/, '')}`;
 }
 
