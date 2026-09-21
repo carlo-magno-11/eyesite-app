@@ -4359,13 +4359,9 @@ async function cambiarEstadoPendiente(id, estado) {
             ? "video"
             : (solicitud.tipo_portada || null),
 
-        p_fotos: publicFotos.length
-          ? publicFotos
-          : fotos,
+        p_fotos: publicFotos,
 
-        p_fotos_pro: publicFotosPro.length
-          ? publicFotosPro
-          : fotosPro,
+        p_fotos_pro: publicFotosPro,
       });
 
       if (error) {
