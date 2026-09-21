@@ -18,7 +18,7 @@ const TERMS_ITEMS = [
 ];
 
 export default function TermsScreen() {
-  const { user, profile } = useAuth();
+  const { user } = useAuth();
   const [accepted, setAccepted] = useState<Record<string, boolean>>({});
   const [leido, setLeido] = useState<Record<string, boolean>>({});
   const [modal, setModal] = useState<string | null>(null);
