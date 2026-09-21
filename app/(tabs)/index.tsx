@@ -2,7 +2,6 @@ import { View, Text, ScrollView, Image, Pressable, StyleSheet, ActivityIndicator
 import { ScreenContainer } from '@/components/screen-container';
 import { PropertyCard } from '@/components/property-card';
 import { router } from 'expo-router';
-import { IconSymbol } from '@/components/ui/icon-symbol';
 import { useProperties } from '@/hooks/use-properties';
 import { useAuth } from '@/hooks/useAuth';
 import { useNotifications } from '@/hooks/use-notifications';
