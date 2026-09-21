@@ -84,7 +84,7 @@ export default function PropertyDetailScreen() {
         id: 'video',
       });
     }
-    // 3) Resto de la galería (sin duplicar portada ni video)
+    // 3) Galería normal
     fotosRaw.forEach((f, i) => {
       const url = urlOf(f);
       if (!url) return;
@@ -93,6 +93,17 @@ export default function PropertyDetailScreen() {
       if (list.some((m) => m.url === url)) return;
       list.push({ type: 'image', url, id: `f-${i}` });
     });
+
+    // 4) Fotografías profesionales.
+    // Se muestran después de la galería normal, pero siguen siendo
+    // parte de los medios públicos aprobados de la propiedad.
+    const fotosProRaw: any[] = ((property as any).fotos_pro || []) as any[];
+    fotosProRaw.forEach((f, i) => {
+      const url = urlOf(f);
+      if (!url || list.some((m) => m.url === url)) return;
+      list.push({ type: 'image', url, id: `pro-${i}` });
+    });
+
     return list;
   }, [property, videoUrl]);
 
@@ -487,9 +498,22 @@ export default function PropertyDetailScreen() {
                   <Text style={styles.legalText}>Estatus: {property.estatus_legal}</Text>
                 ) : null}
                 {property.certeza_legal ? (
-                  <Text style={styles.legalText}>Certeza: {property.certeza_legal}</Text>
+                  <Text style={styles.legalText}>Certeza legal: Verificada por EYESITE</Text>
                 ) : null}
               </View>
+            </View>
+          ) : null}
+
+          {property.tour_360 ? (
+            <View style={styles.dataSection}>
+              <Text style={styles.sectionTitle}>TOUR 360°</Text>
+              <Pressable
+                onPress={() => Linking.openURL(property.tour_360 as string)}
+                style={styles.linkCard}
+              >
+                <Text style={styles.linkLabel}>Abrir recorrido 360°</Text>
+                <Text style={styles.linkUrl}>{property.tour_360}</Text>
+              </Pressable>
             </View>
           ) : null}
 
