@@ -3559,7 +3559,34 @@ async function uploadFile(bucket, file, folder) {
   const MAX_MEDIA_BYTES = 200 * 1024 * 1024;
   const MAX_PRIVATE_BYTES = 25 * 1024 * 1024;
 
-  const mime = String(file.type || "").toLowerCase().trim();
+  const originalName = file.name || "archivo";
+  const extension = originalName.includes(".")
+    ? originalName.split(".").pop().toLowerCase()
+    : "";
+
+  const mimeByExtension = {
+    jpg: "image/jpeg",
+    jpeg: "image/jpeg",
+    png: "image/png",
+    webp: "image/webp",
+    gif: "image/gif",
+    mp4: "video/mp4",
+    mov: "video/quicktime",
+    m4v: "video/x-m4v",
+    pdf: "application/pdf",
+    zip: "application/zip",
+    kml: "application/vnd.google-earth.kml+xml",
+    kmz: "application/vnd.google-earth.kmz",
+    doc: "application/msword",
+    docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    xls: "application/vnd.ms-excel",
+    xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    txt: "text/plain",
+  };
+
+  const mime = String(file.type || mimeByExtension[extension] || "")
+    .toLowerCase()
+    .trim();
   const isMediaBucket = bucket === BUCKET_IMAGES;
   const isPrivateBucket = bucket === BUCKET_FILES;
 
