@@ -1983,32 +1983,6 @@ setTimeout(() => {
   );
 }, 100);
 
-  /*
-   * El formulario ya fue creado.
-   * Ahora inicializamos el mapa con
-   * las coordenadas de la propiedad.
-   */
-
-  const lat =
-    p &&
-    Number.isFinite(
-      Number(p.latitud)
-    )
-      ? Number(p.latitud)
-      : null;
-
-  const lng =
-    p &&
-    Number.isFinite(
-      Number(p.longitud)
-    )
-      ? Number(p.longitud)
-      : null;
-
-  initAdminPropertyMap(
-    lat,
-    lng
-  );
 }
 
 
