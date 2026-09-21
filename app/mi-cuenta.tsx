@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useRef, useState } from "react";
 import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { router } from "expo-router";
 import { supabase } from "@/lib/supabase";
@@ -7,22 +7,18 @@ import { ScreenContainer } from "@/components/screen-container";
 
 export default function AccountScreen() {
   const { user, profile, loading } = useAuth();
-  const [nombre, setNombre] = useState("");
-  const [telefono, setTelefono] = useState("");
-  const [ciudad, setCiudad] = useState("");
-  const [presupuesto, setPresupuesto] = useState("");
+  const nombreRef = useRef(profile?.nombre ?? "");
+  const telefonoRef = useRef(profile?.telefono ?? "");
+  const ciudadRef = useRef(profile?.ciudad ?? "");
+  const presupuestoRef = useRef(profile?.presupuesto != null ? String(profile.presupuesto) : "");
   const [saving, setSaving] = useState(false);
-
-  useEffect(() => {
-    if (!profile) return;
-    setNombre(profile.nombre ?? "");
-    setTelefono(profile.telefono ?? "");
-    setCiudad(profile.ciudad ?? "");
-    setPresupuesto(profile.presupuesto != null ? String(profile.presupuesto) : "");
-  }, [profile]);
 
   const saveProfile = async () => {
     if (!user || saving) return;
+    const nombre = nombreRef.current;
+    const telefono = telefonoRef.current;
+    const ciudad = ciudadRef.current;
+    const presupuesto = presupuestoRef.current;
     if (!nombre.trim() || !ciudad.trim()) {
       Alert.alert("Falta información", "Nombre y ciudad son obligatorios.");
       return;
@@ -87,13 +83,13 @@ export default function AccountScreen() {
           <Text style={styles.label}>CORREO</Text>
           <View style={styles.readonly}><Text style={styles.readonlyText}>{user?.email ?? "—"}</Text></View>
           <Text style={styles.label}>NOMBRE</Text>
-          <TextInput value={nombre} onChangeText={setNombre} style={styles.input} placeholder="Nombre completo" placeholderTextColor="#777" />
+          <TextInput defaultValue={nombreRef.current} onChangeText={(value) => { nombreRef.current = value; }} style={styles.input} placeholder="Nombre completo" placeholderTextColor="#777" />
           <Text style={styles.label}>TELÉFONO</Text>
-          <TextInput value={telefono} onChangeText={setTelefono} keyboardType="phone-pad" style={styles.input} placeholder="Teléfono" placeholderTextColor="#777" />
+          <TextInput defaultValue={telefonoRef.current} onChangeText={(value) => { telefonoRef.current = value; }} keyboardType="phone-pad" style={styles.input} placeholder="Teléfono" placeholderTextColor="#777" />
           <Text style={styles.label}>CIUDAD / ZONA</Text>
-          <TextInput value={ciudad} onChangeText={setCiudad} style={styles.input} placeholder="Ciudad" placeholderTextColor="#777" />
+          <TextInput defaultValue={ciudadRef.current} onChangeText={(value) => { ciudadRef.current = value; }} style={styles.input} placeholder="Ciudad" placeholderTextColor="#777" />
           <Text style={styles.label}>PRESUPUESTO</Text>
-          <TextInput value={presupuesto} onChangeText={setPresupuesto} keyboardType="numeric" style={styles.input} placeholder="Presupuesto" placeholderTextColor="#777" />
+          <TextInput defaultValue={presupuestoRef.current} onChangeText={(value) => { presupuestoRef.current = value; }} keyboardType="numeric" style={styles.input} placeholder="Presupuesto" placeholderTextColor="#777" />
           <Pressable onPress={saveProfile} disabled={saving} style={[styles.primary, saving && styles.disabled]}>
             <Text style={styles.primaryText}>{saving ? "GUARDANDO..." : "GUARDAR PERFIL"}</Text>
           </Pressable>
