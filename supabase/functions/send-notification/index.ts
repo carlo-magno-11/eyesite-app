@@ -44,7 +44,26 @@ Deno.serve(async (req) => {
 
     const body = await req.json();
     const targetUserId = body.user_id ? String(body.user_id) : null;
-    const targetUserIds = Array.isArray(body.user_ids) ? body.user_ids.map((id: unknown) => String(id)).filter(Boolean) : [];
+    const targetUserIds = Array.isArray(body.user_ids)
+      ? body.user_ids.map((id: unknown) => String(id)).filter(Boolean)
+      : [];
+    const propertyId = body.property_id ? String(body.property_id) : null;
+    const createInApp = body.in_app === true;
+
+    let resolvedUserIds = [...targetUserIds];
+
+    if (propertyId) {
+      const { data: favoriteRows, error: favoriteError } = await adminClient
+        .from("favoritos")
+        .select("user_id")
+        .eq("property_id", propertyId);
+      if (favoriteError) throw favoriteError;
+      resolvedUserIds.push(...(favoriteRows || []).map((row: any) => row.user_id).filter(Boolean));
+    }
+
+    if (targetUserId) resolvedUserIds.push(targetUserId);
+
+    resolvedUserIds = [...new Set(resolvedUserIds)];
 
     let query = adminClient
       .from("profiles")
@@ -53,16 +72,40 @@ Deno.serve(async (req) => {
       .not("expo_push_token", "is", null)
       .neq("expo_push_token", "");
 
-    if (targetUserIds.length) {
-      query = query.in("id", targetUserIds);
-    } else if (targetUserId) {
-      query = query.eq("id", targetUserId);
-    } else {
+    if (resolvedUserIds.length) {
+      query = query.in("id", resolvedUserIds);
+    } else if (!propertyId && !targetUserId) {
       query = query.neq("role", "admin");
     }
 
     const { data: rows, error: rowsError } = await query;
     if (rowsError) throw rowsError;
+
+    const finalUserIds = resolvedUserIds.length
+      ? resolvedUserIds
+      : (rows || []).map((row: any) => row.id).filter(Boolean);
+
+    if (createInApp && finalUserIds.length) {
+      const eventBase = String(body.event_key || crypto.randomUUID());
+      const { error: notificationError } = await adminClient
+        .from("notificaciones")
+        .upsert(
+          finalUserIds.map((id) => ({
+            user_id: id,
+            titulo: String(body.titulo || "EYESITE"),
+            mensaje: String(body.mensaje || ""),
+            tipo: String(body.tipo || "informacion"),
+            leida: false,
+            event_key: `${eventBase}:${id}`,
+            programada_para: new Date().toISOString(),
+            estado_envio: "sent",
+            sent_at: new Date().toISOString(),
+            data: body.data && typeof body.data === "object" ? body.data : {},
+          })),
+          { onConflict: "event_key", ignoreDuplicates: true },
+        );
+      if (notificationError) throw notificationError;
+    }
 
     const messages = (rows || [])
       .filter((row: any) => typeof row.expo_push_token === "string" && row.expo_push_token.startsWith("ExponentPushToken["))
