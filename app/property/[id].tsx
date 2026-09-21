@@ -7,6 +7,7 @@ import { useFavorites } from '@/hooks/use-favorites';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { ScreenContainer } from '@/components/screen-container';
 import { useProperty } from '@/hooks/use-properties';
+import { supabase } from '@/lib/supabase';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -18,6 +19,34 @@ export default function PropertyDetailScreen() {
   const { property, loading } = useProperty(id);
   const { isFav, toggleFav } = useFavorites();
   const [activeImage, setActiveImage] = useState(0);
+  const [signedDocuments, setSignedDocuments] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    let cancelled = false;
+    const loadPrivateDocuments = async () => {
+      if (!property?.id) return;
+      const items: string[] = [];
+      const add = (value: any) => {
+        if (typeof value === 'string' && value.trim()) items.push(value.trim());
+        else if (value && typeof value === 'object') add(value.path || value.url || value.publicUrl);
+      };
+      (property.pdfs || []).forEach(add);
+      (property.kmz_kml || []).forEach(add);
+      (property.archivos || []).forEach(add);
+      const unique = [...new Set(items)];
+      if (!unique.length) { if (!cancelled) setSignedDocuments({}); return; }
+      const result: Record<string, string> = {};
+      await Promise.all(unique.map(async (path) => {
+        const { data, error } = await supabase.functions.invoke('get-property-document', {
+          body: { property_id: property.id, path },
+        });
+        if (!error && data?.signedUrl) result[path] = data.signedUrl;
+      }));
+      if (!cancelled) setSignedDocuments(result);
+    };
+    loadPrivateDocuments();
+    return () => { cancelled = true; };
+  }, [property?.id]);
 
   // Portada intercambiable video/foto (anti-trabe: sin player ni autoplay en la
   // vista normal; el video solo se reproduce dentro del Modal al tocar Play)
@@ -514,6 +543,23 @@ export default function PropertyDetailScreen() {
                 <Text style={styles.linkLabel}>Abrir recorrido 360°</Text>
                 <Text style={styles.linkUrl}>{property.tour_360}</Text>
               </Pressable>
+            </View>
+          ) : null}
+
+          {Object.keys(signedDocuments).length > 0 ? (
+            <View style={styles.dataSection}>
+              <Text style={styles.sectionTitle}>DOCUMENTOS</Text>
+              {Object.entries(signedDocuments).map(([path, url]) => {
+                const name = path.split('/').pop() || 'Documento';
+                const lower = name.toLowerCase();
+                const type = lower.endsWith('.pdf') ? 'PDF' : (lower.endsWith('.kmz') || lower.endsWith('.kml')) ? 'MAPA' : 'ARCHIVO';
+                return (
+                  <Pressable key={path} onPress={() => Linking.openURL(url)} style={styles.linkCard}>
+                    <Text style={styles.linkLabel}>{type} · {name}</Text>
+                    <Text style={styles.linkUrl}>Abrir documento</Text>
+                  </Pressable>
+                );
+              })}
             </View>
           ) : null}
 
