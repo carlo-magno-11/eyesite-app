@@ -28,11 +28,23 @@ export function normalizeMediaUrl(
     return null;
   }
 
-  // URL completa.
+  // URL completa. Aun así, nunca aceptamos como media pública
+  // una URL de los buckets privados/de staging de EYESITE.
   if (
     input.startsWith('http://') ||
     input.startsWith('https://')
   ) {
+    const normalizedHttpUrl = input.toLowerCase();
+
+    if (
+      normalizedHttpUrl.includes('/storage/v1/object/public/eyesite-staging/') ||
+      normalizedHttpUrl.includes('/storage/v1/object/public/eyesite-private/') ||
+      normalizedHttpUrl.includes('/storage/v1/object/sign/eyesite-staging/') ||
+      normalizedHttpUrl.includes('/storage/v1/object/sign/eyesite-private/')
+    ) {
+      return null;
+    }
+
     return input;
   }
 
