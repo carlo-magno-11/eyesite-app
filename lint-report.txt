@@ -1,0 +1,47 @@
+
+> eyesite@1.0.0 lint /home/runner/work/eyesite-app/eyesite-app
+> expo lint
+
+
+/home/runner/work/eyesite-app/eyesite-app/app/(tabs)/index.tsx
+  5:10  warning  'IconSymbol' is defined but never used  @typescript-eslint/no-unused-vars
+
+/home/runner/work/eyesite-app/eyesite-app/app/mi-cuenta.tsx
+  18:5  error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+/home/runner/work/eyesite-app/eyesite-app/app/mi-cuenta.tsx:18:5
+  16 |   useEffect(() => {
+  17 |     if (!profile) return;
+> 18 |     setNombre(profile.nombre ?? "");
+     |     ^^^^^^^^^ Avoid calling setState() directly within an effect
+  19 |     setTelefono(profile.telefono ?? "");
+  20 |     setCiudad(profile.ciudad ?? "");
+  21 |     setPresupuesto(profile.presupuesto != null ? String(profile.presupuesto) : "");  react-hooks/set-state-in-effect
+
+/home/runner/work/eyesite-app/eyesite-app/app/my-properties.tsx
+  11:405  warning  React Hook useEffect has a missing dependency: 'user'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+/home/runner/work/eyesite-app/eyesite-app/app/my-requests.tsx
+  11:423  warning  React Hook useEffect has a missing dependency: 'user'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+/home/runner/work/eyesite-app/eyesite-app/app/property/[id].tsx
+  49:6  warning  React Hook useEffect has missing dependencies: 'property.archivos', 'property.kmz_kml', and 'property.pdfs'. Either include them or remove the dependency array  react-hooks/exhaustive-deps
+
+/home/runner/work/eyesite-app/eyesite-app/app/settings.tsx
+  1:10  warning  'Alert' is defined but never used  @typescript-eslint/no-unused-vars
+
+/home/runner/work/eyesite-app/eyesite-app/app/terms.tsx
+  21:17  warning  'profile' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+/home/runner/work/eyesite-app/eyesite-app/components/property-card.tsx
+  8:24  warning  'isVideoUri' is defined but never used  @typescript-eslint/no-unused-vars
+
+✖ 8 problems (1 error, 7 warnings)
+
+ ELIFECYCLE  Command failed with exit code 1.
