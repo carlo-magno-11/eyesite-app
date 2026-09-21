@@ -103,6 +103,11 @@ export default function TermsScreen() {
       details: e?.details,
       hint: e?.hint,
     });
+
+    Alert.alert(
+      'No se pudieron guardar los términos',
+      e?.message || 'No pudimos guardar tu aceptación. Inténtalo nuevamente.',
+    );
   } finally {
     setSaving(false);
   }
