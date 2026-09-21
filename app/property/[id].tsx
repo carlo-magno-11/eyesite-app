@@ -46,7 +46,7 @@ export default function PropertyDetailScreen() {
     };
     loadPrivateDocuments();
     return () => { cancelled = true; };
-  }, [property?.id]);
+  }, [property?.id, property?.pdfs, property?.kmz_kml, property?.archivos]);
 
   // Portada intercambiable video/foto (anti-trabe: sin player ni autoplay en la
   // vista normal; el video solo se reproduce dentro del Modal al tocar Play)
