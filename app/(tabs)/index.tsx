@@ -1,4 +1,4 @@
-import { View, Text, ScrollView, Image, Pressable, StyleSheet, Share, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, Image, Pressable, StyleSheet, ActivityIndicator } from 'react-native';
 import { ScreenContainer } from '@/components/screen-container';
 import { PropertyCard } from '@/components/property-card';
 import { router } from 'expo-router';
@@ -16,8 +16,6 @@ const CATEGORIES = [
   { key: 'industrial', label: 'Industrial', icon: '🏭' },
 ];
 
-const APP_SHARE_LINK = 'https://www.eyesite.mx';
-
 export default function HomeScreen() {
   const { properties, loading } = useProperties();
   const { user } = useAuth();
@@ -28,17 +26,6 @@ export default function HomeScreen() {
     router.push({ pathname: '/(tabs)/properties', params: { filter: key } } as any);
   };
 
-  const handleShareApp = async () => {
-    try {
-      await Share.share({
-        message: `Descubre las mejores oportunidades inmobiliarias en Yucatán con EYESITE. Accede a la app aquí: ${APP_SHARE_LINK}`,
-        url: APP_SHARE_LINK,
-        title: 'EYESITE - Propiedades Inmobiliarias',
-      });
-    } catch (error) {
-      console.error('Error sharing app:', error);
-    }
-  };
 
   return (
     <ScreenContainer edges={['top', 'left', 'right']} containerClassName="bg-[#0D0D0D]">
