@@ -1,8 +1,8 @@
 -- EYESITE — Keep authorization helpers private while preserving RLS/storage behavior
 -- 2026-09-21
 --
--- Public SECURITY DEFINER helpers such as public.is_admin() are not exposed as
--- RPCs. RLS policies use equivalent helpers in the non-exposed private schema.
+-- Public SECURITY DEFINER helpers are not exposed as RPC endpoints.
+-- RLS policies use equivalent helpers in the non-exposed private schema.
 
 create schema if not exists private;
 
@@ -51,15 +51,62 @@ grant execute on function private.current_profile_role(uuid) to authenticated;
 revoke all on function private.current_profile_estado(uuid) from public, anon;
 grant execute on function private.current_profile_estado(uuid) to authenticated;
 
--- RLS policies that need admin checks use the private helper.
--- Public read policies remain available to anon where appropriate.
-drop policy if exists "anuncios_select_publicados" on public.anuncios;
-create policy "anuncios_select_publicados"
-on public.anuncios
-for select
-to anon, authenticated
-using (activa = true or (select private.is_admin()));
+-- Preserve the original policy roles while replacing only is_admin() calls.
+do $$
+declare
+  r record;
+  v_qual text;
+  v_check text;
+  v_roles text;
+begin
+  for r in
+    select schemaname, tablename, policyname, cmd, roles, qual, with_check
+    from pg_policies
+    where (coalesce(qual,'') ilike '%is_admin()%' or coalesce(with_check,'') ilike '%is_admin()%')
+      and schemaname in ('public','storage')
+  loop
+    v_qual := regexp_replace(
+      coalesce(r.qual,''),
+      '(^|[^[:alnum:]_])is_admin\\(\\)',
+      '\\1private.is_admin()',
+      'g'
+    );
+    v_check := regexp_replace(
+      coalesce(r.with_check,''),
+      '(^|[^[:alnum:]_])is_admin\\(\\)',
+      '\\1private.is_admin()',
+      'g'
+    );
+    v_roles := array_to_string(r.roles, ', ');
 
+    execute format('drop policy if exists %I on %I.%I', r.policyname, r.schemaname, r.tablename);
+
+    if r.cmd = 'SELECT' then
+      execute format(
+        'create policy %I on %I.%I for select to %s using (%s)',
+        r.policyname, r.schemaname, r.tablename, v_roles, v_qual
+      );
+    elsif r.cmd = 'INSERT' then
+      execute format(
+        'create policy %I on %I.%I for insert to %s with check (%s)',
+        r.policyname, r.schemaname, r.tablename, v_roles, v_check
+      );
+    elsif r.cmd = 'UPDATE' then
+      execute format(
+        'create policy %I on %I.%I for update to %s using (%s) with check (%s)',
+        r.policyname, r.schemaname, r.tablename, v_roles, v_qual, v_check
+      );
+    elsif r.cmd = 'DELETE' then
+      execute format(
+        'create policy %I on %I.%I for delete to %s using (%s)',
+        r.policyname, r.schemaname, r.tablename, v_roles, v_qual
+      );
+    end if;
+  end loop;
+end $$;
+
+-- Protect profile role/state during self-update without exposing the old
+-- helper functions through public RPC.
 drop policy if exists profiles_update_authenticated on public.profiles;
 create policy profiles_update_authenticated
 on public.profiles
@@ -78,3 +125,11 @@ with check (
     )
   )
 );
+
+-- The public announcement feed must remain available to anonymous users.
+drop policy if exists anuncios_select_publicados on public.anuncios;
+create policy anuncios_select_publicados
+on public.anuncios
+for select
+to anon, authenticated
+using (activa = true or (select private.is_admin()));
