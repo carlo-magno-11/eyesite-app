@@ -40,10 +40,10 @@ as $$
 $$;
 
 revoke all on schema private from public;
-grant usage on schema private to authenticated;
+grant usage on schema private to authenticated, anon;
 
 revoke all on function private.is_admin() from public, anon;
-grant execute on function private.is_admin() to authenticated;
+grant execute on function private.is_admin() to authenticated, anon;
 
 revoke all on function private.current_profile_role(uuid) from public, anon;
 grant execute on function private.current_profile_role(uuid) to authenticated;
