@@ -36,6 +36,8 @@ let nuevosEnlaces = [];
 let nuevasFotosPro = [];
 let nuevosVideos = [];
 let nuevaPortadaVideo = null;
+let nuevosPdfs = [];
+let nuevosKmzKml = [];
 
 let editImagenes = [];
 let editArchivos = [];
@@ -43,6 +45,8 @@ let editEnlaces = [];
 let editFotosPro = [];
 let editVideos = [];
 let editPortadaVideo = null;
+let editPdfs = [];
+let editKmzKml = [];
 
 let currentUser = null;
 
@@ -1893,7 +1897,7 @@ async function editarPropiedad(id) {
     };
   });
 
-  editArchivos = normalizeArray(p.archivos || p.files || p.documentos).map(
+  editArchivos = normalizeArray([...(p.archivos || p.files || p.documentos || []), ...(p.pdfs || []), ...(p.kmz_kml || [])]).map(
     (item) => {
       if (typeof item === "string") {
         return {
@@ -1910,7 +1914,7 @@ async function editarPropiedad(id) {
     },
   );
 
-  editEnlaces = normalizeArray(p.enlaces || p.links);
+  editEnlaces = normalizeArray(p.enlaces || p.links);\n  editPdfs = normalizeArray(p.pdfs || []);\n  editKmzKml = normalizeArray(p.kmz_kml || []);
 
   editFotosPro = normalizeArray(p.fotos_pro || p.imagenes_pro).map((item) => {
     if (typeof item === "string") {
@@ -4373,7 +4377,7 @@ async function saveEdit() {
                     : (propiedadEditando?.portada_url ? "foto" : null)
                 ),
 
-          enlaces: editEnlaces,
+          enlaces: editEnlaces,\n          pdfs: [...new Set([...editPdfs, ...classifyPrivateFileItems(files).pdfs])],\n          kmz_kml: [...new Set([...editKmzKml, ...classifyPrivateFileItems(files).kmzKml])],
         };
 
         const { error } = await s.rpc("admin_update_property", {
