@@ -3552,7 +3552,7 @@ async function uploadFile(bucket, file, folder) {
   const MAX_MEDIA_BYTES = 200 * 1024 * 1024;
   const MAX_PRIVATE_BYTES = 25 * 1024 * 1024;
 
-  const mime = String(file.type || "").toLowerCase();
+  const mime = String(file.type || "").toLowerCase().trim();
   const isMediaBucket = bucket === BUCKET_IMAGES;
   const isPrivateBucket = bucket === BUCKET_FILES;
 
@@ -3570,6 +3570,10 @@ async function uploadFile(bucket, file, folder) {
       throw new Error(
         `Tipo de archivo no permitido en ${bucket}: ${mime || "MIME vacío"}.`,
       );
+    }
+
+    if (Number(file.size || 0) <= 0) {
+      throw new Error("El archivo está vacío o no se pudo determinar su tamaño.");
     }
 
     if (Number(file.size || 0) > MAX_MEDIA_BYTES) {
@@ -3609,31 +3613,50 @@ async function uploadFile(bucket, file, folder) {
   }
 
   const originalName = file.name || "archivo";
-
   const cleanName = originalName.replace(/[^\w.\-]+/g, "_").toLowerCase();
-
   const path = `${folder}/${Date.now()}_${Math.random()
     .toString(36)
     .slice(2, 8)}_${cleanName}`;
 
-  const { error } = await s.storage.from(bucket).upload(path, file, {
+  // En algunos navegadores el SDK puede no inferir el MIME como esperamos.
+  // Lo enviamos explícitamente para que Storage aplique el mismo contrato
+  // que validamos arriba.
+  const uploadOptions = {
     cacheControl: "3600",
     upsert: false,
-  });
+    ...(mime ? { contentType: mime } : {}),
+  };
+
+  const { error } = await s.storage
+    .from(bucket)
+    .upload(path, file, uploadOptions);
 
   if (error) {
-    throw error;
+    console.error("[Admin Storage upload]", {
+      bucket,
+      path,
+      name: originalName,
+      mime,
+      size: Number(file.size || 0),
+      error: error.message,
+      statusCode: error.statusCode,
+    });
+    throw new Error(
+      `No se pudo subir "${originalName}" (${error.statusCode || "sin status"}): ${error.message || "error de Storage"}`,
+    );
   }
 
   const privateUpload = bucket === BUCKET_FILES;
-return {
-  url: privateUpload ? path :
-    s.storage.from(bucket).getPublicUrl(path).data?.publicUrl || "",
-  path,
-  name: originalName,
-  size: file.size || 0,
-  type: file.type || "",
-};
+
+  return {
+    url: privateUpload
+      ? path
+      : s.storage.from(bucket).getPublicUrl(path).data?.publicUrl || "",
+    path,
+    name: originalName,
+    size: file.size || 0,
+    type: mime,
+  };
 }
 
 async function uploadCollection(list, bucket, folder, progressCallback) {
