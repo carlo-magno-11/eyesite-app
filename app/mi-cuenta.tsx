@@ -1,37 +1,42 @@
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { router } from "expo-router";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 import { ScreenContainer } from "@/components/screen-container";
 
-export default function AccountScreen() {
-  const { user, profile, loading } = useAuth();
-  const nombreRef = useRef(profile?.nombre ?? "");
-  const telefonoRef = useRef(profile?.telefono ?? "");
-  const ciudadRef = useRef(profile?.ciudad ?? "");
-  const presupuestoRef = useRef(profile?.presupuesto != null ? String(profile.presupuesto) : "");
+type ProfileFormProps = {
+  user: NonNullable<ReturnType<typeof useAuth>["user"]>;
+  profile: NonNullable<ReturnType<typeof useAuth>["profile"]>;
+};
+
+function AccountForm({ user, profile }: ProfileFormProps) {
+  const [nombre, setNombre] = useState(profile.nombre ?? "");
+  const [telefono, setTelefono] = useState(profile.telefono ?? "");
+  const [ciudad, setCiudad] = useState(profile.ciudad ?? "");
+  const [presupuesto, setPresupuesto] = useState(profile.presupuesto != null ? String(profile.presupuesto) : "");
   const [saving, setSaving] = useState(false);
 
   const saveProfile = async () => {
-    if (!user || saving) return;
-    const nombre = nombreRef.current;
-    const telefono = telefonoRef.current;
-    const ciudad = ciudadRef.current;
-    const presupuesto = presupuestoRef.current;
+    if (saving) return;
     if (!nombre.trim() || !ciudad.trim()) {
       Alert.alert("Falta información", "Nombre y ciudad son obligatorios.");
       return;
     }
+
     setSaving(true);
     try {
-      const { error } = await supabase.from("profiles").update({
-        nombre: nombre.trim(),
-        telefono: telefono.replace(/D/g, ""),
-        ciudad: ciudad.trim(),
-        presupuesto: presupuesto.trim() || null,
-        updated_at: new Date().toISOString(),
-      }).eq("id", user.id);
+      const { error } = await supabase
+        .from("profiles")
+        .update({
+          nombre: nombre.trim(),
+          telefono: telefono.replace(/\D/g, ""),
+          ciudad: ciudad.trim(),
+          presupuesto: presupuesto.trim() || null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", user.id);
+
       if (error) throw error;
       Alert.alert("Perfil actualizado", "Tus datos se guardaron correctamente.");
     } catch (error: any) {
@@ -66,30 +71,33 @@ export default function AccountScreen() {
             }
           },
         },
-      ]
+      ],
     );
   };
-
-  if (loading) return null;
 
   return (
     <ScreenContainer edges={["top", "left", "right"]} containerClassName="bg-background">
       <ScrollView contentContainerStyle={styles.container}>
         <Text style={styles.title}>MI CUENTA</Text>
-        <Text style={styles.subtitle}>{user?.email ?? "Cuenta EYESITE"}</Text>
+        <Text style={styles.subtitle}>{user.email ?? "Cuenta EYESITE"}</Text>
 
         <View style={styles.card}>
           <Text style={styles.sectionTitle}>MI PERFIL</Text>
           <Text style={styles.label}>CORREO</Text>
-          <View style={styles.readonly}><Text style={styles.readonlyText}>{user?.email ?? "—"}</Text></View>
+          <View style={styles.readonly}><Text style={styles.readonlyText}>{user.email ?? "—"}</Text></View>
+
           <Text style={styles.label}>NOMBRE</Text>
-          <TextInput defaultValue={nombreRef.current} onChangeText={(value) => { nombreRef.current = value; }} style={styles.input} placeholder="Nombre completo" placeholderTextColor="#777" />
+          <TextInput value={nombre} onChangeText={setNombre} style={styles.input} placeholder="Nombre completo" placeholderTextColor="#777" />
+
           <Text style={styles.label}>TELÉFONO</Text>
-          <TextInput defaultValue={telefonoRef.current} onChangeText={(value) => { telefonoRef.current = value; }} keyboardType="phone-pad" style={styles.input} placeholder="Teléfono" placeholderTextColor="#777" />
+          <TextInput value={telefono} onChangeText={setTelefono} keyboardType="phone-pad" style={styles.input} placeholder="Teléfono" placeholderTextColor="#777" />
+
           <Text style={styles.label}>CIUDAD / ZONA</Text>
-          <TextInput defaultValue={ciudadRef.current} onChangeText={(value) => { ciudadRef.current = value; }} style={styles.input} placeholder="Ciudad" placeholderTextColor="#777" />
+          <TextInput value={ciudad} onChangeText={setCiudad} style={styles.input} placeholder="Ciudad" placeholderTextColor="#777" />
+
           <Text style={styles.label}>PRESUPUESTO</Text>
-          <TextInput defaultValue={presupuestoRef.current} onChangeText={(value) => { presupuestoRef.current = value; }} keyboardType="numeric" style={styles.input} placeholder="Presupuesto" placeholderTextColor="#777" />
+          <TextInput value={presupuesto} onChangeText={setPresupuesto} keyboardType="numeric" style={styles.input} placeholder="Presupuesto" placeholderTextColor="#777" />
+
           <Pressable onPress={saveProfile} disabled={saving} style={[styles.primary, saving && styles.disabled]}>
             <Text style={styles.primaryText}>{saving ? "GUARDANDO..." : "GUARDAR PERFIL"}</Text>
           </Pressable>
@@ -120,6 +128,14 @@ export default function AccountScreen() {
       </ScrollView>
     </ScreenContainer>
   );
+}
+
+export default function AccountScreen() {
+  const { user, profile, loading } = useAuth();
+
+  if (loading || !user || !profile) return null;
+
+  return <AccountForm key={profile.updated_at ?? profile.id} user={user} profile={profile} />;
 }
 
 const styles = StyleSheet.create({
