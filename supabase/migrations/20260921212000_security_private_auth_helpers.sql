@@ -133,3 +133,7 @@ on public.anuncios
 for select
 to anon, authenticated
 using (activa = true or (select private.is_admin()));
+
+
+-- Anonymous visitors can read only published/active announcements through RLS.
+grant select on table public.anuncios to anon;
