@@ -4085,10 +4085,16 @@ async function eliminarPropiedad(id) {
     `Se eliminará "${getPropTitle(p)}". Esta acción no se puede deshacer.`,
     async () => {
       try {
-        const { error } = await s.from(TABLE_PROPERTIES).delete().eq("id", id);
+        const { data: result, error } = await s.rpc("admin_delete_property", {
+          p_property_id: id,
+        });
 
         if (error) {
           throw error;
+        }
+
+        if (!result?.ok) {
+          throw new Error("Supabase no confirmó la eliminación de la propiedad.");
         }
 
         propiedades = propiedades.filter(
@@ -4357,13 +4363,16 @@ async function delPend() {
     `Se eliminará "${getPropTitle(p)}". Esta acción no se puede deshacer.`,
     async () => {
       try {
-        const { error } = await s
-          .from(TABLE_SUBMISSIONS)
-          .delete()
-          .eq("id", p.id);
+        const { data: result, error } = await s.rpc("admin_delete_property_request", {
+          p_request_id: p.id,
+        });
 
         if (error) {
           throw error;
+        }
+
+        if (!result?.ok) {
+          throw new Error("Supabase no confirmó la eliminación de la solicitud.");
         }
 
         toast("Solicitud eliminada.");
