@@ -496,7 +496,7 @@ export function useProperties() {
             {
               event: '*',
               schema: 'public',
-              table: 'propiedades',
+              table: 'propiedades_cambios',
             },
             () => {
               fetchProperties();
