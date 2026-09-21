@@ -4265,13 +4265,31 @@ async function saveEdit() {
 
           portada_url:
             videoCover?.url ||
-            (typeof editPortadaVideo === "string" ? editPortadaVideo : null),
+            (typeof editPortadaVideo === "string"
+              ? editPortadaVideo
+              : (
+                  String(propiedadEditando?.tipo_portada || propiedadEditando?.portada_tipo || "").toLowerCase() === "video"
+                    ? null
+                    : (propiedadEditando?.portada_url || null)
+                )),
 
           portada_tipo:
-            (videoCover || editPortadaVideo) ? "video" : null,
+            (videoCover || editPortadaVideo)
+              ? "video"
+              : (
+                  String(propiedadEditando?.tipo_portada || propiedadEditando?.portada_tipo || "").toLowerCase() === "video"
+                    ? null
+                    : (propiedadEditando?.portada_url ? "foto" : null)
+                ),
 
           tipo_portada:
-            (videoCover || editPortadaVideo) ? "video" : null,
+            (videoCover || editPortadaVideo)
+              ? "video"
+              : (
+                  String(propiedadEditando?.tipo_portada || propiedadEditando?.portada_tipo || "").toLowerCase() === "video"
+                    ? null
+                    : (propiedadEditando?.portada_url ? "foto" : null)
+                ),
 
           enlaces: editEnlaces,
         };
