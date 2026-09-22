@@ -93,8 +93,6 @@ export default function CreateProfileScreen() {
         email: user.email ?? null,
         nombre: nombreLimpio,
         telefono: telefonoSoloNumeros,
-        estado: 'pendiente',
-        role: 'user',
         ciudad: ciudadLimpia,
         presupuesto: presupuestoLimpio ? Number(presupuestoLimpio.replace(/[^0-9.]/g, '')) || null : null,
       };
