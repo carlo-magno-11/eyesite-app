@@ -189,3 +189,12 @@ Se revisaron los índices de las tablas de comunicación y del flujo de usuarios
 
 ### Criterio adoptado
 Los siguientes cambios de base de datos deberán seguir siendo migraciones versionadas. Antes de eliminar índices o cambiar RLS se comprobará el uso real mediante estadísticas de PostgreSQL y el plan de las consultas afectadas.
+
+
+## 20. Corrección de deep link en push — 2026-09-21
+
+Se detectó una diferencia entre la notificación interna y el push remoto: la fila de `notificaciones` conservaba `data.property_id`, pero el payload enviado a Expo solamente incluía `tipo`. Por eso la nueva navegación directa de la bandeja no podía extenderse al toque de una notificación push.
+
+Se corrigió `send-notification` para conservar los datos de navegación de `body.data` en el payload de Expo, además del tipo. Esto permite que futuras notificaciones push de propiedades puedan abrir directamente la ficha cuando se conecte el manejador de eventos de notificación del cliente.
+
+Commit: `a9fd0a9fcb5034879e968312fa3baed85aacbc3a`.
