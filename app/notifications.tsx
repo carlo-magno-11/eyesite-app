@@ -25,7 +25,7 @@ export default function NotificationsScreen() {
   const { user } = useAuth();
   const { items, loading, unread, markRead, refetch } = useNotifications(user?.id);
   const { items: announcements, loading: announcementsLoading } = useAnnouncements();
-  const [tab, setTab] = useState<Tab>("notifications");
+  const [tab, setTab] = useState<Tab>(() => params.announcement_id ? "announcements" : "notifications");
   const [filter, setFilter] = useState<Filter>("all");
   const params = useLocalSearchParams<{ announcement_id?: string }>();
 
