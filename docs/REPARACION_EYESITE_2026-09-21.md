@@ -965,3 +965,25 @@ Commits:
 - `3cc996f811abc0eb0d94e6ca8a995fb2503751b5`
 
 La ejecución CI posterior a estos cambios debe confirmar si existen errores TypeScript adicionales antes de considerar el proyecto listo.
+
+
+## 48. Reducción de recopilación de diagnóstico de terceros — 2026-09-22
+
+Durante la revisión de privacidad para App Store se detectó que app/_layout.tsx activaba Session Replay y el formulario de feedback de Sentry de forma global.
+
+### Cambio aplicado
+
+- Se conserva Sentry para diagnóstico de errores.
+- Se desactivó enableLogs para evitar enviar registros de aplicación como parte del diagnóstico normal.
+- Se eliminaron mobileReplayIntegration() y feedbackIntegration() de la inicialización global.
+- Se mantienen sendDefaultPii: false y el DSN de Sentry para el reporte de errores.
+
+### Motivo
+
+Apple exige que la política de privacidad describa los datos recopilados por terceros y que las declaraciones de App Privacy sean completas y exactas. Reducir Session Replay y formularios automáticos evita enviar contenido de pantallas o información introducida por el usuario a un tercero cuando no es necesario para la función principal de EYESITE.
+
+La pantalla de privacidad de EYESITE también se actualizó para identificar Sentry como servicio de diagnóstico y explicar que no se utiliza grabación de sesiones en la app.
+
+### Estado
+
+Este cambio reduce el alcance de datos de diagnóstico, pero la declaración final de App Privacy todavía debe comprobarse contra el build iOS real y el reporte de privacidad generado por Xcode.
