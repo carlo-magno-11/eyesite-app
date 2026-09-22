@@ -18,7 +18,7 @@ const PHONE = '+52 9813674060';
 export default function PropertyDetailScreen() {
   const { id, play } = useLocalSearchParams<{ id: string; play?: string }>();
   const { property, loading } = useProperty(id);
-  const { user, session } = useAuth();
+  const { session } = useAuth();
   const { isFav, toggleFav } = useFavorites();
   const [activeImage, setActiveImage] = useState(0);
   const [signedDocuments, setSignedDocuments] = useState<Record<string, string>>({});
