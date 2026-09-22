@@ -60,7 +60,7 @@ export default function ContactScreen() {
     if (!user) return;
     Alert.alert(
       'Eliminar mi cuenta',
-      'Esta acción elimina tu cuenta, favoritos, notificaciones, solicitudes y contenido inmobiliario asociado. No se puede deshacer.',
+      'Esta acción elimina tu cuenta, favoritos, notificaciones, solicitudes y el contenido inmobiliario que hayas enviado personalmente. Las propiedades del catálogo creadas por EYESITE pueden permanecer publicadas, pero quedarán desvinculadas de tu cuenta. No se puede deshacer.',
       [
         { text: 'Cancelar', style: 'cancel' },
         {
