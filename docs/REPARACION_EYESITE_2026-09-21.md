@@ -772,3 +772,39 @@ Se comprobó directamente:
 - Staging: subida aislada por usuario y perfil activo.
 
 **Pendiente de prueba funcional:** ejecutar en un dispositivo/emulador una publicación real con foto y otra con video para comprobar la subida completa y que la solicitud aparece en **Mis solicitudes**. Esta prueba requiere sesión y archivos reales; no se debe declarar completada sólo por inspección estática.
+
+
+## 40. Revisión administrativa de solicitudes — 2026-09-22
+
+Se auditó la pantalla **Por aprobar** y la función `admin_approve_property_request`.
+
+### Verificación del servidor
+
+La RPC de aprobación fue comprobada directamente en Supabase y conserva:
+- `solicitudes_propiedades.user_id → propiedades.user_id`;
+- `solicitudes_propiedades.id → propiedades.solicitud_origen`;
+- `contacto_*` y `dueno_*` de la solicitud;
+- estado publicado `activa`;
+- multimedia pública definitiva antes de insertar la propiedad.
+
+La RPC también rechaza solicitudes inexistentes o que ya no estén en estado `pendiente`.
+
+### Mejora del panel
+
+Se detectó una ambigüedad de interfaz: el listado de pendientes mostraba el contacto de la solicitud, pero no diferenciaba visualmente entre **quién envió la solicitud** y **quién es el propietario/contacto de la propiedad**.
+
+Se corrigió `public/admin.js` para mostrar por separado:
+- **SOLICITANTE:** nombre, correo e ID de la cuenta EYESITE;
+- **CONTACTO / PROPIETARIO:** nombre, teléfono y propietario indicado.
+
+Esto reduce el riesgo operativo de que administración confunda al usuario que creó la solicitud con el dueño del inmueble.
+
+Commit: `6c59e1ecacc4d3bdba981ed0999efabf950bdff3`.
+
+### Estado del flujo
+
+La cadena queda:
+
+`usuario activo → solicitud propia → revisión administrativa → promoción segura de medios → RPC de aprobación → propiedad activa → vínculo con usuario → catálogo público / Mis terrenos`.
+
+No se detectó un bypass que permita al cliente crear directamente una propiedad publicada.
