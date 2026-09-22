@@ -49,7 +49,11 @@ function AuthGate({ children }: { children: React.ReactNode }) {
     const inPending = segments[0] === "pending";
     const inDenied = segments[0] === "denied";
     const inVerifyEmail = segments[0] === "verify-email";
-    const isProtected = !inAuth && !inTerms && !inPending && !inDenied && !inVerifyEmail;
+    const inPublicProperty = segments[0] === "property";
+    const inPublicTabs = segments[0] === "(tabs)" &&
+      (segments[1] === "index" || segments[1] === "properties" || segments[1] === "map");
+    const isProtected = !inAuth && !inTerms && !inPending && !inDenied && !inVerifyEmail &&
+      !inPublicProperty && !inPublicTabs;
     const emailConfirmed = !!session?.user?.email_confirmed_at;
 
     if (!session && isProtected && current !== "(auth)/login") {
