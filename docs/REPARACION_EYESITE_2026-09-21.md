@@ -631,3 +631,45 @@ También deben revisarse los manifiestos de privacidad de los SDK y el reporte d
 Fuentes oficiales consultadas: Apple App Review Guidelines 5.1.1, Apple Account Deletion guidance, Apple App Privacy y Privacy Manifest documentation.
 
 **Criterio:** no se marca EYESITE como "lista para App Store" todavía. Esta auditoría separa lo ya comprobado en el código de lo que sólo puede verificarse en App Store Connect y en el build final.
+
+
+## 36. Preparación del Privacy Manifest iOS — 2026-09-22
+
+Se verificó la documentación actual de Expo y Apple sobre Privacy Manifests.
+
+### Cambio aplicado
+
+`app.config.ts` ahora:
+
+- habilita `ios.privacyManifests`;
+- declara explícitamente que EYESITE no usa tracking mediante `NSPrivacyTracking: false`;
+- deja las colecciones de datos del manifiesto de la aplicación vacías hasta cerrar la declaración real de App Privacy;
+- habilita `privacyManifestAggregationEnabled: true` en `expo-build-properties` para que el build pueda agregar los manifiestos de las dependencias nativas.
+
+Commit: `496f3a1f4cf74bfec53dfeaac7686a8b8b7272f1`.
+
+### Por qué no se agregaron códigos de Required Reason API a ciegas
+
+Apple exige que las APIs con motivo requerido tengan una razón aprobada y correcta. Expo indica que, en algunos casos, los manifiestos de dependencias estáticas no se agregan de forma que Apple los detecte correctamente, por lo que hay que identificar las APIs reales de las dependencias y declarar los motivos correspondientes. No se deben inventar códigos de razón sólo para silenciar una advertencia.
+
+La siguiente comprobación se hará sobre el build iOS real y los manifiestos de los SDK instalados. Si aparece una categoría concreta, se añadirá únicamente el motivo aprobado que corresponda a su uso real.
+
+### Hallazgo importante de App Review
+
+El `AuthGate` actual lleva a una pantalla de inicio de sesión cuando no existe sesión y protege prácticamente todas las rutas principales.
+
+Apple establece que, cuando una app no tiene funciones importantes basadas en cuenta, debe permitir el uso sin iniciar sesión; al mismo tiempo, las funciones que realmente dependen de cuenta sí pueden requerirla. EYESITE tiene funciones claramente dependientes de cuenta (favoritos, publicación, perfil, solicitudes y notificaciones), pero también tiene navegación inmobiliaria y mapa que pueden representar funcionalidad de descubrimiento.
+
+**No se cambió todavía el AuthGate a acceso de invitado**, porque hacerlo sin revisar todas las pantallas podría romper consultas que esperan `auth.uid()` o mostrar datos privados. El siguiente bloque de revisión será determinar exactamente qué pantallas pueden operar como invitado y, si corresponde, separar:
+
+- exploración pública: Inicio, propiedades públicas, detalle y mapa;
+- funciones autenticadas: favoritos, publicar, solicitudes, notificaciones y cuenta.
+
+Esto se considera una revisión de App Review, no una conclusión automática de rechazo.
+
+### Fuentes
+
+- Apple App Review Guidelines 5.1.1(i), 5.1.1(iv), 5.1.1(v).
+- Apple Privacy Manifest documentation.
+- Expo Privacy Manifest documentation.
+
