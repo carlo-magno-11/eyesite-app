@@ -35,7 +35,7 @@ function Splash() {
 
 function AuthGate({ children }: { children: React.ReactNode }) {
   const { session, profile, loading } = useAuth();
-  const termsOk = !!profile?.terminos_aceptados && profile?.terminos_version === "v1.0";
+  const termsOk = !!profile?.terminos_aceptados && profile.terminos_version === "v1.0";
   const router = useRouter();
   const segments = useSegments();
   const current = segments.join("/");
@@ -95,6 +95,48 @@ function AuthGate({ children }: { children: React.ReactNode }) {
 }
 
 export default Sentry.wrap(function RootLayout() {
+  const router = useRouter();
+
+  useEffect(() => {
+    let mounted = true;
+    let responseSubscription: { remove: () => void } | undefined;
+
+    void import("expo-notifications").then((Notifications) => {
+      if (!mounted) return;
+
+      responseSubscription = Notifications.addNotificationResponseReceivedListener((response) => {
+        const data = (response.notification.request.content.data ?? {}) as Record<string, unknown>;
+        const propertyId = typeof data.property_id === "string" ? data.property_id : null;
+        const announcementId = typeof data.announcement_id === "string" ? data.announcement_id : null;
+
+        if (propertyId) {
+          router.push({
+            pathname: "/property/[id]",
+            params: { id: propertyId },
+          } as never);
+          return;
+        }
+
+        if (announcementId) {
+          router.push({
+            pathname: "/notifications",
+            params: { announcement_id: announcementId },
+          } as never);
+          return;
+        }
+
+        router.push("/notifications" as never);
+      });
+    }).catch((error) => {
+      console.warn("[EYESITE] notification response listener error:", error);
+    });
+
+    return () => {
+      mounted = false;
+      responseSubscription?.remove();
+    };
+  }, [router]);
+
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <QueryClientProvider client={queryClient}>
@@ -102,10 +144,10 @@ export default Sentry.wrap(function RootLayout() {
           <ThemeProvider>
             <AuthGate>
               <Stack screenOptions={{ headerShown: false, animation: "fade", contentStyle: { backgroundColor: "#fff" } }} />
-            </AuthGate>
-          </ThemeProvider>
-        </SafeAreaProvider>
-      </QueryClientProvider>
-    </GestureHandlerRootView>
+          </AuthGate>
+        </ThemeProvider>
+      </SafeAreaProvider>
+    </QueryClientProvider>
+  </GestureHandlerRootView>
   );
 });
