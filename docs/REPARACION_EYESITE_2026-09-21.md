@@ -853,3 +853,30 @@ La validación final de multimedia todavía requiere una prueba física/emulador
 - una ubicación elegida manualmente y otra obtenida mediante ubicación actual.
 
 La inspección de código y despliegue no sustituyen esas pruebas funcionales.
+
+
+## 42. Eliminación de medios promocionados — 2026-09-22
+
+Se detectó un desfase entre la ruta de publicación y la rutina de eliminación de cuenta.
+
+Los medios promocionados desde staging se almacenan en:
+`eyesite-media/submissions/{solicitud_id}/assets/...`
+
+La rutina de eliminación ya eliminaba los medios bajo `properties/{property_id}`, pero no recorría la ruta `submissions/{solicitud_id}`.
+
+### Corrección
+
+Ahora `delete-account`:
+- identifica las solicitudes que originaron las propiedades personales;
+- elimina también sus medios promocionados bajo `submissions/{solicitud_id}`;
+- conserva los medios de propiedades creadas por administración para el catálogo;
+- mantiene la separación entre contenido personal y catálogo EYESITE.
+
+Commit:
+`0f3ab50b164f1aa0f110b9d156ee9ed6d2120088`
+
+Edge Function desplegada:
+- `delete-account`
+- versión **5 ACTIVE**
+
+La respuesta de la función ahora informa también cuántas propiedades personales fueron eliminadas, cuántas propiedades de catálogo quedaron preservadas y cuántas solicitudes aportaron medios eliminados.
