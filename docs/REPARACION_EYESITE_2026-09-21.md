@@ -920,3 +920,19 @@ Commits:
 - `1af91dd800a325e2178c5d4d8ec7eb45bca7f36e`
 
 Esto requiere un build nativo para probar el registro real en iOS/Android; Expo Go/simulador no sustituye esa prueba.
+
+## 45. Corrección de configuración nativa Expo — 2026-09-22
+
+Durante la revisión final del build iOS se detectó un error de estructura en `app.config.ts`: el plugin `expo-build-properties` estaba envuelto accidentalmente en un arreglo adicional dentro de `plugins`. Esto podía impedir que Expo procesara correctamente su configuración nativa.
+
+### Corrección
+
+- Se corrigió la estructura para que `expo-build-properties` sea un plugin válido directamente dentro de `plugins`.
+- Se conserva `privacyManifestAggregationEnabled: true` para agregar los manifiestos de privacidad de dependencias CocoaPods cuando corresponda.
+- No se añadieron códigos de Required Reason API inventados. Apple exige motivos aprobados y correctos; Expo recomienda identificar las APIs reales de las dependencias/build antes de declararlas.
+
+Commit: `2f830561929356f77f61a729b978e838066ec9d3`.
+
+### Estado
+
+La configuración queda preparada para el siguiente build nativo. Falta generar el build iOS y revisar el Privacy Report resultante; esa comprobación es necesaria para confirmar definitivamente los Required Reason APIs y los manifiestos de terceros.
