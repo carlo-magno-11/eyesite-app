@@ -479,3 +479,27 @@ No se modificó la base de datos para esta corrección porque las columnas neces
 ### Nota sobre propiedades creadas directamente por administración
 
 `admin_create_property` elimina deliberadamente `user_id` y `solicitud_origen` del payload administrativo. Por ello, una propiedad creada directamente desde el panel como alta administrativa no queda asociada automáticamente a un usuario solicitante. Esto es distinto del flujo normal de usuario `solicitud → aprobación → propiedad` y queda identificado para una futura mejora si el panel necesita crear propiedades en nombre de un usuario existente.
+
+
+## 32. Catálogo de usuarios y publicación administrativa a nombre de usuario — 2026-09-22
+
+Se amplió el panel para que una propiedad creada directamente por administración pueda quedar asociada explícitamente a un usuario existente. Esto cubre el caso de una propiedad que EYESITE carga o administra en nombre de un cliente, sin fingir que fue enviada por el usuario desde la app.
+
+### Cambios funcionales
+- Nueva propiedad incluye Usuario asociado / catálogo.
+- El catálogo ofrece usuarios no administradores con estado activa.
+- Desde Usuarios, cada usuario activo tiene una acción Propiedad, que abre Nueva propiedad con ese usuario seleccionado.
+- Al publicar desde el panel, propiedades.user_id conserva el usuario seleccionado, por lo que la propiedad puede aparecer en Mis terrenos.
+- Sin usuario seleccionado, la propiedad queda como catálogo general de EYESITE.
+- Al editar una propiedad también se puede cambiar o quitar la asociación.
+
+### Seguridad
+La asociación usa RPC administrativas; no se habilita INSERT/UPDATE directo del navegador sobre propiedades. admin_create_property y admin_assign_property_user validan que el usuario exista, sea no administrador y tenga estado activa. La segunda RPC sólo tiene EXECUTE para authenticated y comprueba is_admin() internamente.
+
+La propiedad creada directamente por administración mantiene solicitud_origen = null: no se inventa una solicitud que el usuario nunca envió. user_id significa que administración publicó la propiedad a nombre de esa cuenta.
+
+### Migración
+20260922170000_admin_property_user_catalog.sql.
+
+### Verificación
+Se instalaron las funciones en Supabase y se mantuvo intacto el flujo normal solicitud → aprobación.
