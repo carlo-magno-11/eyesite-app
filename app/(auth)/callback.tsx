@@ -42,7 +42,7 @@ export default function AuthCallbackScreen() {
         if (!mounted) return;
 
         if (isRecovery) {
-          router.replace("/(auth)/reset-password" as never);
+          router.replace("/reset-password" as never);
           return;
         }
 
