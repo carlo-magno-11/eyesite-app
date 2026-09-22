@@ -3,16 +3,19 @@ import { ScreenContainer } from "@/components/screen-container";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/lib/supabase";
 import { router } from "expo-router";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import * as Notifications from "expo-notifications";
 import Constants from "expo-constants";
 import { Platform } from "react-native";
 
 export default function NotificationSettingsScreen() {
   const { user, profile } = useAuth();
-  const [push, setPush] = useState(true);
-  const [inApp, setInApp] = useState(true);
-  const [adsPush, setAdsPush] = useState(true);
+  const [push, setPush] = useState<boolean | null>(null);
+  const [inApp, setInApp] = useState<boolean | null>(null);
+  const [adsPush, setAdsPush] = useState<boolean | null>(null);
+  const pushValue = push ?? profile?.notificaciones_push !== false;
+  const inAppValue = inApp ?? profile?.notificaciones_in_app !== false;
+  const adsPushValue = adsPush ?? profile?.anuncios_push !== false;
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -94,21 +97,21 @@ export default function NotificationSettingsScreen() {
         <Row
           title="Notificaciones dentro de EYESITE"
           description="Avisos de tu cuenta, propiedades y eventos."
-          value={inApp}
+          value={inAppValue}
           disabled={saving}
           onChange={(v) => void save("notificaciones_in_app", v)}
         />
         <Row
           title="Notificaciones push"
           description="Avisos que llegan al teléfono aunque EYESITE esté cerrada."
-          value={push}
+          value={pushValue}
           disabled={saving}
           onChange={(v) => void save("notificaciones_push", v)}
         />
         <Row
           title="Anuncios de EYESITE"
           description="Permite recibir por push novedades y anuncios generales."
-          value={adsPush}
+          value={adsPushValue}
           disabled={saving}
           onChange={(v) => void save("anuncios_push", v)}
         />
