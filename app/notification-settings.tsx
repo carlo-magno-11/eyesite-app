@@ -14,9 +14,10 @@ export default function NotificationSettingsScreen() {
 
   useEffect(() => {
     if (!profile) return;
-    setPush(profile.notificaciones_push !== false);
-    setInApp(profile.notificaciones_in_app !== false);
-    setAdsPush(profile.anuncios_push !== false);
+    const p = profile as any;
+    setPush(p.notificaciones_push !== false);
+    setInApp(p.notificaciones_in_app !== false);
+    setAdsPush(p.anuncios_push !== false);
   }, [profile]);
 
   const save = async (field: "notificaciones_push" | "notificaciones_in_app" | "anuncios_push", value: boolean) => {
