@@ -54,7 +54,7 @@ function AccountForm({ user, profile }: ProfileFormProps) {
   const deleteAccount = () => {
     Alert.alert(
       "Eliminar mi cuenta",
-      "Se eliminarán tu cuenta, favoritos, solicitudes, notificaciones y propiedades asociadas. Esta acción no se puede deshacer.",
+      "Se eliminarán tu cuenta, favoritos, solicitudes, notificaciones y el contenido inmobiliario que hayas enviado personalmente. Las propiedades del catálogo creadas por EYESITE para tu cuenta pueden permanecer publicadas, pero quedarán desvinculadas de ella. Esta acción no se puede deshacer.",
       [
         { text: "Cancelar", style: "cancel" },
         {
