@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 import * as Linking from "expo-linking";
+import { router } from "expo-router";
 
 import { supabase } from "@/lib/supabase";
 
@@ -60,10 +61,12 @@ export default function AuthCallbackScreen() {
 
         if (!mounted) return;
 
-        setMessage("¡Correo confirmado correctamente!");
+        if (type === "recovery") {
+          router.replace("/reset-password" as never);
+          return;
+        }
 
-        // NO navegamos manualmente.
-        // useAuth + AuthGate controlan el flujo de EYESITE.
+        setMessage("¡Correo confirmado correctamente!");
       } catch (error: any) {
         console.error("[EYESITE] auth callback error:", error);
 
