@@ -51,6 +51,10 @@ Deno.serve(async (req: Request) => {
       .filter((property) => property.solicitud_origen !== null)
       .map((property) => property.id);
 
+    const submissionIds = (associatedProperties ?? [])
+      .map((property) => property.solicitud_origen)
+      .filter((id): id is string => typeof id === "string" && id.length > 0);
+
     const catalogPropertyIds = (associatedProperties ?? [])
       .filter((property) => property.solicitud_origen === null)
       .map((property) => property.id);
@@ -113,6 +117,35 @@ Deno.serve(async (req: Request) => {
       );
     }
 
+    // Submission media is promoted under submissions/{request_id}/assets,
+    // not properties/{property_id}. Remove those public copies too.
+    const collectSubmissionStoragePaths = async (bucket: string, requestId: string) => {
+      const paths: string[] = [];
+      const prefix = `submissions/${requestId}`;
+      const { data: entries, error } = await admin.storage
+        .from(bucket)
+        .list(prefix, { limit: 1000 });
+      if (error && !/not found/i.test(error.message || "")) throw error;
+      for (const entry of entries ?? []) {
+        const entryPath = `${prefix}/${entry.name}`;
+        const { data: children, error: childError } = await admin.storage
+          .from(bucket)
+          .list(entryPath, { limit: 1000 });
+        if (childError && !/not found/i.test(childError.message || "")) throw childError;
+        for (const child of children ?? []) paths.push(`${entryPath}/${child.name}`);
+      }
+      return paths;
+    };
+
+    for (const requestId of submissionIds) {
+      publicPaths.push(
+        ...(await collectSubmissionStoragePaths("eyesite-media", requestId)),
+      );
+      privatePaths.push(
+        ...(await collectSubmissionStoragePaths("eyesite-private", requestId)),
+      );
+    }
+
     if (publicPaths.length) {
       const { error } = await admin.storage.from("eyesite-media").remove(publicPaths);
       if (error) throw error;
@@ -155,7 +188,7 @@ Deno.serve(async (req: Request) => {
     const { error: deleteUserError } = await admin.auth.admin.deleteUser(userId);
     if (deleteUserError) throw deleteUserError;
 
-    return json({ ok: true });
+    return json({ ok: true, deletedProperties: userSubmittedPropertyIds.length, preservedCatalogProperties: catalogPropertyIds.length, deletedSubmissionMediaRequests: submissionIds.length });
   } catch (error) {
     console.error("delete-account failed", error);
     return json({
