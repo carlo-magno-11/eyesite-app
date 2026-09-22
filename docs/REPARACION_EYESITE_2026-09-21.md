@@ -1006,3 +1006,27 @@ La versión pública ahora incluye:
 - contacto de privacidad.
 
 La URL pública exacta todavía depende del hosting donde se publique `public/`; no se inventó una URL para App Store Connect.
+
+
+## 50. Validación automática de configuración nativa iOS — 2026-09-22
+
+Se amplió GitHub Actions para que la revisión de calidad no se limite a TypeScript y ESLint.
+
+### Cambio aplicado
+
+El workflow `.github/workflows/quality.yml` ahora incluye un job `native-config` que:
+
+1. instala las dependencias con el lockfile;
+2. genera temporalmente el proyecto nativo iOS con Expo Prebuild;
+3. localiza `PrivacyInfo.xcprivacy`;
+4. comprueba que el manifiesto generado contiene `NSPrivacyTracking`, `NSPrivacyCollectedDataTypes` y `NSPrivacyAccessedAPITypes`.
+
+Commit:
+`38029f08a72338e1d8c3fe04e7d06d4de7c65b3a`.
+
+### Alcance
+
+Esto valida automáticamente que la configuración Expo de privacidad se pueda transformar en un proyecto iOS y que el manifiesto propio exista.
+
+No sustituye el build iOS final ni el Privacy Report de Xcode: los manifiestos y APIs de SDKs nativos deben comprobarse en el binario real antes de App Store Connect. Apple exige razones aprobadas para las Required Reason APIs usadas por la app o por SDKs de terceros. citeturn0search0turn0search1
+
