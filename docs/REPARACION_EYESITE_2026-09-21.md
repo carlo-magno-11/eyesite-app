@@ -673,3 +673,39 @@ Esto se considera una revisión de App Review, no una conclusión automática de
 - Apple Privacy Manifest documentation.
 - Expo Privacy Manifest documentation.
 
+
+## 37. Acceso de invitado a descubrimiento público — 2026-09-22
+
+Se completó el siguiente bloque de la revisión de App Review.
+
+### Cambio aplicado
+
+- `app/_layout.tsx` ya no considera protegidas las rutas públicas de descubrimiento:
+  - Inicio (`(tabs)/index`)
+  - listado público (`(tabs)/properties`)
+  - mapa (`(tabs)/map`)
+  - detalle de propiedad (`property/[id]`)
+- Las rutas que requieren cuenta siguen protegidas por `AuthGate`.
+- En `app/(tabs)/_layout.tsx`, las pestañas **Publicar**, **Favoritos** y **Nosotros** se ocultan para usuarios sin sesión; las pantallas públicas de Inicio y Mapa permanecen disponibles.
+- `useProperties` continúa leyendo exclusivamente `propiedades_publicas`, por lo que el acceso de invitado no abre acceso directo a `propiedades`.
+
+### Resultado esperado
+
+Un usuario no autenticado puede explorar el catálogo público y el mapa sin crear una cuenta. Para publicar, guardar favoritos y utilizar funciones de cuenta deberá iniciar sesión y completar el flujo normal de verificación/perfil/aprobación.
+
+### Verificación pendiente
+
+Esta corrección debe validarse en un build/emulador iOS y Android comprobando específicamente:
+
+1. abrir la app sin sesión;
+2. navegar Inicio → Oportunidades → Detalle → Mapa;
+3. intentar entrar a Publicar/Favoritos/Cuenta y comprobar que se solicita autenticación;
+4. iniciar sesión y confirmar que las funciones de cuenta vuelven a aparecer;
+5. comprobar que el detalle público no expone documentos privados a un invitado.
+
+Commits aplicados:
+- `b6137c9b709baf22bd93d3619963ada0d00a852e` — acceso invitado a descubrimiento público.
+- `66810a8299da6cc7f5322fd5c28ce8e687e51103` — ocultación de pestañas de cuenta para invitados.
+
+**Estado:** el cambio queda documentado, pero EYESITE todavía no se declara listo para App Store hasta completar pruebas del build iOS, Privacy Report/App Privacy y revisión visual del flujo de invitado.
+
