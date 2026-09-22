@@ -343,3 +343,34 @@ Se volvió a consultar RLS después de aplicar los cambios y se confirmó que la
 La revisión de RLS de perfiles, favoritos, solicitudes, notificaciones y entregas de anuncios queda **cerrada para esta etapa**. No se considera cerrada toda la seguridad del proyecto todavía por los cuatro pendientes del apartado anterior.
 
 El siguiente bloque recomendado antes de pasar a otra sección es resolver la frontera de `propiedades_publicas` y revisar la migración segura de `pg_net`. Después de eso podemos pasar a la siguiente sección funcional sin dejar pendiente esta auditoría.
+
+
+## 29. Eliminación del ERROR de SECURITY DEFINER de propiedades públicas — 2026-09-22
+
+Se reemplazó la vista `public.propiedades_publicas` que estaba marcada por Security Advisor como SECURITY DEFINER.
+
+### Nueva arquitectura
+- Se creó una tabla pública de solo lectura con únicamente las columnas que exponía la vista anterior: `public.propiedades_publicas`.
+- La tabla tiene RLS activo y una política exclusiva de SELECT para `anon` y `authenticated`.
+- No se concedieron INSERT, UPDATE ni DELETE a los roles de aplicación.
+- Se hizo una carga inicial y se comprobó que existen **9 propiedades activas en la tabla base y 9 en la tabla pública**.
+- Un trigger sobre `propiedades` mantiene sincronizada la tabla pública en INSERT/UPDATE/DELETE.
+- La función de sincronización está en el esquema `private`, es SECURITY DEFINER sólo para ejecutar la sincronización interna y no tiene EXECUTE para `public`, `anon` ni `authenticated`.
+- La app sigue utilizando el mismo nombre `propiedades_publicas`, por lo que no necesita una ruta alternativa ni acceso directo a `propiedades`.
+- El feed `propiedades_cambios` continúa provocando la recarga de la app después de cambios administrativos.
+
+### Resultado
+El ERROR de Security Advisor relacionado con `propiedades_publicas` dejó de aparecer. El límite público queda ahora en una tabla dedicada, en lugar de depender de una vista SECURITY DEFINER.
+
+### pg_net
+Se investigó el WARN de `pg_net` instalado en `public`. El proyecto usa actualmente `net.http_post` desde el job `eyesite-process-communications` cada minuto para llamar al scheduler de comunicaciones. Se intentó preparar una migración para mover la extensión a `extensions`, pero PostgreSQL/Supabase respondió que la extensión `pg_net` no soporta `ALTER EXTENSION ... SET SCHEMA`. **No se modificó la configuración real de pg_net** y la migración no aplicada fue eliminada de GitHub.
+
+Por seguridad, el WARN de pg_net queda abierto y documentado en lugar de intentar un workaround que pueda romper el scheduler.
+
+### Estado actualizado
+La lista de seguridad queda ahora reducida a:
+1. `pg_net` en schema `public` — pendiente por limitación de la extensión y dependencia del scheduler.
+2. RPC administrativas SECURITY DEFINER ejecutables por `authenticated` — intencionales y protegidas por comprobación administrativa.
+3. Protección contra contraseñas filtradas de Auth — pendiente de configuración desde Supabase Auth.
+
+El ERROR de `propiedades_publicas` quedó resuelto.
