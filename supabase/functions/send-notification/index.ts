@@ -114,7 +114,10 @@ Deno.serve(async (req) => {
         sound: "default",
         title: String(body.titulo || "EYESITE"),
         body: String(body.mensaje || ""),
-        data: { tipo: String(body.tipo || "informacion") },
+        data: {
+          tipo: String(body.tipo || "informacion"),
+          ...(body.data && typeof body.data === "object" ? body.data : {}),
+        },
       }));
 
     if (!messages.length) {
