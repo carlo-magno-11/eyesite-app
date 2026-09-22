@@ -198,3 +198,20 @@ Se detectó una diferencia entre la notificación interna y el push remoto: la f
 Se corrigió `send-notification` para conservar los datos de navegación de `body.data` en el payload de Expo, además del tipo. Esto permite que futuras notificaciones push de propiedades puedan abrir directamente la ficha cuando se conecte el manejador de eventos de notificación del cliente.
 
 Commit: `a9fd0a9fcb5034879e968312fa3baed85aacbc3a`.
+
+
+## 21. Navegación al tocar push remoto — 2026-09-21
+
+Se completó el segundo lado del deep link de notificaciones. El layout raíz de la app ahora registra `addNotificationResponseReceivedListener` de Expo Notifications y lee `property_id` / `announcement_id` del payload recibido.
+
+### Comportamiento
+- Push con `property_id`: abre directamente `/property/[id]`.
+- Push con `announcement_id`: abre la pantalla de comunicación/notificaciones y conserva el identificador para el flujo posterior.
+- Push sin identificador específico: abre la pantalla de notificaciones.
+- También se consulta `getLastNotificationResponseAsync()` para cubrir el caso en que el usuario toca el push mientras la aplicación estaba cerrada y la app se inicia desde esa interacción.
+- La suscripción se elimina al desmontar el layout para evitar listeners duplicados.
+
+Commit: `dd19e2f152d9f1b30cfd54a814538e6bd709effa`.
+
+### Verificación pendiente
+El cambio quedó versionado en GitHub. El workflow de calidad todavía no reporta una ejecución asociada a este commit, por lo que no se declara CI verde hasta que exista una ejecución verificable.
