@@ -84,14 +84,17 @@ No se marca como “pasado” hasta disponer de una ejecución confirmada del wo
 
 ### 12. Estado actual de seguridad
 El Security Advisor de Supabase actualmente reporta:
-- 1 ERROR sobre `propiedades_publicas` como SECURITY DEFINER view;
 - 1 WARN sobre `pg_net` en schema `public`;
-- 17 WARN sobre funciones administrativas SECURITY DEFINER ejecutables por usuarios autenticados;
+- 19 WARN sobre funciones SECURITY DEFINER ejecutables por usuarios autenticados;
 - 1 WARN por protección contra contraseñas filtradas desactivada.
 
-Los 17 RPC administrativas no se revocan ciegamente porque el panel de administración depende de ellas y sus cuerpos ya fueron auditados para comprobar autorización de administrador y `search_path`.
+La antigua alerta ERROR de `propiedades_publicas` como SECURITY DEFINER view fue eliminada al sustituir la vista pública por una tabla cache con RLS. La app continúa leyendo exclusivamente esa frontera pública.
 
-La vista `propiedades_publicas` es deliberadamente el puente público de lectura mientras el acceso directo a `propiedades` está bloqueado. Eliminar SECURITY DEFINER sin rediseñar esta frontera podría romper la seguridad y la lectura de la app.
+Las 19 funciones SECURITY DEFINER no se revocan ciegamente porque el panel de administración y las operaciones protegidas de notificaciones dependen de ellas. Sus cuerpos fueron auditados para comprobar autorización, restricciones de usuario y `search_path`.
+
+`pg_net` permanece en `public` porque la extensión es utilizada por el scheduler de comunicaciones y el intento de moverla mediante `ALTER EXTENSION ... SET SCHEMA` fue rechazado por PostgreSQL. No se aplicará una migración insegura sólo para eliminar el aviso.
+
+La protección contra contraseñas filtradas debe activarse desde la configuración de Auth de Supabase cuando la opción esté disponible en el proyecto; no se sustituye por SQL improvisado.
 
 ### 13. Migraciones/commits relevantes
 - `20260921150000_security_public_property_documents_boundary.sql`
