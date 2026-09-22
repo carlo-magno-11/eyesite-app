@@ -709,3 +709,21 @@ Commits aplicados:
 
 **Estado:** el cambio queda documentado, pero EYESITE todavía no se declara listo para App Store hasta completar pruebas del build iOS, Privacy Report/App Privacy y revisión visual del flujo de invitado.
 
+
+## 38. Endurecimiento UX para invitados — 2026-09-22
+
+Durante la validación del acceso sin cuenta se detectaron dos puntos de UX que no debían quedar abiertos para invitados.
+
+### Correcciones
+
+- Inicio ahora muestra acciones de cuenta que llevan a **Iniciar sesión** cuando no existe sesión, en lugar de abrir directamente pantallas protegidas.
+- El detalle público de una propiedad ya no intenta solicitar documentos privados cuando el visitante es invitado; los documentos se solicitan sólo con sesión.
+- El botón de favorito del detalle público informa al invitado que debe iniciar sesión y ofrece acceso directo al login.
+
+Esto mantiene el catálogo y detalle como contenido público, mientras las operaciones personales continúan detrás de autenticación.
+
+Commits:
+- `ad012274e6b42c3d52a16185faa2c7bafb186ee9` — acciones de Inicio seguras para invitados.
+- `a644e2ef93e1f45907d7e87b677f8dcd6f540ebb` — protección del detalle público.
+- `2d69d3a9ba7bb024b6299b4e2eb92f7dfe9388c3` — limpieza de valor no utilizado.
+
