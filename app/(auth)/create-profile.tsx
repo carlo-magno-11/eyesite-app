@@ -81,12 +81,10 @@ export default function CreateProfileScreen() {
       /*
        * Perfil inicial.
        *
-       * estado = pendiente significa que el usuario
-       * todavía NO tiene autorización para entrar.
-       *
-       * El administrador será quien cambie:
-       *
-       * pendiente -> aprobado
+       * El estado y el rol no se modifican aquí.
+       * La base de datos conserva la aprobación administrativa
+       * si el perfil ya existe; en un perfil nuevo se aplican
+       * los valores predeterminados del esquema.
        */
       const payload = {
         id: user.id,
@@ -123,7 +121,7 @@ export default function CreateProfileScreen() {
       }
 
       /*
-       * El perfil quedó guardado como PENDIENTE.
+       * El perfil quedó guardado sin alterar su rol ni estado.
        *
        * Continuamos al segundo paso del proceso.
        */
