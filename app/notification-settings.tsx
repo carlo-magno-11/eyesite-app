@@ -4,7 +4,6 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/lib/supabase";
 import { router } from "expo-router";
 import { useState } from "react";
-import * as Notifications from "expo-notifications";
 import Constants from "expo-constants";
 
 export default function NotificationSettingsScreen() {
@@ -25,6 +24,12 @@ export default function NotificationSettingsScreen() {
 
     if (field === "notificaciones_push") {
       if (value && Platform.OS !== "web") {
+        if (Constants.executionEnvironment === "storeClient") {
+          setSaving(false);
+          setPush(false);
+          return;
+        }
+        const Notifications = await import("expo-notifications");
         const current = await Notifications.getPermissionsAsync();
         let status = current.status;
         if (status !== "granted") {
