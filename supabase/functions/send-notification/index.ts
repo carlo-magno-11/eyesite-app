@@ -72,10 +72,8 @@ Deno.serve(async (req) => {
 
     let query = adminClient
       .from("profiles")
-      .select("id,expo_push_token")
-      .eq("estado", "activa")
-      .not("expo_push_token", "is", null)
-      .neq("expo_push_token", "");
+      .select("id,expo_push_token,notificaciones_push,notificaciones_in_app,anuncios_push")
+      .eq("estado", "activa");
 
     if (resolvedUserIds.length) {
       query = query.in("id", resolvedUserIds);
@@ -91,11 +89,26 @@ Deno.serve(async (req) => {
       : (rows || []).map((row: any) => row.id).filter(Boolean);
 
     if (createInApp && finalUserIds.length) {
+      const { data: inAppProfiles, error: inAppProfilesError } = await adminClient
+        .from("profiles")
+        .select("id,notificaciones_in_app")
+        .in("id", finalUserIds)
+        .eq("estado", "activa");
+      if (inAppProfilesError) throw inAppProfilesError;
+
+      const inAppUserIds = (inAppProfiles || [])
+        .filter((p: any) => p.notificaciones_in_app !== false)
+        .map((p: any) => p.id);
+
+      if (!inAppUserIds.length) {
+        // El usuario puede haber desactivado las notificaciones in-app.
+      }
+
       const eventBase = String(body.event_key || crypto.randomUUID());
       const { error: notificationError } = await adminClient
         .from("notificaciones")
         .upsert(
-          finalUserIds.map((id) => ({
+          (inAppUserIds).map((id) => ({
             user_id: id,
             titulo: String(body.titulo || "EYESITE"),
             mensaje: String(body.mensaje || ""),
@@ -112,8 +125,16 @@ Deno.serve(async (req) => {
       if (notificationError) throw notificationError;
     }
 
+    const isAnnouncement = Boolean(body.announcement_id || navigationData.announcement_id || String(body.tipo || "").toLowerCase() === "anuncio");
     const messages = (rows || [])
-      .filter((row: any) => typeof row.expo_push_token === "string" && row.expo_push_token.startsWith("ExponentPushToken["))
+      .filter((row: any) => {
+        const pushEnabled = isAnnouncement
+          ? row.anuncios_push !== false
+          : row.notificaciones_push !== false;
+        return pushEnabled
+          && typeof row.expo_push_token === "string"
+          && row.expo_push_token.startsWith("ExponentPushToken[");
+      })
       .map((row: any) => ({
         to: row.expo_push_token,
         sound: "default",
