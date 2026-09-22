@@ -39,11 +39,21 @@ Deno.serve(async (req: Request) => {
   const userId = user.id;
 
   try {
-    const { data: ownedProperties, error: propertyError } = await admin
+    // EYESITE distingue entre contenido personal enviado por el usuario y
+    // propiedades del catálogo publicadas por un administrador "para" un usuario.
+    const { data: associatedProperties, error: propertyError } = await admin
       .from("propiedades")
-      .select("id")
+      .select("id, solicitud_origen")
       .eq("user_id", userId);
     if (propertyError) throw propertyError;
+
+    const userSubmittedPropertyIds = (associatedProperties ?? [])
+      .filter((property) => property.solicitud_origen !== null)
+      .map((property) => property.id);
+
+    const catalogPropertyIds = (associatedProperties ?? [])
+      .filter((property) => property.solicitud_origen === null)
+      .map((property) => property.id);
 
     const stagingRoot = userId;
     const { data: stagingFolders, error: folderError } = await admin.storage
@@ -92,12 +102,14 @@ Deno.serve(async (req: Request) => {
     const publicPaths: string[] = [];
     const privatePaths: string[] = [];
 
-    for (const property of ownedProperties ?? []) {
+    // Only user-submitted properties are deleted. Admin-created catalog
+    // properties remain published and keep their media.
+    for (const propertyId of userSubmittedPropertyIds) {
       publicPaths.push(
-        ...(await collectPropertyStoragePaths("eyesite-media", property.id)),
+        ...(await collectPropertyStoragePaths("eyesite-media", propertyId)),
       );
       privatePaths.push(
-        ...(await collectPropertyStoragePaths("eyesite-private", property.id)),
+        ...(await collectPropertyStoragePaths("eyesite-private", propertyId)),
       );
     }
 
@@ -111,11 +123,28 @@ Deno.serve(async (req: Request) => {
       if (error) throw error;
     }
 
+    if (userSubmittedPropertyIds.length) {
+      const { error } = await admin
+        .from("propiedades")
+        .delete()
+        .in("id", userSubmittedPropertyIds);
+      if (error) throw error;
+    }
+
+    // Admin-created catalog properties are not personal account content.
+    // Keep them available in EYESITE, but remove the deleted user's association.
+    if (catalogPropertyIds.length) {
+      const { error } = await admin
+        .from("propiedades")
+        .update({ user_id: null })
+        .in("id", catalogPropertyIds);
+      if (error) throw error;
+    }
+
     const deletes = [
       admin.from("favoritos").delete().eq("user_id", userId),
       admin.from("notificaciones").delete().eq("user_id", userId),
       admin.from("solicitudes_propiedades").delete().eq("user_id", userId),
-      admin.from("propiedades").delete().eq("user_id", userId),
       admin.from("profiles").delete().eq("id", userId),
     ];
     for (const operation of deletes) {
