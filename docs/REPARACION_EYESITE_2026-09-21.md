@@ -215,3 +215,18 @@ Commit: `dd19e2f152d9f1b30cfd54a814538e6bd709effa`.
 
 ### Verificación pendiente
 El cambio quedó versionado en GitHub. El workflow de calidad todavía no reporta una ejecución asociada a este commit, por lo que no se declara CI verde hasta que exista una ejecución verificable.
+
+
+## 22. Corrección de divergencia entre GitHub y Edge Function de push — 2026-09-21
+
+Durante la verificación del flujo se detectó una divergencia real: `supabase/functions/send-notification/index.ts` ya contenía en GitHub la lógica de favoritos e in-app, pero la versión activa de Supabase todavía era la versión 4 y no conservaba los identificadores de navegación en el payload. Esto podía provocar que el código del repositorio pareciera reparado mientras el backend ejecutaba una versión anterior.
+
+Se desplegó la versión 5 de `send-notification` directamente desde el archivo versionado. Ahora:
+- `property_id` y `announcement_id` enviados en el cuerpo se incorporan al `data` del push.
+- Los mismos identificadores quedan en `notificaciones.data` cuando `in_app` está activo.
+- Se mantiene la resolución de favoritos para alertas de precio.
+- Los tokens `DeviceNotRegistered` siguen invalidándose en `profiles`.
+
+Verificación posterior: la función quedó `ACTIVE`, versión `5`, con hash `4e4f7b38e060073e72cf1dcadb6fd66dbc98fcc9de91fdef2df4291d80f5673e`.
+
+Commit del código: `7586008b98996d0b87815cdaa005a77dadf3c1d8`.
