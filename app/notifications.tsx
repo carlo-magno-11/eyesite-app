@@ -25,9 +25,9 @@ export default function NotificationsScreen() {
   const { user } = useAuth();
   const { items, loading, unread, markRead, refetch } = useNotifications(user?.id);
   const { items: announcements, loading: announcementsLoading } = useAnnouncements();
+  const params = useLocalSearchParams<{ announcement_id?: string }>();
   const [tab, setTab] = useState<Tab>(() => params.announcement_id ? "announcements" : "notifications");
   const [filter, setFilter] = useState<Filter>("all");
-  const params = useLocalSearchParams<{ announcement_id?: string }>();
 
   useEffect(() => {
     if (user?.id) void registerPushToken(user.id);
@@ -35,7 +35,6 @@ export default function NotificationsScreen() {
 
   useEffect(() => {
     if (params.announcement_id) {
-      setTab("announcements");
       void supabase.rpc("registrar_anuncio_evento", {
         p_announcement_id: String(params.announcement_id),
         p_evento: "opened",
