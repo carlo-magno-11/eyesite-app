@@ -174,3 +174,18 @@ Se realizó una segunda revisión directamente contra el proyecto Supabase de pr
 3. Añadir métricas de anuncios/notificaciones y estado de push.
 4. Diseñar reintentos de push con backoff e invalidación de tokens.
 5. Crear pruebas E2E del flujo completo de registro → verificación → perfil → términos → aprobación → notificaciones.
+
+
+## 19. Revisión de rendimiento y flujo de comunicaciones — 2026-09-21
+
+Se revisaron los índices de las tablas de comunicación y del flujo de usuarios/propiedades. No se eliminaron índices solo porque aparezcan como poco usados: el proyecto todavía está en pruebas y varios cubren consultas esperadas del panel o del crecimiento futuro.
+
+### Observaciones
+- `notificaciones` ya tiene índices adecuados para bandeja por usuario, no leídas y programación.
+- `anuncios` tiene índices para publicaciones activas y programación. Se mantiene un índice adicional de publicación porque su utilidad debe medirse con tráfico real antes de decidir una limpieza.
+- `favoritos` conserva índice único usuario+propiedad y búsquedas por usuario y propiedad, necesarios para favoritos y alertas de precio.
+- `propiedades` tiene índices para estado/fecha, usuario, orden y coordenadas de propiedades activas.
+- No se ejecutó una limpieza automática de índices porque podría empeorar el rendimiento del panel o del scheduler sin métricas de producción suficientes.
+
+### Criterio adoptado
+Los siguientes cambios de base de datos deberán seguir siendo migraciones versionadas. Antes de eliminar índices o cambiar RLS se comprobará el uso real mediante estadísticas de PostgreSQL y el plan de las consultas afectadas.
