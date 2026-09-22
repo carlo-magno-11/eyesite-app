@@ -1,4 +1,4 @@
-import { ActivityIndicator, Pressable, StyleSheet, Switch, Text, View } from "react-native";
+import { ActivityIndicator, Platform, Pressable, StyleSheet, Switch, Text, View } from "react-native";
 import { ScreenContainer } from "@/components/screen-container";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/lib/supabase";
@@ -6,7 +6,6 @@ import { router } from "expo-router";
 import { useState } from "react";
 import * as Notifications from "expo-notifications";
 import Constants from "expo-constants";
-import { Platform } from "react-native";
 
 export default function NotificationSettingsScreen() {
   const { user, profile } = useAuth();
@@ -17,14 +16,6 @@ export default function NotificationSettingsScreen() {
   const inAppValue = inApp ?? profile?.notificaciones_in_app !== false;
   const adsPushValue = adsPush ?? profile?.anuncios_push !== false;
   const [saving, setSaving] = useState(false);
-
-  useEffect(() => {
-    if (!profile) return;
-    const p = profile as any;
-    setPush(p.notificaciones_push !== false);
-    setInApp(p.notificaciones_in_app !== false);
-    setAdsPush(p.anuncios_push !== false);
-  }, [profile]);
 
   const save = async (field: "notificaciones_push" | "notificaciones_in_app" | "anuncios_push", value: boolean) => {
     if (!user?.id || saving) return;
