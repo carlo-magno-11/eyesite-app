@@ -4,6 +4,9 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/lib/supabase";
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
+import * as Notifications from "expo-notifications";
+import Constants from "expo-constants";
+import { Platform } from "react-native";
 
 export default function NotificationSettingsScreen() {
   const { user, profile } = useAuth();
@@ -24,9 +27,43 @@ export default function NotificationSettingsScreen() {
     if (!user?.id || saving) return;
     setSaving(true);
 
+    let extraUpdate: Record<string, unknown> = {};
+
+    if (field === "notificaciones_push") {
+      if (value && Platform.OS !== "web") {
+        const current = await Notifications.getPermissionsAsync();
+        let status = current.status;
+        if (status !== "granted") {
+          const requested = await Notifications.requestPermissionsAsync();
+          status = requested.status;
+        }
+
+        if (status !== "granted") {
+          setSaving(false);
+          setPush(false);
+          return;
+        }
+
+        try {
+          const projectId =
+            Constants.expoConfig?.extra?.eas?.projectId ||
+            "53f27292-7aee-4a95-a597-0f3d062495bd";
+          const token = await Notifications.getExpoPushTokenAsync({ projectId });
+          extraUpdate.expo_push_token = token.data;
+        } catch (error) {
+          console.error("[EYESITE] push token error:", error);
+          setSaving(false);
+          setPush(false);
+          return;
+        }
+      } else if (!value) {
+        extraUpdate.expo_push_token = null;
+      }
+    }
+
     const { error } = await supabase
       .from("profiles")
-      .update({ [field]: value })
+      .update({ [field]: value, ...extraUpdate })
       .eq("id", user.id);
 
     setSaving(false);
