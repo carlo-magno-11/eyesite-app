@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { View, Text, Pressable, Switch, StyleSheet, ScrollView, ActivityIndicator, Modal } from 'react-native';
+import { View, Text, Pressable, Switch, StyleSheet, ScrollView, ActivityIndicator, Modal, Alert } from 'react-native';
 import { router } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
