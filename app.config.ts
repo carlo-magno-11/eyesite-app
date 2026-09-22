@@ -85,6 +85,14 @@ const config: ExpoConfig = {
     "expo-status-bar",
     "expo-web-browser",
     [
+      "expo-notifications",
+      {
+        icon: "./assets/images/icon.png",
+        color: "#C9A84C",
+        sounds: []
+      }
+    ],
+    [
       "expo-location",
       {
         locationWhenInUsePermission: "EYESITE usa tu ubicación para mostrar propiedades cercanas y ubicar una propiedad en el mapa."
