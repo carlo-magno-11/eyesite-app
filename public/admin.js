@@ -1483,7 +1483,7 @@ async function cargarPendientes() {
   }
 }
 
-function actualizarBadgePendientes(total) {
+function getRequesterDisplayName(p) {\n  const u = (Array.isArray(usuarios) ? usuarios : []).find((item) => String(item?.id) === String(p?.user_id));\n  return String(u?.nombre || p?.user_name || p?.contacto_nombre || "Usuario no identificado");\n}\n\nfunction getRequesterEmail(p) {\n  const u = (Array.isArray(usuarios) ? usuarios : []).find((item) => String(item?.id) === String(p?.user_id));\n  return String(u?.email || p?.user_email || p?.contacto_email || "Correo no disponible");\n}\n\nfunction actualizarBadgePendientes(total) {
   const badge = document.getElementById("nb");
 
   if (!badge) {
@@ -1537,10 +1537,7 @@ async function renderPendientes() {
             ${esc(getPropTitle(p))}
           </td>
 
-          <td>
-            ${p.contacto_nombre || p.user_name ? `<div class="p">${esc(p.contacto_nombre || p.user_name)}</div>` : ""}
-            <div>${esc(getUserEmail(p))}</div>
-          </td>
+          <td>\n            <div class="p"><strong>SOLICITANTE</strong></div>\n            <div>${esc(getRequesterDisplayName(p))}</div>\n            <div>${esc(getRequesterEmail(p))}</div>\n            <div class="rh">ID: ${esc(p.user_id || "sin usuario")}</div>\n          </td>\n\n          <td>\n            <div class="p"><strong>CONTACTO / PROPIETARIO</strong></div>\n            <div>${esc(p.contacto_nombre || "Sin contacto")}</div>\n            <div>${esc(p.contacto_telefono || p.contacto_whatsapp || "Sin teléfono")}</div>\n            <div>${esc(p.dueno_nombre || "Propietario no indicado")}</div>\n          </td>
 
           <td>
             ${typeBadge(getPropType(p))}
