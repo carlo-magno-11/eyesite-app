@@ -952,3 +952,16 @@ Se cerró correctamente el objeto anidado de `contentStyle` y el objeto externo 
 Commit: `e8c3ea032e5129f88068f6dfc6ff2fcebc1d9b4f`.
 
 El workflow generado por este commit quedó en estado `queued` al momento de la revisión; se debe esperar su resultado antes de declarar CI verde.
+
+## 47. Correcciones adicionales encontradas por CI — 2026-09-22
+
+La siguiente ejecución de calidad detectó dos errores TypeScript reales:
+
+1. `app/_layout.tsx`: el guard de acceso usaba `segments[1]` sin contemplar que el tipo inferido de segmentos podía ser una tupla de un elemento. Se ajustó la condición para reconocer también la ruta raíz `(tabs)` y evitar el acceso inválido.
+2. `app/terms.tsx`: se utilizaba `Alert.alert` sin importar `Alert` desde React Native. Se añadió el import.
+
+Commits:
+- `f7a7e3c751e7a28cc32ef71d2c533447888bcae8`
+- `3cc996f811abc0eb0d94e6ca8a995fb2503751b5`
+
+La ejecución CI posterior a estos cambios debe confirmar si existen errores TypeScript adicionales antes de considerar el proyecto listo.
