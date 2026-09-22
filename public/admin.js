@@ -4621,6 +4621,104 @@ async function desactivarPropiedad(id) {
 }
 
 /* ============================================================
+   LIMPIEZA DE MEDIOS HUÉRFANOS
+   ============================================================ */
+
+async function cleanupSubmissionMediaRecord(request) {
+  if (!request?.id) return;
+
+  const stagingCandidates = [];
+  for (const field of ["fotos", "fotos_pro", "videos", "imagenes"]) {
+    const value = request[field];
+    const list = Array.isArray(value) ? value : value ? [value] : [];
+    for (const item of list) {
+      if (typeof item !== "string") continue;
+      const clean = item.trim();
+      if (
+        clean &&
+        !/^https?:\/\//i.test(clean) &&
+        clean.split("/").length >= 2 &&
+        clean.startsWith(`${request.user_id || ""}/`)
+      ) {
+        stagingCandidates.push(clean);
+      }
+    }
+  }
+  for (const field of ["video_url", "portada_url"]) {
+    const value = request[field];
+    if (
+      typeof value === "string" &&
+      value &&
+      !/^https?:\/\//i.test(value) &&
+      value.startsWith(`${request.user_id || ""}/`)
+    ) {
+      stagingCandidates.push(value);
+    }
+  }
+
+  const uniqueStaging = [...new Set(stagingCandidates)];
+  if (uniqueStaging.length) {
+    const { error } = await s.storage.from("eyesite-staging").remove(uniqueStaging);
+    if (error) console.warn("[media cleanup] staging:", error);
+  }
+
+  const { data: publicEntries, error: listError } = await s.storage
+    .from("eyesite-media")
+    .list(`submissions/${request.id}/assets`, { limit: 1000 });
+
+  if (listError) {
+    if (!/not found/i.test(listError.message || "")) {
+      console.warn("[media cleanup] public list:", listError);
+    }
+    return;
+  }
+
+  const publicPaths = (publicEntries || [])
+    .filter((entry) => entry?.name)
+    .map((entry) => `submissions/${request.id}/assets/${entry.name}`);
+
+  if (publicPaths.length) {
+    const { error } = await s.storage.from("eyesite-media").remove(publicPaths);
+    if (error) console.warn("[media cleanup] public:", error);
+  }
+}
+
+async function cleanupPropertyMediaRecord(property) {
+  if (!property) return;
+
+  const candidates = [];
+  for (const field of ["fotos", "fotos_pro", "videos", "imagenes", "archivos", "pdfs", "kmz_kml"]) {
+    const value = property[field];
+    const list = Array.isArray(value) ? value : value ? [value] : [];
+    for (const item of list) {
+      if (typeof item !== "string") continue;
+      const clean = item.trim();
+      if (!clean || /^https?:\/\//i.test(clean)) continue;
+      candidates.push(clean.replace(/^eyesite-media\//i, "").replace(/^eyesite-private\//i, ""));
+    }
+  }
+  for (const field of ["video_url", "portada_url"]) {
+    const value = property[field];
+    if (typeof value === "string" && value.trim() && !/^https?:\/\//i.test(value)) {
+      candidates.push(value.trim().replace(/^eyesite-media\//i, ""));
+    }
+  }
+
+  const publicPaths = [...new Set(candidates.filter((p) => p && !p.includes("..")))];
+  if (publicPaths.length) {
+    const { error } = await s.storage.from("eyesite-media").remove(publicPaths);
+    if (error) console.warn("[property media cleanup] public:", error);
+  }
+
+  if (property.solicitud_origen) {
+    await cleanupSubmissionMediaRecord({
+      id: property.solicitud_origen,
+      user_id: property.user_id,
+    });
+  }
+}
+
+/* ============================================================
    ELIMINAR PROPIEDAD
    ============================================================ */
 
@@ -4649,6 +4747,8 @@ async function eliminarPropiedad(id) {
         if (!result?.ok) {
           throw new Error("Supabase no confirmó la eliminación de la propiedad.");
         }
+
+        await cleanupPropertyMediaRecord(p);
 
         propiedades = propiedades.filter(
           (item) => String(item.id) !== String(id),
@@ -5059,6 +5159,8 @@ async function delPend() {
         if (!result?.ok) {
           throw new Error("Supabase no confirmó la eliminación de la solicitud.");
         }
+
+        await cleanupSubmissionMediaRecord(p);
 
         toast("Solicitud eliminada.");
 
