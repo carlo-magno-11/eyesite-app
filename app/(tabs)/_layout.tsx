@@ -1,10 +1,12 @@
 import { Tabs } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Platform } from "react-native";
+import { useAuth } from "@/hooks/useAuth";
 import { HapticTab } from "@/components/haptic-tab";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 
 export default function TabLayout() {
+  const { session } = useAuth();
   const insets = useSafeAreaInsets();
   const bottomPadding = Platform.OS === "web" ? 12 : Math.max(insets.bottom,16);
   const tabBarHeight = 56 + bottomPadding;
@@ -57,6 +59,7 @@ export default function TabLayout() {
         name="publish"
         options={{
           title: "Publicar",
+          href: session ? undefined : null,
           tabBarIcon: ({ color }) => <IconSymbol size={28} name="plus.circle.fill" color={color} />,
         }}
       />
@@ -64,6 +67,7 @@ export default function TabLayout() {
         name="favorites"
         options={{
           title: "Favoritos",
+          href: session ? undefined : null,
           tabBarIcon: ({ color }) => <IconSymbol size={24} name="heart.fill" color={color} />,
         }}
       />
@@ -78,6 +82,7 @@ export default function TabLayout() {
         name="contact"
         options={{
           title: "Nosotros",
+          href: session ? undefined : null,
           tabBarIcon: ({ color }) => <IconSymbol size={24} name="person.fill" color={color} />,
         }}
       />
