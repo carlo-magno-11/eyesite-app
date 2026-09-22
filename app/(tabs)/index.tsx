@@ -17,7 +17,7 @@ const CATEGORIES = [
 
 export default function HomeScreen() {
   const { properties, loading } = useProperties();
-  const { user } = useAuth();
+  const { user, session } = useAuth();
   const { unread } = useNotifications(user?.id);
   const featuredProperties = properties.filter((p) => p.featured || p.destacada);
   // Si todavía no hay propiedades marcadas como destacadas, mostramos las
@@ -47,17 +47,17 @@ export default function HomeScreen() {
           <Text style={styles.logo}>EYESI<Text style={styles.logoPlus}>+</Text>E</Text>
           <View style={styles.headerButtons}>
             <Pressable
-              onPress={() => router.push('/mi-cuenta' as any)}
+              onPress={() => router.push((session ? '/mi-cuenta' : '/(auth)/login') as any)}
               accessibilityRole="button"
-              accessibilityLabel="Mi cuenta"
+              accessibilityLabel={session ? "Mi cuenta" : "Iniciar sesión"}
               style={({ pressed }) => [styles.contactBtn, pressed && { opacity: 0.7 }]}
             >
               <Ionicons name="person-circle-outline" size={22} color="#C9A84C" />
             </Pressable>
             <Pressable
-              onPress={() => router.push('/notifications' as any)}
+              onPress={() => router.push((session ? '/notifications' : '/(auth)/login') as any)}
               accessibilityRole="button"
-              accessibilityLabel="Notificaciones"
+              accessibilityLabel={session ? "Notificaciones" : "Iniciar sesión"}
               style={({ pressed }) => [styles.contactBtn, pressed && { opacity: 0.7 }]}
             >
               <View style={{ position: 'relative' }}>
