@@ -990,3 +990,19 @@ La pantalla de privacidad de EYESITE también se actualizó para identificar Sen
 ### Estado
 
 Este cambio reduce el alcance de datos de diagnóstico, pero la declaración final de App Privacy todavía debe comprobarse contra el build iOS real y el reporte de privacidad generado por Xcode.
+
+## 49. Política de privacidad pública sincronizada — 2026-09-22
+
+Se actualizó `public/privacy.html` para que su contenido coincida con la política mostrada dentro de la app.
+
+La versión pública ahora incluye:
+- datos de cuenta y contenido inmobiliario;
+- uso de ubicación;
+- fotos, videos y archivos;
+- Supabase y servicios cartográficos;
+- Sentry como diagnóstico de errores sin Session Replay;
+- conservación y controles de seguridad;
+- eliminación de cuenta, distinguiendo contenido enviado personalmente de propiedades de catálogo creadas por EYESITE;
+- contacto de privacidad.
+
+La URL pública exacta todavía depende del hosting donde se publique `public/`; no se inventó una URL para App Store Connect.
