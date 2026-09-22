@@ -4258,7 +4258,7 @@ async function saveNew() {
 
           enlaces: Array.isArray(nuevosEnlaces) ? nuevosEnlaces : [],
 
-          user_id: currentUser?.id || null,
+          user_id: valueOf("new_user_id") || null,
         };
 
         /* =====================================================
