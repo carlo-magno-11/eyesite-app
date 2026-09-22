@@ -374,3 +374,56 @@ La lista de seguridad queda ahora reducida a:
 3. Protección contra contraseñas filtradas de Auth — pendiente de configuración desde Supabase Auth.
 
 El ERROR de `propiedades_publicas` quedó resuelto.
+
+
+## 30. Auditoría individual de RPC SECURITY DEFINER — 2026-09-22
+
+Se revisaron individualmente las 18 funciones que siguen apareciendo en Security Advisor como SECURITY DEFINER ejecutables por `authenticated`.
+
+### Resultado de autorización
+
+Las funciones administrativas revisadas comprueban internamente `public.is_admin()` antes de realizar operaciones privilegiadas:
+
+- `admin_activate_property`
+- `admin_approve_profile`
+- `admin_approve_property_request`
+- `admin_create_property`
+- `admin_deactivate_property`
+- `admin_delete_announcement`
+- `admin_delete_notification`
+- `admin_delete_property`
+- `admin_delete_property_request`
+- `admin_list_profiles`
+- `admin_rechazar_solicitud`
+- `admin_reject_profile`
+- `admin_reject_property_request`
+- `admin_suspend_profile`
+- `admin_update_property`
+
+La revisión confirmó además que:
+
+- Las operaciones de propiedad no aceptan desde el cliente los campos de identidad/propietario que fueron excluidos explícitamente por `admin_create_property`.
+- `admin_update_property` utiliza una lista blanca de columnas actualizables y no permite modificar directamente el ID ni los campos de propietario/solicitud.
+- Las operaciones de aprobación/rechazo comprueban que la solicitud exista y que todavía esté en estado pendiente antes de procesarla.
+- Las funciones de perfiles impiden modificar el estado de un administrador y `admin_suspend_profile` impide suspender al propio administrador.
+- `admin_approve_profile` exige que el correo del usuario esté confirmado antes de activar el perfil.
+- Las funciones de notificaciones de usuario sólo afectan filas cuyo `user_id` coincide con `auth.uid()` y además exigen perfil activo.
+- `registrar_anuncio_evento` sólo acepta `opened` y `clicked`, exige perfil activo y registra el evento para el usuario autenticado.
+
+### Privilegios
+
+Las funciones administrativas tienen EXECUTE para `authenticated` porque el panel las invoca mediante el Data API. No se concedió EXECUTE a `anon`. La advertencia 0029 de Supabase se mantiene como advertencia de arquitectura, no como evidencia por sí sola de una escalada: el control de autorización está dentro de cada función.
+
+Las funciones internas `private.is_active_user()` y los helpers privados no se exponen como RPC de aplicación.
+
+### Decisión
+
+No se revocó EXECUTE de las 15 RPC administrativas ni se cambió `SECURITY DEFINER` a `SECURITY INVOKER`, porque ambas acciones romperían el flujo actual del panel o eliminarían el acceso privilegiado que esas funciones necesitan. La revisión del cuerpo de las funciones es la medida adecuada para esta arquitectura.
+
+Tampoco se eliminaron los índices marcados como no utilizados por Performance Advisor. EYESITE sigue en fase de pruebas y varios índices cubren consultas del panel, scheduler o crecimiento futuro.
+
+### Pendientes externos a esta auditoría
+
+- Activar **Leaked Password Protection** desde Supabase Auth. La documentación actual de Supabase indica que esta protección se configura desde Auth y utiliza la base de contraseñas comprometidas de HaveIBeenPwned. citeturn0search0
+- Mantener documentado el WARN de `pg_net` hasta contar con un procedimiento soportado para moverlo sin afectar el scheduler.
+- Confirmar una ejecución visible de GitHub Actions para `pnpm check` y `pnpm lint`.
