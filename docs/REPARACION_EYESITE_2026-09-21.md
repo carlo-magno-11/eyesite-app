@@ -281,3 +281,19 @@ Commits principales:
 - `ca65e967a2471a782de05ceb6f1336c5f4ed4f33`
 - `b2fd9488d07e319b53d6f3051b62630a0076f66c`
 - `d22fa17b0f6ed7b6fa1c8a50f039cdbfdfc66959`
+
+
+## 26. Revisión final de seguridad después de comunicaciones — 2026-09-22
+
+Después de crear `anuncio_entregas` apareció temporalmente un aviso porque el RPC de eventos de anuncios podía ser ejecutado por `anon`. Se corrigió explícitamente: `registrar_anuncio_evento(uuid,text)` sólo queda ejecutable por `authenticated`.
+
+También se optimizó su política RLS para evaluar `auth.uid()` mediante subconsulta estable y evitar el aviso de init-plan.
+
+Estado actual de advisors:
+- El nuevo RPC ya no aparece como ejecutable por `anon`.
+- Continúan los hallazgos conocidos: `propiedades_publicas` SECURITY DEFINER, `pg_net` en public, funciones administrativas SECURITY DEFINER ejecutables por authenticated y protección contra contraseñas filtradas desactivada.
+- Los índices sin uso siguen siendo informativos; no se eliminaron mientras EYESITE continúa en etapa de pruebas.
+
+Últimas migraciones:
+- `20260922151000_lock_announcement_event_rpc_execute.sql`
+- `20260922151500_optimize_announcement_delivery_rls.sql`
