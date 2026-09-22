@@ -8,6 +8,7 @@ import { registerPushToken } from "@/hooks/use-notifications";
 import { useEffect } from "react";
 import { View, ActivityIndicator, Text, StatusBar } from "react-native";
 import * as Sentry from "@sentry/react-native";
+import { supabase } from "@/lib/supabase";
 
 Sentry.init({
   dsn: "https://2b9f8a4dc404528b87957977fe39da0c@o4512088794333184.ingest.us.sentry.io/4512088804556800",
@@ -115,6 +116,10 @@ export default Sentry.wrap(function RootLayout() {
       }
 
       if (announcementId) {
+        void supabase.rpc("registrar_anuncio_evento", {
+          p_announcement_id: announcementId,
+          p_evento: "opened",
+        });
         router.push({
           pathname: "/notifications",
           params: { announcement_id: announcementId },
