@@ -230,3 +230,54 @@ Se desplegó la versión 5 de `send-notification` directamente desde el archivo 
 Verificación posterior: la función quedó `ACTIVE`, versión `5`, con hash `4e4f7b38e060073e72cf1dcadb6fd66dbc98fcc9de91fdef2df4291d80f5673e`.
 
 Commit del código: `7586008b98996d0b87815cdaa005a77dadf3c1d8`.
+
+
+## 23. Preferencias de notificaciones y reintentos de push — 2026-09-22
+
+Se añadió una capa explícita para que cada usuario pueda controlar:
+- `notificaciones_in_app`
+- `notificaciones_push`
+- `anuncios_push`
+
+También se separó el estado de entrega in-app del estado de push. `notificaciones` ahora conserva `push_status`, `push_attempts` y `push_next_retry_at`, permitiendo reintentos sin ocultar una notificación que ya está disponible dentro de la app.
+
+El Edge Function `send-notification` quedó desplegado en versión 6 y respeta las preferencias del perfil.
+
+El scheduler `process-scheduled-communications` quedó desplegado en versión 2. Ahora:
+- procesa comunicaciones programadas;
+- intenta push sólo cuando la preferencia lo permite;
+- registra intentos;
+- reintenta fallos en ventanas de 5, 15 y 60 minutos;
+- invalida tokens `DeviceNotRegistered`;
+- mantiene separado el estado in-app del push.
+
+## 24. Entrega y analítica por usuario de anuncios — 2026-09-22
+
+Se creó `anuncio_entregas`, una fila por anuncio y usuario, para poder registrar entrega push, intentos, errores, apertura y clic.
+
+Se añadió el RPC `registrar_anuncio_evento(uuid,text)`, limitado a los eventos `opened` y `clicked`, para que la propia app registre interacción del usuario sin exponer escritura directa de la tabla.
+
+La pantalla de comunicaciones ahora:
+- abre anuncios desde pushes;
+- registra aperturas;
+- registra clics en enlaces;
+- ofrece una pantalla de preferencias de notificaciones.
+
+La navegación al tocar un push conserva el comportamiento de abrir la propiedad cuando existe `property_id`, o comunicaciones cuando existe `announcement_id`. Expo documenta precisamente el uso de `addNotificationResponseReceivedListener` y de la respuesta inicial para cubrir aperturas desde segundo plano o arranque. citeturn0search0turn0search4
+
+## 25. Corrección adicional de onboarding — 2026-09-22
+
+Se detectó que `create-profile.tsx` enviaba `role: 'user'` y `estado: 'pendiente'` en cada upsert. Esto podía intentar sobrescribir una aprobación administrativa existente y chocaba con la frontera de seguridad de perfiles.
+
+Se eliminó esa escritura: el onboarding sólo actualiza los datos personales y deja que el esquema/RLS conserve el rol y estado administrativos.
+
+Migraciones:
+- `20260922150000_add_notification_preferences_and_push_retry.sql`
+- `20260922150500_add_announcement_delivery_analytics.sql`
+
+Commits principales:
+- `f0a003afba728a2b935bd1542fd5dac4c4dbb592`
+- `5db466d30a6bf90da7e141f23900018a90c55453`
+- `ca65e967a2471a782de05ceb6f1336c5f4ed4f33`
+- `b2fd9488d07e319b53d6f3051b62630a0076f66c`
+- `d22fa17b0f6ed7b6fa1c8a50f039cdbfdfc66959`
