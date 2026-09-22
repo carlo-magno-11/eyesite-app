@@ -900,3 +900,23 @@ Commits:
 La limpieza se ejecuta **después** de confirmar la eliminación en la base de datos, evitando borrar medios si la operación principal de administración falla.
 
 La eliminación de cuenta ya cuenta además con limpieza del área `submissions/{solicitud_id}`, desplegada en `delete-account` versión 5.
+
+
+## 44. Registro real de Push Notifications — 2026-09-22
+
+Durante la auditoría de notificaciones se encontró que el backend ya tenía soporte para `profiles.expo_push_token` y el envío mediante `send-notification`, pero la pantalla de preferencias no estaba registrando el token Expo del dispositivo al activar las notificaciones push.
+
+Se corrigió `app/notification-settings.tsx`:
+- al activar Push, solicita el permiso nativo si todavía no existe;
+- obtiene el Expo Push Token usando el EAS project ID;
+- guarda el token en `profiles.expo_push_token`;
+- al desactivar Push, limpia el token;
+- si el usuario rechaza el permiso o falla el registro, no se activa falsamente la preferencia.
+
+También se añadió el plugin nativo `expo-notifications` a `app.config.ts`.
+
+Commits:
+- `010183063008e307f0d81d6904fc2dd1efff76fd`
+- `1af91dd800a325e2178c5d4d8ec7eb45bca7f36e`
+
+Esto requiere un build nativo para probar el registro real en iOS/Android; Expo Go/simulador no sustituye esa prueba.
