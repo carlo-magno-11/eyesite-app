@@ -15,7 +15,9 @@ Deno.serve(async(req)=>{
   const admin=createClient(url,service);
   const {data:profile,error:profileError}=await admin.from("profiles").select("estado,role").eq("id",user.id).maybeSingle();
   if(profileError)return json({error:"No se pudo validar el perfil"},500);
-  if(profile?.role!=="admin"&&profile?.estado!=="activa")return json({error:"Acceso no autorizado"},403);
+  const isActiveAdmin=profile?.role==="admin"&&profile?.estado==="activa";
+  const isActiveUser=profile?.role!=="admin"&&profile?.estado==="activa";
+  if(!isActiveAdmin&&!isActiveUser)return json({error:"Acceso no autorizado"},403);
   const body=await req.json(), propertyId=typeof body?.property_id==="string"?body.property_id.trim():"", path=typeof body?.path==="string"?body.path.trim().replace(/^\/+/, ""):"";
   if(!propertyId||!path)return json({error:"property_id y path son obligatorios"},400);
   if(path.includes("..")||path.includes("\\")||path.includes("?")||path.includes("#")||path.startsWith("http"))return json({error:"Ruta no válida"},400);
