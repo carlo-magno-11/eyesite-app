@@ -31,7 +31,7 @@ export default function PrivacyScreen() {
           Aplicamos controles de acceso, políticas de seguridad y almacenamiento separado para información pública y privada. Conservamos los datos mientras sean necesarios para las finalidades descritas o cuando exista una obligación legal aplicable.
         </Section>
         <Section title="8. Eliminación de la cuenta">
-          Puedes iniciar la eliminación de tu cuenta desde la sección “Nosotros” de la aplicación. La eliminación está diseñada para retirar la cuenta y los datos asociados que EYESITE controle, incluidos favoritos, notificaciones, solicitudes y contenido inmobiliario asociado, salvo información que deba conservarse por obligación legal.
+          Puedes iniciar la eliminación de tu cuenta desde la sección “Nosotros” de la aplicación. La eliminación está diseñada para retirar la cuenta y los datos personales asociados que EYESITE controle, incluidos favoritos, notificaciones, solicitudes y el contenido inmobiliario que hayas enviado personalmente. Una propiedad del catálogo creada por EYESITE para una cuenta puede permanecer publicada cuando no constituye contenido personal enviado por esa cuenta; en ese caso se elimina la asociación con el usuario. Se conservan únicamente los datos que deban mantenerse por obligación legal o que formen parte del catálogo de EYESITE y no sean datos personales del usuario.
         </Section>
         <Section title="9. Contacto">
           Para dudas sobre privacidad o tratamiento de datos puedes contactar a EYESITE en informacion@eyesite.com.
