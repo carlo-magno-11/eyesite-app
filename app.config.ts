@@ -36,6 +36,15 @@ const config: ExpoConfig = {
   ios: {
     supportsTablet: true,
     bundleIdentifier: env.iosBundleId,
+    // No declaramos razones de APIs a ciegas. Expo genera PrivacyInfo.xcprivacy
+    // y agregará los manifiestos de los SDK; las razones específicas se añaden
+    // cuando se confirman desde los manifiestos de las dependencias/build.
+    privacyManifests: {
+      NSPrivacyTracking: false,
+      NSPrivacyTrackingDomains: [],
+      NSPrivacyCollectedDataTypes: [],
+      NSPrivacyAccessedAPITypes: [],
+    },
     "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }
@@ -102,11 +111,17 @@ const config: ExpoConfig = {
       },
     ],
     [
+      [
       "expo-build-properties",
       {
         android: {
           buildArchs: ["armeabi-v7a", "arm64-v8a"],
           minSdkVersion: 24,
+        },
+        ios: {
+          // Apple exige que los motivos de las Required Reason APIs usados por
+          // código nativo/SDK queden declarados en el Privacy Manifest final.
+          privacyManifestAggregationEnabled: true,
         },
       },
     ],
