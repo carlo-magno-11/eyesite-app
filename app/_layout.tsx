@@ -101,32 +101,39 @@ export default Sentry.wrap(function RootLayout() {
     let mounted = true;
     let responseSubscription: { remove: () => void } | undefined;
 
-    void import("expo-notifications").then((Notifications) => {
+    const openNotification = (response: any) => {
+      const data = (response?.notification?.request?.content?.data ?? {}) as Record<string, unknown>;
+      const propertyId = typeof data.property_id === "string" ? data.property_id : null;
+      const announcementId = typeof data.announcement_id === "string" ? data.announcement_id : null;
+
+      if (propertyId) {
+        router.push({
+          pathname: "/property/[id]",
+          params: { id: propertyId },
+        } as never);
+        return;
+      }
+
+      if (announcementId) {
+        router.push({
+          pathname: "/notifications",
+          params: { announcement_id: announcementId },
+        } as never);
+        return;
+      }
+
+      router.push("/notifications" as never);
+    };
+
+    void import("expo-notifications").then(async (Notifications) => {
       if (!mounted) return;
 
-      responseSubscription = Notifications.addNotificationResponseReceivedListener((response) => {
-        const data = (response.notification.request.content.data ?? {}) as Record<string, unknown>;
-        const propertyId = typeof data.property_id === "string" ? data.property_id : null;
-        const announcementId = typeof data.announcement_id === "string" ? data.announcement_id : null;
+      responseSubscription = Notifications.addNotificationResponseReceivedListener(openNotification);
 
-        if (propertyId) {
-          router.push({
-            pathname: "/property/[id]",
-            params: { id: propertyId },
-          } as never);
-          return;
-        }
-
-        if (announcementId) {
-          router.push({
-            pathname: "/notifications",
-            params: { announcement_id: announcementId },
-          } as never);
-          return;
-        }
-
-        router.push("/notifications" as never);
-      });
+      const lastResponse = await Notifications.getLastNotificationResponseAsync();
+      if (mounted && lastResponse) {
+        openNotification(lastResponse);
+      }
     }).catch((error) => {
       console.warn("[EYESITE] notification response listener error:", error);
     });
@@ -143,11 +150,11 @@ export default Sentry.wrap(function RootLayout() {
         <SafeAreaProvider>
           <ThemeProvider>
             <AuthGate>
-              <Stack screenOptions={{ headerShown: false, animation: "fade", contentStyle: { backgroundColor: "#fff" } }} />
-          </AuthGate>
-        </ThemeProvider>
-      </SafeAreaProvider>
-    </QueryClientProvider>
-  </GestureHandlerRootView>
+              <Stack screenOptions={{ headerShown: false, animation: "fade", contentStyle: { backgroundColor: "#fff" }} />
+            </AuthGate>
+          </ThemeProvider>
+        </SafeAreaProvider>
+      </QueryClientProvider>
+    </GestureHandlerRootView>
   );
 });
