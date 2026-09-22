@@ -22,7 +22,12 @@ export default function VerifyEmailScreen() {
       const { error } = await supabase.auth.resend({
         type: "signup",
         email,
-        options: {\n          emailRedirectTo:\n            Platform.OS === "web"\n              ? "https://auth.eyesite.mx/auth/callback"\n              : "eyesite://auth/callback",\n        },
+        options: {
+          emailRedirectTo:
+            Platform.OS === "web"
+              ? "https://auth.eyesite.mx/auth/callback"
+              : "eyesite://auth/callback",
+        },
       });
       if (error) throw error;
       Alert.alert("Correo enviado", "Revisa " + email + " y también la carpeta de spam.");
