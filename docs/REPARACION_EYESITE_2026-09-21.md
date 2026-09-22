@@ -727,3 +727,48 @@ Commits:
 - `a644e2ef93e1f45907d7e87b677f8dcd6f540ebb` — protección del detalle público.
 - `2d69d3a9ba7bb024b6299b4e2eb92f7dfe9388c3` — limpieza de valor no utilizado.
 
+
+
+## 39. Flujo de publicación de propiedades y permisos — 2026-09-22
+
+Se auditó la cadena completa de publicación:
+
+`usuario activo → solicitudes_propiedades → revisión administrativa → propiedades → Mis terrenos / catálogo público`.
+
+### Hallazgos y correcciones
+
+1. **La identidad del solicitante está protegida por RLS.**
+   `solicitudes_propiedades` permite INSERT sólo a usuarios activos y exige que `user_id = auth.uid()`. Un cliente no puede enviar una solicitud a nombre de otro usuario.
+2. **Los usuarios no publican directamente en `propiedades`.**
+   La tabla publicada mantiene INSERT/UPDATE/DELETE administrativos; la publicación normal pasa por la solicitud y las RPC administrativas.
+3. **Se encontró un bug en la pantalla de publicación.**
+   `publish.tsx` ya importaba `useAuth`, pero no extraía `user` y `profile` dentro del componente. Se corrigió para que los datos de contacto usados al enviar la solicitud provengan realmente del perfil y del correo de la sesión.
+4. **Se encontró un segundo bug más importante en el guardado multimedia.**
+   La app hacía INSERT de la solicitud y después intentaba UPDATE de video/portada/precio. La política de UPDATE de solicitudes es administrativa, por lo que ese segundo paso podía fallar aunque la solicitud ya se hubiera creado.
+5. **Corrección:** ahora portada, galería, video, thumbnail, contacto, precio esperado y coordenadas se incluyen en el INSERT inicial. Se eliminó el UPDATE posterior del cliente. Esto mantiene el flujo compatible con RLS y evita solicitudes parcialmente guardadas.
+6. **El correo del solicitante** también se guarda en `contacto_email`, usando el correo de la sesión como respaldo.
+7. **Staging multimedia:** `eyesite-staging` sólo permite subir dentro de la carpeta del propio `auth.uid()` y exige perfil activo para INSERT.
+
+### Resultado
+
+El flujo queda separado correctamente:
+
+- `user_id`: identidad de la cuenta que envió la solicitud.
+- `contacto_*`: datos de contacto que se mostrarán/gestionarán para esa solicitud.
+- `dueno_*`: datos del propietario de la propiedad, que pueden ser distintos.
+- `solicitud_origen`: vínculo histórico que se crea al aprobar una solicitud en `propiedades`.
+- `propiedades.user_id`: vínculo con la cuenta para la que quedó publicada la propiedad.
+
+No se necesitó una nueva migración SQL para esta corrección porque las políticas actuales ya bloqueaban el UPDATE del usuario y todas las columnas necesarias ya existen.
+
+### Verificación Supabase
+
+Se comprobó directamente:
+
+- INSERT de solicitudes: usuario activo + `user_id = auth.uid()`.
+- SELECT: sólo administrador o propio usuario activo.
+- UPDATE: sólo administración.
+- Propiedades: el cliente no tiene INSERT/UPDATE/DELETE normal.
+- Staging: subida aislada por usuario y perfil activo.
+
+**Pendiente de prueba funcional:** ejecutar en un dispositivo/emulador una publicación real con foto y otra con video para comprobar la subida completa y que la solicitud aparece en **Mis solicitudes**. Esta prueba requiere sesión y archivos reales; no se debe declarar completada sólo por inspección estática.
