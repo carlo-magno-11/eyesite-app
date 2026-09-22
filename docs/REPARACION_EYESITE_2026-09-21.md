@@ -880,3 +880,23 @@ Edge Function desplegada:
 - versión **5 ACTIVE**
 
 La respuesta de la función ahora informa también cuántas propiedades personales fueron eliminadas, cuántas propiedades de catálogo quedaron preservadas y cuántas solicitudes aportaron medios eliminados.
+
+
+## 43. Limpieza de medios huérfanos desde administración — 2026-09-22
+
+Se encontró que eliminar una solicitud o una propiedad desde el panel eliminaba el registro de base de datos, pero no tenía una limpieza completa de los objetos de Storage asociados.
+
+Se añadió al panel:
+- limpieza de archivos exactos del staging de una solicitud eliminada;
+- limpieza de `submissions/{solicitud_id}/assets` en medios públicos;
+- limpieza de medios públicos de una propiedad eliminada;
+- limpieza separada de medios privados para no mezclar buckets;
+- reutilización de `solicitud_origen` para localizar los medios promocionados de una propiedad proveniente de una solicitud.
+
+Commits:
+- `2f69f7f2aff33473d547a07cf98471b38122082`
+- `dc5147cb300112c57d387cbce4642ff6bee8bc79`
+
+La limpieza se ejecuta **después** de confirmar la eliminación en la base de datos, evitando borrar medios si la operación principal de administración falla.
+
+La eliminación de cuenta ya cuenta además con limpieza del área `submissions/{solicitud_id}`, desplegada en `delete-account` versión 5.
