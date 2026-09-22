@@ -248,6 +248,7 @@ export default function PublishScreen() {
   const [videoName, setVideoName] = useState<string | null>(null);
   const [videoType, setVideoType] = useState<string | null>(null);
   const [processingVideo, setProcessingVideo] = useState(false);
+  const { user, profile } = useAuth();
 
   const updateField = (key: keyof FormData, value: string) => {
     setForm((prev) => ({ ...prev, [key]: value }));
