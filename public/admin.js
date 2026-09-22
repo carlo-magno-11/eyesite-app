@@ -1538,7 +1538,8 @@ async function renderPendientes() {
           </td>
 
           <td>
-            ${esc(getUserEmail(p))}
+            ${p.contacto_nombre || p.user_name ? `<div class="p">${esc(p.contacto_nombre || p.user_name)}</div>` : ""}
+            <div>${esc(getUserEmail(p))}</div>
           </td>
 
           <td>
@@ -2030,6 +2031,41 @@ function buildNewForm() {
    HTML FORMULARIO
    ============================================================ */
 
+
+function catalogUsersOptions(selectedId = null) {
+  const selected = selectedId ? String(selectedId) : "";
+  const list = (Array.isArray(usuarios) ? usuarios : [])
+    .filter((u) => String(u?.role || "user").toLowerCase() !== "admin")
+    .filter((u) => String(u?.estado || "").toLowerCase() === "activa")
+    .sort((a, b) => {
+      const aa = String(a?.nombre || a?.email || "").toLowerCase();
+      const bb = String(b?.nombre || b?.email || "").toLowerCase();
+      return aa.localeCompare(bb, "es");
+    });
+  const options = ['<option value="">Sin usuario asociado — catálogo EYESITE</option>'];
+  for (const u of list) {
+    const name = String(u?.nombre || "Sin nombre").trim();
+    const email = String(u?.email || "").trim();
+    const label = email ? name + " — " + email : name;
+    options.push('<option value="' + esc(u.id) + '" ' + (String(u.id) === selected ? "selected" : "") + '>' + esc(label) + '</option>');
+  }
+  return options.join("");
+}
+
+function prepararNuevaPropiedadParaUsuario(userId) {
+  const user = (Array.isArray(usuarios) ? usuarios : []).find((u) => String(u.id) === String(userId));
+  if (!user) { toast("Usuario no encontrado."); return; }
+  if (String(user.estado || "").toLowerCase() !== "activa" || String(user.role || "user").toLowerCase() === "admin") {
+    toast("Solo se pueden asociar propiedades a usuarios activos no administradores.");
+    return;
+  }
+  goTo("nueva");
+  setTimeout(() => {
+    const select = document.getElementById("new_user_id");
+    if (select) select.value = String(user.id);
+  }, 50);
+}
+
 function propertyFormHTML(p = {}, mode = "new") {
   const tipo = String(
     p.tipo ||
@@ -2086,6 +2122,16 @@ function propertyFormHTML(p = {}, mode = "new") {
     </div>
 
     <div class="g2">
+
+      <div class="fg gfull">
+        <label>USUARIO ASOCIADO / CATÁLOGO</label>
+        <select id="${mode}_user_id" class="fsel">
+          ${catalogUsersOptions(p.user_id || null)}
+        </select>
+        <div class="rh">
+          Si seleccionas un usuario, la propiedad publicada desde este panel aparecerá también en <strong>Mis terrenos</strong> de esa cuenta. Déjalo vacío para una propiedad propia del catálogo EYESITE.
+        </div>
+      </div>
 
       <div class="fg gfull">
         <label>
@@ -4440,6 +4486,15 @@ async function saveEdit() {
           throw error;
         }
 
+        const assignedUserId = valueOf("edit_user_id") || null;
+        const { error: assignmentError } = await s.rpc("admin_assign_property_user", {
+          p_property_id: propiedadEditando.id,
+          p_user_id: assignedUserId,
+        });
+        if (assignmentError) {
+          throw assignmentError;
+        }
+
         if (oldPrice > 0 && Number(data.precio_actual ?? 0) > 0 && Number(data.precio_actual) < oldPrice) {
           try {
             const { error: pushError } = await s.functions.invoke("send-notification", {
@@ -5146,6 +5201,12 @@ function renderUsuarios() {
        -------------------------------------------------------- */
         acciones = `
         <button
+          class="bs bap2"
+          onclick="prepararNuevaPropiedadParaUsuario('${esc(usuario.id)}')"
+        >
+          ➕ Propiedad
+        </button>
+        <button
           class="bs"
           onclick="suspenderUsuario('${esc(usuario.id)}')"
         >
@@ -5823,6 +5884,8 @@ async function initAdmin() {
         },
       )
       .subscribe();
+
+    await cargarUsuarios();
 
     buildNewForm();
 
