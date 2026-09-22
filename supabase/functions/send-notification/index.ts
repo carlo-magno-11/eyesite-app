@@ -49,6 +49,11 @@ Deno.serve(async (req) => {
       : [];
     const propertyId = body.property_id ? String(body.property_id) : null;
     const createInApp = body.in_app === true;
+    const navigationData = {
+      ...(body.data && typeof body.data === "object" ? body.data : {}),
+      ...(body.property_id ? { property_id: String(body.property_id) } : {}),
+      ...(body.announcement_id ? { announcement_id: String(body.announcement_id) } : {}),
+    };
 
     let resolvedUserIds = [...targetUserIds];
 
@@ -100,7 +105,7 @@ Deno.serve(async (req) => {
             programada_para: new Date().toISOString(),
             estado_envio: "sent",
             sent_at: new Date().toISOString(),
-            data: body.data && typeof body.data === "object" ? body.data : {},
+            data: navigationData,
           })),
           { onConflict: "event_key", ignoreDuplicates: true },
         );
@@ -116,7 +121,7 @@ Deno.serve(async (req) => {
         body: String(body.mensaje || ""),
         data: {
           tipo: String(body.tipo || "informacion"),
-          ...(body.data && typeof body.data === "object" ? body.data : {}),
+          ...navigationData,
         },
       }));
 
