@@ -119,7 +119,6 @@ const config: ExpoConfig = {
       },
     ],
     [
-      [
       "expo-build-properties",
       {
         android: {
