@@ -297,3 +297,49 @@ Estado actual de advisors:
 Últimas migraciones:
 - `20260922151000_lock_announcement_event_rpc_execute.sql`
 - `20260922151500_optimize_announcement_delivery_rls.sql`
+
+
+## 27. Seguridad de acceso por estado de perfil — 2026-09-22
+
+Se cerró una brecha de autorización que no debía depender únicamente de la navegación de la app. Antes, un usuario suspendido/rechazado o pendiente podía conservar un JWT válido y, mediante llamadas directas al Data API, todavía intentar acceder a algunos datos propios porque varias políticas sólo comprobaban `auth.uid()`.
+
+### Reparación aplicada
+Se creó la función interna `private.is_active_user()`, que comprueba el estado actual de `profiles` directamente en la base de datos. La función no queda expuesta como RPC.
+
+Las políticas quedaron reforzadas para exigir `estado = 'activa'` en:
+- `favoritos`: SELECT, INSERT y DELETE propios;
+- `solicitudes_propiedades`: SELECT e INSERT propios;
+- `notificaciones`: SELECT propio;
+- `anuncio_entregas`: SELECT propio;
+- edición del propio `profiles`.
+
+Los administradores conservan sus rutas administrativas mediante `private.is_admin()`.
+
+El SELECT del propio perfil sigue disponible para cualquier usuario autenticado porque `AuthGate` necesita conocer `estado` para enviar correctamente a pendiente/denegado. Esto evita romper el flujo de onboarding mientras bloquea el acceso a los datos de negocio cuando el estado no es activo.
+
+También se endurecieron los RPC de usuario:
+- `marcar_notificacion_leida(uuid)` devuelve `false` para perfiles inactivos;
+- `marcar_todas_notificaciones_leidas()` devuelve `0` para perfiles inactivos;
+- `registrar_anuncio_evento(uuid,text)` no registra aperturas/clics para perfiles inactivos.
+
+Durante la verificación se encontró además una política antigua duplicada en `anuncio_entregas` (`anuncio_entregas_select_own`) que habría permitido acceso independientemente del nuevo estado. Fue eliminada inmediatamente.
+
+### Migraciones
+- `20260922153000_security_active_profile_data_access.sql` — commit `1834282598428bf61a093730b6d9187f525bc5a0`.
+- `20260922153500_security_remove_legacy_announcement_delivery_policy.sql` — commit `6ed18dc595c46ca911f2c968da79bd6bcaa9e1f6`.
+
+### Verificación
+Se volvió a consultar RLS después de aplicar los cambios y se confirmó que las políticas nuevas contienen la comprobación de usuario activo. El Security Advisor no añadió una nueva alerta por estas reparaciones.
+
+### Pendientes de seguridad que siguen abiertos
+1. `propiedades_publicas` continúa como SECURITY DEFINER view. Es intencional en la arquitectura actual, pero requiere rediseño si queremos eliminar el ERROR del Advisor sin abrir SELECT directo sobre `propiedades`.
+2. `pg_net` continúa instalado en `public`; su migración debe hacerse con cuidado porque el scheduler/comunicaciones puede depender de él.
+3. Las funciones administrativas SECURITY DEFINER siguen apareciendo como WARN porque deben ser invocables desde el panel autenticado; se mantienen protegidas por comprobación administrativa interna.
+4. La protección de contraseñas filtradas de Supabase sigue desactivada. Supabase recomienda habilitarla desde la configuración de Auth; esta opción no es una migración SQL del esquema.
+5. Falta una prueba E2E con un usuario real en estado suspendido para comprobar también la experiencia de sesión/redirect en el cliente, además de la barrera RLS ya verificada en base de datos.
+
+## 28. Estado de la sección de seguridad
+
+La revisión de RLS de perfiles, favoritos, solicitudes, notificaciones y entregas de anuncios queda **cerrada para esta etapa**. No se considera cerrada toda la seguridad del proyecto todavía por los cuatro pendientes del apartado anterior.
+
+El siguiente bloque recomendado antes de pasar a otra sección es resolver la frontera de `propiedades_publicas` y revisar la migración segura de `pg_net`. Después de eso podemos pasar a la siguiente sección funcional sin dejar pendiente esta auditoría.
