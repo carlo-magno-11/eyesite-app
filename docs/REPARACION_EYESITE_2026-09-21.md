@@ -542,3 +542,57 @@ Resultado:
 Migración: `20260922173000_security_active_profile_property_ownership.sql`.
 
 Cambio aplicado y verificado directamente en Supabase antes de documentarlo en GitHub.
+
+
+## 34. Eliminación de cuenta y preparación para App Store — 2026-09-22
+
+Se revisó la eliminación de cuentas con la exigencia de Apple de que una app que permite crear cuentas permita iniciar la eliminación desde dentro de la app y elimine la cuenta junto con los datos personales asociados que no exista obligación legal de conservar.
+
+### Corrección aplicada
+
+Se encontró una diferencia importante entre los dos tipos de propiedades que EYESITE admite:
+
+1. **Propiedad enviada por el usuario:** tiene `solicitud_origen` y `user_id` apunta al usuario que envió la solicitud.
+2. **Propiedad creada por administración para un usuario:** tiene `solicitud_origen = NULL` y `user_id` identifica la cuenta a la que se asoció desde el catálogo administrativo.
+
+Antes, `delete-account` eliminaba cualquier propiedad cuyo `user_id` coincidiera con la cuenta eliminada. Eso podía borrar una propiedad del catálogo de EYESITE que el usuario nunca había enviado personalmente.
+
+Ahora el Edge Function `delete-account` aplica esta regla:
+
+- elimina propiedades que provienen de una solicitud del usuario;
+- elimina también el contenido multimedia de esas propiedades;
+- conserva las propiedades creadas por administración para el catálogo;
+- en esas propiedades conservadas, elimina únicamente la asociación con la cuenta (`user_id = NULL`);
+- conserva la multimedia de las propiedades de catálogo;
+- elimina favoritos, notificaciones, solicitudes pendientes, perfil y finalmente la cuenta de Auth;
+- mantiene la limpieza del área de staging del usuario.
+
+Edge Function desplegado en Supabase:
+- versión 4;
+- JWT obligatorio;
+- respuesta final informa cuántas propiedades personales fueron eliminadas y cuántas propiedades de catálogo fueron conservadas.
+
+Commit de GitHub del código: `b8dfff26413a27db12adbdf6881d573ee8e491dc`.
+
+### Motivo App Store
+
+La guía vigente de Apple indica que una app que permite crear cuentas debe ofrecer la eliminación dentro de la app y que el proceso debe eliminar la cuenta y los datos personales asociados que no sea legalmente necesario conservar. Apple también indica que el contenido generado por el usuario debe eliminarse al borrar la cuenta, salvo que exista una obligación legal de conservarlo.
+
+Fuente oficial: Directrices de App Review 5.1.1(v) y guía de Apple sobre eliminación de cuentas.
+
+Para EYESITE, la distinción anterior evita confundir contenido personal con contenido del catálogo administrado por EYESITE.
+
+### Checklist App Store que queda integrado en la auditoría
+
+- Eliminación de cuenta accesible desde la app: existente y respaldada por Edge Function.
+- Eliminación real de Auth: implementada al final del flujo.
+- Eliminación de datos personales principales: perfil, favoritos, notificaciones y solicitudes.
+- Eliminación de contenido enviado por el usuario: propiedades derivadas de sus solicitudes y su multimedia.
+- Preservación controlada de contenido de catálogo administrado: se elimina la asociación personal, no el contenido de EYESITE.
+- No se requiere Sign in with Apple por el simple hecho de publicar en iOS si EYESITE utiliza exclusivamente su propio sistema de cuenta/correo; Apple contempla una excepción para apps que usan exclusivamente su propio sistema de configuración e inicio de sesión.
+- Queda pendiente una revisión final de privacidad, permisos, metadatos de App Store Connect y flujo visual de eliminación antes de la entrega a App Review.
+
+### Regla de trabajo
+
+A partir de este punto, las correcciones se evaluarán no sólo por seguridad técnica y funcionamiento, sino también por su impacto en App Review, privacidad, permisos, eliminación de cuenta, manejo de datos y experiencia de usuario. No se eliminarán advertencias de Supabase de forma ciega si eso puede debilitar la seguridad o romper una función.
+
