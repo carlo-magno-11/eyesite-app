@@ -80,22 +80,16 @@ export function useSubmitProperty() {
     try {
       const { data: { user } } = await supabase.auth.getUser();
 
-      // ── EYESITE 4: PORTADA + GALERÍA + VIDEO (staging privado) ──
-      // photoUris[0] = PORTADA (obligatoria, SIEMPRE se ve en el Home);
-      // resto = galería (0-10); el video va SEGUNDO en el detalle.
+      // ── EYESITE: PORTADA + GALERÍA + VIDEO (staging privado) ──
+      // Todo se inserta en una sola operación porque los usuarios sólo tienen
+      // INSERT sobre solicitudes_propiedades; UPDATE queda reservado a administración.
       const [portadaUri, ...galeriaUris] = photoUris || [];
       let portadaUrl: string | null = null;
+
       if (portadaUri) {
-        try {
-          portadaUrl = await uploadFile(await compressImage(portadaUri), 'imagenes');
-        } catch (e: any) {
-          console.error('[submitProperty] portada falló:', {
-            code: e?.code, message: e?.message, details: e?.details, hint: e?.hint,
-          });
-          throw e;
-        }
+        portadaUrl = await uploadFile(await compressImage(portadaUri), 'imagenes');
       }
-      // TAREA 5: subida EN PARALELO con Promise.all (tolerante: una foto que falle no pierde el resto)
+
       const fotosUrls = (
         await Promise.all(
           galeriaUris.slice(0, 10).map(async (uri) => {
@@ -110,10 +104,12 @@ export function useSubmitProperty() {
           })
         )
       ).filter(Boolean) as string[];
+
       const fotosArray = [portadaUrl, ...fotosUrls].filter(Boolean) as string[];
 
       let videoUrl: string | null = null;
       let thumbnailUrl: string | null = null;
+
       if (video?.videoUri) {
         try {
           videoUrl = await uploadFile(video.videoUri, 'videos');
@@ -122,21 +118,21 @@ export function useSubmitProperty() {
             code: e?.code, message: e?.message,
           });
         }
+
         if (video.thumbnailUri) {
           try {
             thumbnailUrl = await uploadFile(video.thumbnailUri, 'imagenes');
-          } catch {}
+          } catch (e: any) {
+            console.warn('[submitProperty] thumbnail falló:', {
+              code: e?.code, message: e?.message,
+            });
+          }
         }
       }
-      // La portada SIEMPRE es FOTO: la foto del usuario o el thumbnail del video.
-      // Los valores son paths privados hasta la aprobación.
-      const portadaFinal: string | null = portadaUrl || thumbnailUrl || null;
 
-      // ── V5 ANTI-PGRST204: insert base primero, update extendido después ──
-      // basePayload: SOLO columnas verificadas que existen HOY (sondeo anon key):
-      // user_id, titulo, tipo, municipio, descripcion, superficie, unidad_superficie,
-      // precio_actual, precio_mercado, unidad_precio, contacto_nombre, contacto_telefono,
-      // fotos, estado. Nunca puede fallar por 42703/PGRST204.
+      // La portada visible es siempre una imagen: la foto elegida o el thumbnail.
+      const portadaFinal = portadaUrl || thumbnailUrl || null;
+
       const basePayload: Record<string, any> = {
         user_id: user?.id,
         titulo: formData.titulo || formData.title,
@@ -147,16 +143,23 @@ export function useSubmitProperty() {
         unidad_superficie: formData.unidad_superficie,
         precio_actual: Number(formData.precio_actual || formData.currentPrice || 0),
         precio_mercado: formData.precio_mercado ? Number(formData.precio_mercado) : null,
+        precio_esperado: Number(formData.precio_esperado || formData.precio_actual || formData.currentPrice || 0),
         unidad_precio: formData.unidad_precio,
         contacto_nombre: formData.contacto_nombre,
         contacto_telefono: formData.contacto_telefono,
+        contacto_email: formData.contacto_email ?? user?.email ?? null,
         fotos: fotosArray,
-        estado: 'pendiente',
+        portada_url: portadaFinal,
+        tipo_portada: videoUrl ? 'video' : 'foto',
+        video_url: videoUrl,
+        videos: videoUrl ? [videoUrl] : [],
         latitud: formData.latitud ?? null,
         longitud: formData.longitud ?? null,
+        estado: 'pendiente',
       };
 
-      // 1) INSERT base → la propiedad SIEMPRE se crea
+      // La identidad del solicitante se toma del usuario autenticado y la RLS
+      // exige user_id = auth.uid(); el cliente no puede publicar en propiedades.
       const { data: inserted, error: insertError } = await supabase
         .from('solicitudes_propiedades')
         .insert([basePayload])
@@ -164,46 +167,13 @@ export function useSubmitProperty() {
         .single();
 
       if (insertError) {
-        console.error('[submitProperty] insert base falló:', {
+        console.error('[submitProperty] insert falló:', {
           code: insertError.code,
           message: insertError.message,
           details: insertError.details,
           hint: insertError.hint,
         });
         throw insertError;
-      }
-
-      // 2) UPDATE extendido: video + portada + precio_esperado (migraciones 20250514/20250515).
-      //    Foto y video CONVIVEN: portada_url es FOTO (thumbnail del video o 1a foto);
-      //    el video va aparte en video_url/videos. Si el update falla porque la migración
-      //    aún no se corrió, la propiedad YA existe y solo se avisa por consola.
-      const extendedPayload: Record<string, any> = {
-        // portada_url SIEMPRE FOTO (nunca video) → Home sin card negra
-        portada_url: portadaFinal,
-        fotos: fotosArray,
-        precio_esperado: Number(formData.precio_actual || formData.currentPrice || 0),
-        tipo_portada: videoUrl ? 'video' : 'foto',
-        latitud: formData.latitud ?? null,
-        longitud: formData.longitud ?? null,
-      };
-      if (videoUrl) {
-        extendedPayload.video_url = videoUrl;
-        extendedPayload.videos = [videoUrl];
-      }
-
-      if (Object.keys(extendedPayload).length > 0) {
-        const { error: extendedError } = await supabase
-          .from('solicitudes_propiedades')
-          .update(extendedPayload)
-          .eq('id', inserted.id);
-        if (extendedError) {
-          console.warn('[submitProperty] extended fallo, pero propiedad ya creada:', {
-            code: extendedError.code,
-            message: extendedError.message,
-            details: extendedError.details,
-            hint: extendedError.hint,
-          });
-        }
       }
 
       return inserted;
