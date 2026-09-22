@@ -503,3 +503,10 @@ La propiedad creada directamente por administración mantiene solicitud_origen =
 
 ### Verificación
 Se instalaron las funciones en Supabase y se mantuvo intacto el flujo normal solicitud → aprobación.
+
+### Ajuste posterior verificado
+Después de la primera actualización del panel se detectó y corrigió un detalle: el payload de Nueva propiedad todavía tomaba por error el ID del administrador. Se cambió para usar exclusivamente el usuario seleccionado en el catálogo (new_user_id).
+
+Commit correctivo: 7290fc009f4dce651206771125892e94a226724b.
+
+También se comprobó que public/admin.js pasa una validación sintáctica con new Function() y que las RPC nuevas tienen EXECUTE para authenticated y no para anon.
