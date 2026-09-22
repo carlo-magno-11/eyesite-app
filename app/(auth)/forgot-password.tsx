@@ -22,7 +22,8 @@ export default function ForgotPasswordScreen() {
     setLoading(true);
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(cleanEmail, {
-        redirectTo:\n          Platform.OS === "web"\n            ? "https://auth.eyesite.mx/auth/callback?type=recovery"\n            : "eyesite://auth/callback?type=recovery",
+        redirectTo:
+          Platform.OS === "web"\n            ? "https://auth.eyesite.mx/auth/callback?type=recovery"\n            : "eyesite://auth/callback?type=recovery",
       });
 
       if (error) {
