@@ -808,3 +808,48 @@ La cadena queda:
 `usuario activo → solicitud propia → revisión administrativa → promoción segura de medios → RPC de aprobación → propiedad activa → vínculo con usuario → catálogo público / Mis terrenos`.
 
 No se detectó un bypass que permita al cliente crear directamente una propiedad publicada.
+
+
+## 41. Seguridad de multimedia staging — 2026-09-22
+
+Se auditó `promote-submission-media`, que convierte los archivos privados de una solicitud en medios públicos al momento de aprobación.
+
+### Hallazgo
+
+La función validaba que la primera carpeta de cada archivo de `eyesite-staging` fuera un UUID, pero no comprobaba que ese UUID fuera exactamente el `user_id` de la solicitud que se estaba aprobando.
+
+Aunque la función sólo puede ser llamada por un administrador, la falta de vínculo explícito permitía que un archivo de staging de otra cuenta pudiera asociarse accidentalmente a una solicitud distinta.
+
+### Corrección
+
+Ahora la función:
+1. obtiene `user_id` junto con la solicitud;
+2. compara el propietario de la ruta staging contra ese `user_id`;
+3. rechaza cualquier diferencia con `MEDIA_OWNER_MISMATCH`;
+4. sólo después continúa con validación MIME, tamaño y promoción.
+
+Commit de código:
+`4aaaba9c9d414cb7e01cb215c0d076df6b738b4e`.
+
+La Edge Function fue desplegada a Supabase como versión **3 ACTIVE**.
+
+Esto refuerza la regla:
+`cuenta solicitante → sus archivos staging → su solicitud → propiedad publicada`.
+
+### Permisos de dispositivo auditados
+
+La pantalla de publicación usa:
+- galería de imágenes para fotografías;
+- selector de videos para el video;
+- ubicación foreground únicamente cuando el usuario solicita colocar la ubicación actual.
+
+No se encontró una solicitud innecesaria de cámara en este flujo. La configuración de Expo ya declara el mensaje de ubicación de uso en iOS.
+
+### Prueba pendiente
+
+La validación final de multimedia todavía requiere una prueba física/emulador con:
+- una solicitud con fotografías;
+- una solicitud con fotografía + video;
+- una ubicación elegida manualmente y otra obtenida mediante ubicación actual.
+
+La inspección de código y despliegue no sustituyen esas pruebas funcionales.
