@@ -3,7 +3,6 @@ import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 import * as Linking from "expo-linking";
 
 import { supabase } from "@/lib/supabase";
-import { router } from "expo-router";
 
 export default function AuthCallbackScreen() {
   const [message, setMessage] = useState("Verificando tu correo...");
