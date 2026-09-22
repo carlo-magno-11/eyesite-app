@@ -13,10 +13,8 @@ import { supabase } from "@/lib/supabase";
 Sentry.init({
   dsn: "https://2b9f8a4dc404528b87957977fe39da0c@o4512088794333184.ingest.us.sentry.io/4512088804556800",
   sendDefaultPii: false,
-  enableLogs: true,
-  replaysSessionSampleRate: 0.1,
-  replaysOnErrorSampleRate: 1,
-  integrations: [Sentry.mobileReplayIntegration(), Sentry.feedbackIntegration()],
+  // Diagnóstico de errores sin grabación de sesiones ni formularios de feedback de terceros.
+  enableLogs: false,
 });
 
 const queryClient = new QueryClient({
