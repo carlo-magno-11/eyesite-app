@@ -427,3 +427,55 @@ Tampoco se eliminaron los índices marcados como no utilizados por Performance A
 - Activar **Leaked Password Protection** desde Supabase Auth. La documentación actual de Supabase indica que esta protección se configura desde Auth y utiliza la base de contraseñas comprometidas de HaveIBeenPwned. citeturn0search0
 - Mantener documentado el WARN de `pg_net` hasta contar con un procedimiento soportado para moverlo sin afectar el scheduler.
 - Confirmar una ejecución visible de GitHub Actions para `pnpm check` y `pnpm lint`.
+
+
+## 31. Concordancia de registro, perfil y propietario de solicitudes — 2026-09-22
+
+Se revisó el flujo completo de identidad del usuario.
+
+### Registro y perfil
+
+El registro inicial solicita:
+- correo electrónico;
+- contraseña;
+- confirmación de contraseña;
+- aceptación legal.
+
+Después de verificar el correo, `create-profile` solicita:
+- nombre completo;
+- teléfono/WhatsApp;
+- ciudad/zona;
+- presupuesto opcional.
+
+El apartado **Mi cuenta** utiliza los mismos cuatro datos de perfil: nombre, teléfono, ciudad/zona y presupuesto, además del correo como dato de solo lectura. La base `profiles` contiene estos campos. Por tanto, la información solicitada durante el alta y la información editable posteriormente están alineadas.
+
+### Propiedades solicitadas por usuarios
+
+La pantalla de publicación ya guarda `user_id = auth.uid()` al crear `solicitudes_propiedades`. La solicitud queda relacionada con la cuenta que la envió.
+
+Al aprobar una solicitud, `admin_approve_property_request` copia:
+- `solicitudes_propiedades.user_id` → `propiedades.user_id`;
+- `solicitudes_propiedades.id` → `propiedades.solicitud_origen`.
+
+Por lo tanto, una propiedad aprobada desde una solicitud sí conserva el vínculo con el usuario que la solicitó. La consulta de verificación encontró una propiedad aprobada con el mismo usuario en ambas tablas.
+
+### Corrección aplicada
+
+Se encontró un problema real adicional en `app/(tabs)/publish.tsx`: aunque la solicitud sí registraba correctamente el `user_id`, los campos de contacto enviados por la app estaban puestos como datos fijos (`Usuario de la App` y un teléfono fijo).
+
+Se corrigió para utilizar los datos reales del perfil:
+- `profile.nombre`;
+- `profile.telefono`;
+- `user.email`.
+
+Esto quedó versionado en GitHub en el commit `730817163689006f134b278a526bdec79e365b5f`.
+
+No se modificó la base de datos para esta corrección porque las columnas necesarias ya existen y el `user_id` ya estaba funcionando correctamente.
+
+### Distinción importante
+
+`user_id` identifica a la **persona que envió la solicitud desde EYESITE**. Los campos `dueno_*` y `contacto_*` son información de propietario/contacto de la publicación y no deben confundirse automáticamente con la identidad del solicitante. La nueva corrección hace que el contacto de la solicitud use el perfil del usuario cuando la app publica por él.
+
+### Nota sobre propiedades creadas directamente por administración
+
+`admin_create_property` elimina deliberadamente `user_id` y `solicitud_origen` del payload administrativo. Por ello, una propiedad creada directamente desde el panel como alta administrativa no queda asociada automáticamente a un usuario solicitante. Esto es distinto del flujo normal de usuario `solicitud → aprobación → propiedad` y queda identificado para una futura mejora si el panel necesita crear propiedades en nombre de un usuario existente.
