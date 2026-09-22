@@ -7,6 +7,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { registerPushToken } from "@/hooks/use-notifications";
 import { useEffect } from "react";
 import { View, ActivityIndicator, Text, StatusBar } from "react-native";
+import Constants from "expo-constants";
 import * as Sentry from "@sentry/react-native";
 import { supabase } from "@/lib/supabase";
 
@@ -135,6 +136,12 @@ export default Sentry.wrap(function RootLayout() {
 
       router.push("/notifications" as never);
     };
+
+    if (Constants.executionEnvironment === "storeClient") {
+      return () => {
+        mounted = false;
+      };
+    }
 
     void import("expo-notifications").then(async (Notifications) => {
       if (!mounted) return;
