@@ -87,7 +87,9 @@ export default function RegisterScreen() {
         password,
         options: {
           emailRedirectTo:
-            Platform.OS === "web"\n              ? "https://auth.eyesite.mx/auth/callback"\n              : "eyesite://auth/callback",
+            Platform.OS === "web"
+              ? "https://auth.eyesite.mx/auth/callback"
+              : "eyesite://auth/callback",
         },
       });
 
