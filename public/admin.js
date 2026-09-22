@@ -4686,28 +4686,39 @@ async function cleanupSubmissionMediaRecord(request) {
 async function cleanupPropertyMediaRecord(property) {
   if (!property) return;
 
-  const candidates = [];
+  const publicPaths = [];
+  const privatePaths = [];
+
+  const addPath = (value) => {
+    if (typeof value !== "string") return;
+    const clean = value.trim();
+    if (!clean || /^https?:\/\//i.test(clean) || clean.includes("..")) return;
+    if (clean.startsWith("eyesite-private/")) {
+      privatePaths.push(clean.slice("eyesite-private/".length));
+    } else {
+      publicPaths.push(clean.replace(/^eyesite-media\//i, ""));
+    }
+  };
+
   for (const field of ["fotos", "fotos_pro", "videos", "imagenes", "archivos", "pdfs", "kmz_kml"]) {
     const value = property[field];
     const list = Array.isArray(value) ? value : value ? [value] : [];
-    for (const item of list) {
-      if (typeof item !== "string") continue;
-      const clean = item.trim();
-      if (!clean || /^https?:\/\//i.test(clean)) continue;
-      candidates.push(clean.replace(/^eyesite-media\//i, "").replace(/^eyesite-private\//i, ""));
-    }
+    for (const item of list) addPath(item);
   }
-  for (const field of ["video_url", "portada_url"]) {
-    const value = property[field];
-    if (typeof value === "string" && value.trim() && !/^https?:\/\//i.test(value)) {
-      candidates.push(value.trim().replace(/^eyesite-media\//i, ""));
-    }
+  for (const field of ["video_url", "portada_url"]) addPath(property[field]);
+
+  if (publicPaths.length) {
+    const { error } = await s.storage
+      .from("eyesite-media")
+      .remove([...new Set(publicPaths)]);
+    if (error) console.warn("[property media cleanup] public:", error);
   }
 
-  const publicPaths = [...new Set(candidates.filter((p) => p && !p.includes("..")))];
-  if (publicPaths.length) {
-    const { error } = await s.storage.from("eyesite-media").remove(publicPaths);
-    if (error) console.warn("[property media cleanup] public:", error);
+  if (privatePaths.length) {
+    const { error } = await s.storage
+      .from("eyesite-private")
+      .remove([...new Set(privatePaths)]);
+    if (error) console.warn("[property media cleanup] private:", error);
   }
 
   if (property.solicitud_origen) {
