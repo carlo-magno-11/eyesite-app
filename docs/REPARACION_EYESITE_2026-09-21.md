@@ -936,3 +936,19 @@ Commit: `2f830561929356f77f61a729b978e838066ec9d3`.
 ### Estado
 
 La configuración queda preparada para el siguiente build nativo. Falta generar el build iOS y revisar el Privacy Report resultante; esa comprobación es necesaria para confirmar definitivamente los Required Reason APIs y los manifiestos de terceros.
+
+## 46. Corrección detectada por CI — 2026-09-22
+
+La ejecución de GitHub Actions del commit `2f830561929356f77f61a729b978e838066ec9d3` falló en TypeScript antes de ejecutar lint.
+
+### Error
+
+`app/_layout.tsx` tenía una llave de cierre faltante en el JSX de `Stack.screenOptions`, por lo que TypeScript reportó `TS1109: Expression expected` en las líneas 162–163.
+
+### Corrección
+
+Se cerró correctamente el objeto anidado de `contentStyle` y el objeto externo de `screenOptions`.
+
+Commit: `e8c3ea032e5129f88068f6dfc6ff2fcebc1d9b4f`.
+
+El workflow generado por este commit quedó en estado `queued` al momento de la revisión; se debe esperar su resultado antes de declarar CI verde.
