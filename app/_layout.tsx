@@ -159,7 +159,7 @@ export default Sentry.wrap(function RootLayout() {
         <SafeAreaProvider>
           <ThemeProvider>
             <AuthGate>
-              <Stack screenOptions={{ headerShown: false, animation: "fade", contentStyle: { backgroundColor: "#fff" }} />
+              <Stack screenOptions={{ headerShown: false, animation: "fade", contentStyle: { backgroundColor: "#fff" }}} />
             </AuthGate>
           </ThemeProvider>
         </SafeAreaProvider>
