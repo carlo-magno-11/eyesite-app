@@ -526,3 +526,19 @@ Resultado:
 Migración: `20260922173000_security_active_profile_property_ownership.sql`.
 
 Cambio aplicado y verificado directamente en Supabase antes de documentarlo en GitHub.
+
+## 33. Protección de Mis terrenos para cuentas suspendidas — 2026-09-22
+
+Durante la auditoría del nuevo catálogo se revisó la cadena `propiedades → propiedades_mias → Mis terrenos`. La vista `propiedades_mias` ya utiliza `security_invoker=true` y `security_barrier=true`, por lo que respeta las políticas de la tabla base.
+
+Se detectó que la política de lectura de una propiedad propia sólo comprobaba `auth.uid() = user_id`, sin exigir que el perfil siguiera activo. Se endureció para requerir `private.is_active_user()` además de la coincidencia de propietario.
+
+Resultado:
+- una cuenta activa puede seguir viendo sus propiedades asociadas;
+- una cuenta suspendida/no activa deja de acceder a las propiedades privadas asociadas mediante `propiedades_mias`;
+- el catálogo público de propiedades aprobadas no depende de esta política porque usa `propiedades_publicas`;
+- el flujo administrativo mediante RPC SECURITY DEFINER permanece intacto.
+
+Migración: `20260922173000_security_active_profile_property_ownership.sql`.
+
+Cambio aplicado y verificado directamente en Supabase antes de documentarlo en GitHub.
