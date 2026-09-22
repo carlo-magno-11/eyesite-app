@@ -15,7 +15,7 @@ import { registerPushToken, useNotifications } from "@/hooks/use-notifications";
 import { useAnnouncements } from "@/hooks/use-announcements";
 import { Ionicons } from "@expo/vector-icons";
 import { useEffect, useMemo, useState } from "react";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { supabase } from "@/lib/supabase";
 
 type Tab = "notifications" | "announcements";
@@ -27,10 +27,21 @@ export default function NotificationsScreen() {
   const { items: announcements, loading: announcementsLoading } = useAnnouncements();
   const [tab, setTab] = useState<Tab>("notifications");
   const [filter, setFilter] = useState<Filter>("all");
+  const params = useLocalSearchParams<{ announcement_id?: string }>();
 
   useEffect(() => {
     if (user?.id) void registerPushToken(user.id);
   }, [user?.id]);
+
+  useEffect(() => {
+    if (params.announcement_id) {
+      setTab("announcements");
+      void supabase.rpc("registrar_anuncio_evento", {
+        p_announcement_id: String(params.announcement_id),
+        p_evento: "opened",
+      });
+    }
+  }, [params.announcement_id]);
 
   const visibleNotifications = useMemo(
     () => filter === "unread" ? items.filter((item) => !item.leida) : items,
@@ -142,7 +153,15 @@ export default function NotificationsScreen() {
             </View>
           }
           renderItem={({ item }) => (
-            <View style={s.c}>
+            <Pressable
+              onPress={() => {
+                void supabase.rpc("registrar_anuncio_evento", {
+                  p_announcement_id: item.id,
+                  p_evento: "opened",
+                });
+              }}
+              style={s.c}
+            >
               <View style={s.row}>
                 <Text style={s.ct}>{item.titulo}</Text>
                 <Ionicons name="megaphone-outline" size={18} color="#C9A84C" />
@@ -158,12 +177,21 @@ export default function NotificationsScreen() {
               ) : null}
               <Text style={s.m}>{item.mensaje}</Text>
               {item.enlace ? (
-                <Pressable onPress={() => Linking.openURL(item.enlace!)} style={s.linkButton}>
+                <Pressable
+                  onPress={() => {
+                    void supabase.rpc("registrar_anuncio_evento", {
+                      p_announcement_id: item.id,
+                      p_evento: "clicked",
+                    });
+                    void Linking.openURL(item.enlace!);
+                  }}
+                  style={s.linkButton}
+                >
                   <Text style={s.linkText}>{item.enlace_label || "VER MÁS"}</Text>
                 </Pressable>
               ) : null}
               <Text style={s.d}>{item.published_at ? new Date(item.published_at).toLocaleString("es-MX") : ""}</Text>
-            </View>
+            </Pressable>
           )}
         />
       )}
