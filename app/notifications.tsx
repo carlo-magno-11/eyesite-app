@@ -82,7 +82,9 @@ export default function NotificationsScreen() {
           <Text style={s.t}>COMUNICACIÓN</Text>
           <Text style={s.sub}>{tab === "notifications" ? `${unread} sin leer` : `${announcements.length} anuncios activos`}</Text>
         </View>
-        <Ionicons name={tab === "notifications" ? "notifications-outline" : "megaphone-outline"} size={28} color="#C9A84C" />
+        <Pressable onPress={() => router.push("/notification-settings" as never)} hitSlop={10}>
+          <Ionicons name="settings-outline" size={24} color="#C9A84C" />
+        </Pressable>
       </View>
 
       <View style={s.tabs}>
