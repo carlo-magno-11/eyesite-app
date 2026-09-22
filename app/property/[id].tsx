@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { View, Text, Image, ScrollView, Pressable, Linking, StyleSheet, Dimensions, Share, ActivityIndicator, Modal, FlatList } from 'react-native';
+import { View, Text, Image, ScrollView, Pressable, Linking, StyleSheet, Dimensions, Share, ActivityIndicator, Modal, FlatList, Alert } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { VideoView, useVideoPlayer } from 'expo-video';
 import { formatPrice, formatSurface, getReturnColor } from '@/lib/properties-data';
@@ -8,6 +8,7 @@ import { IconSymbol } from '@/components/ui/icon-symbol';
 import { ScreenContainer } from '@/components/screen-container';
 import { useProperty } from '@/hooks/use-properties';
 import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/hooks/useAuth';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -17,6 +18,7 @@ const PHONE = '+52 9813674060';
 export default function PropertyDetailScreen() {
   const { id, play } = useLocalSearchParams<{ id: string; play?: string }>();
   const { property, loading } = useProperty(id);
+  const { user, session } = useAuth();
   const { isFav, toggleFav } = useFavorites();
   const [activeImage, setActiveImage] = useState(0);
   const [signedDocuments, setSignedDocuments] = useState<Record<string, string>>({});
@@ -24,7 +26,7 @@ export default function PropertyDetailScreen() {
   useEffect(() => {
     let cancelled = false;
     const loadPrivateDocuments = async () => {
-      if (!property?.id) return;
+      if (!property?.id || !session?.user?.id) { if (!cancelled) setSignedDocuments({}); return; }
       const items: string[] = [];
       const add = (value: any) => {
         if (typeof value === 'string' && value.trim()) items.push(value.trim());
@@ -46,7 +48,7 @@ export default function PropertyDetailScreen() {
     };
     loadPrivateDocuments();
     return () => { cancelled = true; };
-  }, [property?.id, property?.pdfs, property?.kmz_kml, property?.archivos]);
+  }, [property?.id, property?.pdfs, property?.kmz_kml, property?.archivos, session?.user?.id]);
 
   // Portada intercambiable video/foto (anti-trabe: sin player ni autoplay en la
   // vista normal; el video solo se reproduce dentro del Modal al tocar Play)
@@ -381,7 +383,7 @@ export default function PropertyDetailScreen() {
 
           {/* Botón favorito */}
           <Pressable
-            onPress={() => toggleFav(property.id)}
+            onPress={() => session ? toggleFav(property.id) : Alert.alert('Inicia sesión', 'Inicia sesión para guardar propiedades en favoritos.', [{ text: 'Cancelar', style: 'cancel' }, { text: 'Iniciar sesión', onPress: () => router.push('/(auth)/login' as never) }])}
             style={({ pressed }) => [styles.favoriteButton, pressed && { opacity: 0.7 }]}
           >
             <IconSymbol
