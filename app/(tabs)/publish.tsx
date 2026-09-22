@@ -3,6 +3,7 @@ import { View, Text, TextInput, ScrollView, Pressable, StyleSheet, Alert, Activi
 import { ScreenContainer } from '@/components/screen-container';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { useSubmitProperty } from '@/hooks/use-submit-property';
+import { useAuth } from '@/hooks/useAuth';
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as VideoThumbnails from 'expo-video-thumbnails';
@@ -461,8 +462,9 @@ const handlePropertyMapMessage = (
           superficie: form.surfaceM2 ? parseInt(form.surfaceM2) : null,
           unidad_superficie: form.priceUnit === 'ml' ? 'ml' : 'm2',
           descripcion: form.description,
-          contacto_nombre: 'Usuario de la App',
-          contacto_telefono: '+52 9813674060',
+          contacto_nombre: profile?.nombre?.trim() || 'Usuario de EYESITE',
+          contacto_telefono: profile?.telefono?.trim() || null,
+          contacto_email: user?.email ?? null,
           latitud: form.latitud,
           longitud: form.longitud,
         },
