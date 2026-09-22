@@ -340,6 +340,7 @@ function validateMediaMetadata(
 async function promoteOne(
   client: ReturnType<typeof createClient>,
   requestId: string,
+  expectedOwnerId: string,
   field: string,
   value: unknown,
 ): Promise<MediaResult | null> {
@@ -547,6 +548,18 @@ async function promoteOne(
       code: "INVALID_OWNER_PATH",
       error:
         "La ruta de staging no pertenece a un usuario válido.",
+    };
+  }
+
+  if (ownerId.toLowerCase() !== expectedOwnerId.toLowerCase()) {
+    return {
+      field,
+      originalPath,
+      sourcePath,
+      status: "error",
+      code: "MEDIA_OWNER_MISMATCH",
+      error:
+        "El archivo de staging no pertenece al usuario que creó esta solicitud.",
     };
   }
 
@@ -1083,7 +1096,7 @@ Deno.serve(
             "solicitudes_propiedades",
           )
           .select(
-            "id, estado, fotos, fotos_pro, videos, video_url, portada_url, imagenes",
+            "id, user_id, estado, fotos, fotos_pro, videos, video_url, portada_url, imagenes",
           )
           .eq(
             "id",
@@ -1189,6 +1202,7 @@ Deno.serve(
               promoteOne(
                 admin,
                 requestId,
+                String(submission.user_id || ""),
                 field,
                 value,
               ),
