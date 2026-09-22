@@ -596,3 +596,38 @@ Para EYESITE, la distinción anterior evita confundir contenido personal con con
 
 A partir de este punto, las correcciones se evaluarán no sólo por seguridad técnica y funcionamiento, sino también por su impacto en App Review, privacidad, permisos, eliminación de cuenta, manejo de datos y experiencia de usuario. No se eliminarán advertencias de Supabase de forma ciega si eso puede debilitar la seguridad o romper una función.
 
+
+
+## 35. Revisión de requisitos Apple de privacidad — 2026-09-22
+
+Además de la eliminación de cuenta, se revisó el proyecto contra los requisitos actuales de Apple relacionados con privacidad y App Store.
+
+### Verificado en el código
+
+- Existe una pantalla interna de **Aviso de Privacidad** ('app/privacy.tsx').
+- La pantalla de **Nosotros** permite abrir el Aviso de Privacidad y comenzar la eliminación de cuenta.
+- La eliminación se inicia directamente dentro de la app, no solamente desde una página externa.
+- EYESITE utiliza autenticación propia mediante correo/contraseña. No se detectó un proveedor social de inicio de sesión que obligue a añadir Sign in with Apple por la regla de servicios de inicio de sesión equivalentes.
+- La app solicita ubicación con un mensaje específico de finalidad: mostrar propiedades cercanas y ubicar una propiedad en el mapa.
+- La política interna explica el uso de ubicación, fotografías/videos/archivos, autenticación, favoritos, notificaciones, solicitudes y almacenamiento.
+- Se aclaró en la interfaz que una propiedad del catálogo creada por EYESITE para un usuario puede permanecer publicada después de la eliminación de la cuenta, pero queda desvinculada de esa cuenta.
+
+### Requisitos que dependen de App Store Connect / distribución
+
+Apple exige una **Privacy Policy URL pública** para todas las apps y exige declarar las prácticas de recopilación de datos en App Store Connect. La pantalla de privacidad dentro de la app ayuda a cumplir la parte interna, pero no sustituye la URL pública de App Store Connect.
+
+También deben revisarse los manifiestos de privacidad de los SDK y el reporte de privacidad generado por Xcode antes de la entrega. El proyecto utiliza varios SDK de Expo/React Native y Sentry, por lo que no se debe afirmar cumplimiento final sólo a partir del código fuente.
+
+### Pendientes concretos antes de App Review
+
+1. Confirmar que existe una URL pública estable de política de privacidad, preferentemente bajo el dominio oficial de EYESITE.
+2. Introducir esa URL en App Store Connect.
+3. Completar **App Privacy / Privacy Nutrition Label** con todos los datos realmente recopilados por EYESITE y sus SDK.
+4. Generar/revisar el Privacy Report del build iOS y comprobar Required Reason APIs y privacy manifests.
+5. Revisar permisos de Fotos, ubicación, notificaciones y cualquier otro permiso contra el uso real de cada pantalla.
+6. Preparar las notas de App Review con una cuenta de prueba y explicar claramente el flujo de registro, verificación, aprobación de acceso y eliminación de cuenta.
+7. Revisar que los textos legales publicados coincidan con las prácticas reales de producción y con la información declarada en App Store Connect.
+
+Fuentes oficiales consultadas: Apple App Review Guidelines 5.1.1, Apple Account Deletion guidance, Apple App Privacy y Privacy Manifest documentation.
+
+**Criterio:** no se marca EYESITE como "lista para App Store" todavía. Esta auditoría separa lo ya comprobado en el código de lo que sólo puede verificarse en App Store Connect y en el build final.
