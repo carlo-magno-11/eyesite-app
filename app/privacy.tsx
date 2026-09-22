@@ -25,7 +25,7 @@ export default function PrivacyScreen() {
           Usamos la información para autenticar cuentas, gestionar favoritos y notificaciones, recibir y moderar solicitudes inmobiliarias, mostrar propiedades publicadas, atender consultas y operar y proteger EYESITE.
         </Section>
         <Section title="6. Terceros y servicios técnicos">
-          EYESITE utiliza servicios técnicos necesarios para operar la aplicación, incluyendo Supabase para autenticación, base de datos y almacenamiento, y servicios de mapas cuando el usuario utiliza las funciones cartográficas. No vendemos los datos personales del usuario.
+          EYESITE utiliza servicios técnicos necesarios para operar la aplicación, incluyendo Supabase para autenticación, base de datos y almacenamiento, servicios de mapas cuando el usuario utiliza las funciones cartográficas y Sentry para diagnóstico de errores. El diagnóstico de errores está configurado sin grabación de sesiones ni captura automática de formularios de feedback en la app. No vendemos los datos personales del usuario.
         </Section>
         <Section title="7. Conservación y seguridad">
           Aplicamos controles de acceso, políticas de seguridad y almacenamiento separado para información pública y privada. Conservamos los datos mientras sean necesarios para las finalidades descritas o cuando exista una obligación legal aplicable.
