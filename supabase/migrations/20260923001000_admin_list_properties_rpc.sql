@@ -14,4 +14,5 @@ as $$
 $$;
 
 revoke all on function public.admin_list_properties() from public;
+revoke execute on function public.admin_list_properties() from anon;
 grant execute on function public.admin_list_properties() to authenticated;
