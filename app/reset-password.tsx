@@ -21,6 +21,11 @@ export default function ResetPasswordScreen() {
 
     setSaving(true);
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        throw new Error("El enlace de recuperación ya no es válido. Solicita uno nuevo.");
+      }
+
       const { error } = await supabase.auth.updateUser({ password });
       if (error) throw error;
 
