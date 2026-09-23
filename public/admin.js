@@ -3717,17 +3717,13 @@ async function uploadFile(bucket, file, folder) {
     );
   }
 
-  const privateUpload = bucket === BUCKET_FILES;
-
   return {
-    url: privateUpload
-      ? path
-      : s.storage.from(bucket).getPublicUrl(path).data?.publicUrl || "",
-    path,
-    name: originalName,
-    size: file.size || 0,
-    type: mime,
-  };
+  url: isPrivateBucket ? path : s.storage.from(bucket).getPublicUrl(path).data?.publicUrl || "",
+  path,
+  name: originalName,
+  size: file.size || 0,
+  type: mime,
+};
 }
 
 async function uploadCollection(list, bucket, folder, progressCallback) {
