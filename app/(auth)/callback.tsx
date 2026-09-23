@@ -38,11 +38,6 @@ export default function AuthCallbackScreen() {
             ? parsed.queryParams.type
             : "email";
 
-        if (confirmed && type !== "recovery") {
-          setMessage("¡Correo confirmado correctamente!");
-          return;
-        }
-
         if (code) {
           const { error } = await supabase.auth.exchangeCodeForSession(code);
 
