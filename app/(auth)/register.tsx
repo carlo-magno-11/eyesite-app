@@ -25,6 +25,10 @@ export default function RegisterScreen() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [nombre, setNombre] = useState("");
+  const [telefono, setTelefono] = useState("");
+  const [ciudad, setCiudad] = useState("");
+  const [presupuesto, setPresupuesto] = useState("");
 
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -61,6 +65,21 @@ export default function RegisterScreen() {
         "Correo no válido",
         "Ingresa una dirección de correo electrónico válida.",
       );
+    }
+
+    const cleanNombre = nombre.trim();
+    const cleanTelefono = telefono.trim().replace(/\D/g, "");
+    const cleanCiudad = ciudad.trim();
+    const cleanPresupuesto = presupuesto.trim();
+
+    if (!cleanNombre) {
+      return Alert.alert("Nombre requerido", "Ingresa tu nombre completo.");
+    }
+    if (cleanTelefono.length < 10) {
+      return Alert.alert("Teléfono inválido", "Ingresa un teléfono válido de al menos 10 dígitos.");
+    }
+    if (!cleanCiudad) {
+      return Alert.alert("Ciudad requerida", "Ingresa tu ciudad o zona de interés.");
     }
 
     // Validar contraseña
@@ -214,6 +233,39 @@ export default function RegisterScreen() {
                   returnKeyType="next"
                   style={styles.input}
                 />
+              </View>
+            </View>
+
+            {/* DATOS DEL PERFIL */}
+            <View style={styles.field}>
+              <Text style={styles.label}>NOMBRE COMPLETO</Text>
+              <View style={styles.inputWrap}>
+                <Ionicons name="person-outline" size={20} color="#888" style={styles.inputIcon} />
+                <TextInput value={nombre} onChangeText={setNombre} placeholder="Tu nombre completo" placeholderTextColor="#666" autoCapitalize="words" autoCorrect={false} style={styles.input} />
+              </View>
+            </View>
+
+            <View style={styles.field}>
+              <Text style={styles.label}>TELÉFONO / WHATSAPP</Text>
+              <View style={styles.inputWrap}>
+                <Ionicons name="call-outline" size={20} color="#888" style={styles.inputIcon} />
+                <TextInput value={telefono} onChangeText={setTelefono} placeholder="10 dígitos" placeholderTextColor="#666" keyboardType="phone-pad" style={styles.input} />
+              </View>
+            </View>
+
+            <View style={styles.field}>
+              <Text style={styles.label}>CIUDAD / ZONA</Text>
+              <View style={styles.inputWrap}>
+                <Ionicons name="location-outline" size={20} color="#888" style={styles.inputIcon} />
+                <TextInput value={ciudad} onChangeText={setCiudad} placeholder="Ciudad o zona de interés" placeholderTextColor="#666" autoCapitalize="words" autoCorrect={false} style={styles.input} />
+              </View>
+            </View>
+
+            <View style={styles.field}>
+              <Text style={styles.label}>PRESUPUESTO <Text style={styles.optional}>(OPCIONAL)</Text></Text>
+              <View style={styles.inputWrap}>
+                <Ionicons name="cash-outline" size={20} color="#888" style={styles.inputIcon} />
+                <TextInput value={presupuesto} onChangeText={setPresupuesto} placeholder="Ej. $2,500,000" placeholderTextColor="#666" keyboardType="default" style={styles.input} />
               </View>
             </View>
 
@@ -463,6 +515,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 12,
   },
+
+  optional: { color: "#777", fontWeight: "400" },
 
   legalBox: {
     backgroundColor: "#171717",
