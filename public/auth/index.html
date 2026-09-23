@@ -2,42 +2,108 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>EYESITE — Verificación</title>
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>EYESITE — Acceso seguro</title>
 <style>
-*{box-sizing:border-box}html,body{margin:0;padding:0;width:100%;min-height:100%;background:#0e0e0e;color:#fff;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif}
-body{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}.card{width:100%;max-width:430px;text-align:center;padding:42px 28px;border:1px solid rgba(201,168,76,.35);border-radius:20px;background:#151515;box-shadow:0 20px 60px rgba(0,0,0,.45)}
-.logo{color:#c9a84c;font-size:32px;font-weight:800;letter-spacing:4px;margin-bottom:28px}.spinner{width:42px;height:42px;margin:0 auto 24px;border:4px solid rgba(201,168,76,.2);border-top-color:#c9a84c;border-radius:50%;animation:spin .9s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}h1{margin:0 0 12px;font-size:23px;font-weight:700}p{margin:0;color:#b8b8b8;line-height:1.6;font-size:15px}.success{color:#c9a84c}.error{color:#ff7777}.button{display:inline-block;margin-top:24px;padding:13px 22px;border:0;border-radius:10px;background:#c9a84c;color:#0e0e0e;font-weight:700;text-decoration:none;cursor:pointer}.hidden{display:none}.small{margin-top:18px;font-size:13px;color:#777}
+*{box-sizing:border-box}html,body{margin:0;padding:0;min-height:100%;background:#0e0e0e;color:#fff;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif}
+body{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
+.card{width:100%;max-width:430px;padding:42px 28px;text-align:center;border:1px solid rgba(201,168,76,.35);border-radius:20px;background:#151515;box-shadow:0 20px 60px rgba(0,0,0,.45)}
+.logo{color:#c9a84c;font-size:32px;font-weight:800;letter-spacing:4px;margin-bottom:28px}
+h1{margin:0 0 12px;font-size:23px}p{margin:0;color:#b8b8b8;line-height:1.6;font-size:15px}
+.spinner{width:42px;height:42px;margin:0 auto 24px;border:4px solid rgba(201,168,76,.2);border-top-color:#c9a84c;border-radius:50%;animation:spin .9s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}.success{color:#c9a84c}.error{color:#ff7777}
+.button{display:inline-block;margin-top:24px;padding:13px 22px;border:0;border-radius:10px;background:#c9a84c;color:#0e0e0e;font-weight:700;text-decoration:none;cursor:pointer}
+.input{width:100%;height:50px;margin-top:18px;padding:0 14px;border:1px solid #333;border-radius:10px;background:#0e0e0e;color:#fff;font-size:16px;outline:none}
+.hidden{display:none}.small{margin-top:18px;font-size:13px;color:#777}
 </style>
 </head>
 <body>
 <main class="card">
 <div class="logo">EYESITE</div>
-<div id="loading"><div class="spinner"></div><h1 id="title">Verificando tu correo...</h1><p>Estamos preparando el acceso seguro a EYESITE.</p></div>
-<div id="success" class="hidden"><h1 class="success" id="successTitle">¡Listo!</h1><p id="successText">Continúa en la aplicación EYESITE.</p><a id="openApp" class="button" href="#">Abrir EYESITE</a><p class="small">Si la aplicación no se abre automáticamente, toca el botón.</p></div>
-<div id="error" class="hidden"><h1 class="error">No pudimos procesar el enlace</h1><p id="errorMessage">El enlace puede haber expirado o ya haber sido utilizado.</p><a class="button" href="https://www.eyesite.mx">Ir a EYESITE</a></div>
+<div id="loading"><div class="spinner"></div><h1>Procesando...</h1><p>Estamos verificando tu enlace de forma segura.</p></div>
+
+<div id="success" class="hidden">
+<h1 class="success" id="successTitle">¡Correo confirmado!</h1>
+<p id="successText">Tu correo electrónico ya está confirmado. Ahora puedes iniciar sesión en EYESITE.</p>
+<a id="openApp" class="button" href="eyesite://">Abrir EYESITE</a>
+<p class="small">Si no tienes la aplicación instalada, puedes cerrar esta página. Tu correo ya quedó confirmado.</p>
+</div>
+
+<div id="recovery" class="hidden">
+<h1 class="success">Nueva contraseña</h1>
+<p>Tu enlace de recuperación es válido. Escribe tu nueva contraseña.</p>
+<input id="password" class="input" type="password" minlength="6" autocomplete="new-password" placeholder="Nueva contraseña">
+<input id="password2" class="input" type="password" minlength="6" autocomplete="new-password" placeholder="Repite la contraseña">
+<button id="savePassword" class="button" type="button">CAMBIAR CONTRASEÑA</button>
+<p id="recoveryMessage" class="small"></p>
+<a id="openAppRecovery" class="button hidden" href="eyesite://">Abrir EYESITE</a>
+</div>
+
+<div id="error" class="hidden">
+<h1 class="error">No pudimos procesar el enlace</h1>
+<p id="errorMessage">El enlace puede haber expirado o ya haber sido utilizado.</p>
+<a class="button" href="https://www.eyesite.mx">Ir a EYESITE</a>
+</div>
 </main>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 (function(){
-  const loading=document.getElementById("loading"), success=document.getElementById("success"), errorBox=document.getElementById("error");
-  const errorMessage=document.getElementById("errorMessage"), openApp=document.getElementById("openApp");
-  const title=document.getElementById("successTitle"), text=document.getElementById("successText");
-  const params=new URLSearchParams(window.location.search);
-  const tokenHash=params.get("token_hash");
-  const code=params.get("code");
-  const type=params.get("type")||"email";
-  const query=new URLSearchParams();
-  if(tokenHash) query.set("token_hash",tokenHash);
-  if(code) query.set("code",code);
-  query.set("type",type);
-  const appUrl="eyesite://auth/callback?"+query.toString();
-  function showError(message){loading.classList.add("hidden");success.classList.add("hidden");errorBox.classList.remove("hidden");if(message) errorMessage.textContent=message;}
-  function open(){window.location.href=appUrl;}
-  if(!tokenHash && !code){showError("Este enlace no contiene la información necesaria para continuar.");return;}
-  if(type==="recovery"){title.textContent="Recuperación de contraseña";text.textContent="Abre EYESITE para continuar y elegir una nueva contraseña.";}
-  else{title.textContent="Confirmación de correo";text.textContent="Abre EYESITE para completar la confirmación de tu cuenta.";}
-  loading.classList.add("hidden");success.classList.remove("hidden");openApp.href=appUrl;
-  setTimeout(open,800);
+  const SUPABASE_URL="https://xhvpvpvtkdgnnxdwdrkn.supabase.co";
+  const SUPABASE_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhodnB2cHZ0a2Rnbm54ZHdkcmtuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODcwODk5MTEsImV4cCI6MjEwMjY2NTkxMX0.zsEMmjhbln24S25FnbKvlkic2djzON8QoXNLO8CtXA0";
+  const supabase=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+  const loading=document.getElementById("loading"),success=document.getElementById("success"),recovery=document.getElementById("recovery"),errorBox=document.getElementById("error");
+  const errorMessage=document.getElementById("errorMessage"),openApp=document.getElementById("openApp"),openAppRecovery=document.getElementById("openAppRecovery");
+  const successTitle=document.getElementById("successTitle"),successText=document.getElementById("successText");
+  const password=document.getElementById("password"),password2=document.getElementById("password2"),savePassword=document.getElementById("savePassword"),recoveryMessage=document.getElementById("recoveryMessage");
+  const params=new URLSearchParams(window.location.search),type=params.get("type")||"email",tokenHash=params.get("token_hash"),code=params.get("code");
+  const appQuery=new URLSearchParams(); if(tokenHash)appQuery.set("token_hash",tokenHash); if(code)appQuery.set("code",code); appQuery.set("type",type);
+  const appUrl="eyesite://auth/callback?"+appQuery.toString();
+  openApp.href=appUrl; openAppRecovery.href=appUrl;
+
+  function showError(message){loading.classList.add("hidden");success.classList.add("hidden");recovery.classList.add("hidden");errorBox.classList.remove("hidden");if(message)errorMessage.textContent=message;}
+
+  async function establishSession(){
+    if(code){
+      const {error}=await supabase.auth.exchangeCodeForSession(code);
+      if(error)throw error;
+      return;
+    }
+    if(tokenHash){
+      const {error}=await supabase.auth.verifyOtp({token_hash:tokenHash,type:type==="recovery"?"recovery":"email"});
+      if(error)throw error;
+      return;
+    }
+    throw new Error("El enlace no contiene un código válido.");
+  }
+
+  async function run(){
+    try{
+      await establishSession();
+      loading.classList.add("hidden");
+      if(type==="recovery"){
+        recovery.classList.remove("hidden");
+        savePassword.onclick=async function(){
+          const p=password.value,p2=password2.value;
+          if(p.length<6){recoveryMessage.textContent="La contraseña debe tener al menos 6 caracteres.";return;}
+          if(p!==p2){recoveryMessage.textContent="Las contraseñas no coinciden.";return;}
+          savePassword.disabled=true; recoveryMessage.textContent="Guardando...";
+          const {error}=await supabase.auth.updateUser({password:p});
+          if(error){recoveryMessage.textContent=error.message;savePassword.disabled=false;return;}
+          recoveryMessage.textContent="Contraseña actualizada correctamente.";
+          password.value="";password2.value="";savePassword.classList.add("hidden");openAppRecovery.classList.remove("hidden");
+        };
+      }else{
+        success.classList.remove("hidden");
+        successTitle.textContent="¡Correo confirmado!";
+        successText.textContent="Tu correo electrónico ya está confirmado. Ahora puedes iniciar sesión en EYESITE.";
+      }
+    }catch(e){
+      console.error("[EYESITE auth domain]",e);
+      showError(e&&e.message?e.message:"El enlace expiró o ya fue utilizado.");
+    }
+  }
+  run();
 })();
 </script>
 </body>
