@@ -22,6 +22,19 @@ export default function CreateProfileScreen() {
   const [telefono, setTelefono] = useState('');
   const [ciudad, setCiudad] = useState('');
   const [presupuesto, setPresupuesto] = useState('');
+
+  React.useEffect(() => {
+    let mounted = true;
+    supabase.auth.getUser().then(({ data }) => {
+      if (!mounted || !data.user?.user_metadata) return;
+      const metadata = data.user.user_metadata as Record<string, unknown>;
+      setNombre((metadata.nombre as string) || '');
+      setTelefono((metadata.telefono as string) || '');
+      setCiudad((metadata.ciudad as string) || '');
+      setPresupuesto((metadata.presupuesto as string) || '');
+    });
+    return () => { mounted = false; };
+  }, []);
   const [saving, setSaving] = useState(false);
 
   const guardarPerfil = async () => {
