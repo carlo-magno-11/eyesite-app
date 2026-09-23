@@ -324,12 +324,12 @@ export default function RegisterScreen() {
                   </Text>
                   <ScrollView style={styles.modalScroll}>
                     <Text style={styles.modalText}>
-                      TÉRMINOS Y CONDICIONES EYESI+E\n\nLa información
+                      TÉRMINOS Y CONDICIONES EYESITE\n\nLa información
                       inmobiliaria es referencial y debe verificarse con un
                       asesor. Te comprometes a proporcionar datos
                       veraces.\n\nAVISO DE PRIVACIDAD\n\nTus datos se utilizarán
                       para gestionar tu cuenta y contactarte sobre propiedades y
-                      servicios de EYESI+E.\n\nTRATAMIENTO DE DATOS\n\nAutorizas
+                      servicios de EYESITE.\n\nTRATAMIENTO DE DATOS\n\nAutorizas
                       el contacto por WhatsApp, llamada o correo para atención
                       inmobiliaria.
                     </Text>
