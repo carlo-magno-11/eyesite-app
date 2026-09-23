@@ -4,6 +4,7 @@ import { Platform } from "react-native";
 import Constants from "expo-constants";
 
 import { supabase } from "@/lib/supabase";
+import { addAppBreadcrumb, reportAppError } from "@/lib/monitoring";
 
 type NotificationItem = {
   id: string;
@@ -41,8 +42,9 @@ export function useNotifications(userId?: string) {
 
     if (!error) {
       setItems(data ?? []);
+      addAppBreadcrumb("Notificaciones cargadas", { count: data?.length ?? 0 }, "notification");
     } else {
-      console.error("[EYESITE] notifications load error:", error);
+      reportAppError(error, { area: "notifications", action: "load", extra: { code: error.code } });
       setErrorMessage(error.message || "No se pudieron cargar las notificaciones.");
     }
 
@@ -88,7 +90,7 @@ export function useNotifications(userId?: string) {
     });
 
     if (error) {
-      console.error("[EYESITE] mark notification read error:", error);
+      reportAppError(error, { area: "notifications", action: "mark_read", extra: { notification_id_present: Boolean(id) } });
       return;
     }
 
@@ -151,12 +153,13 @@ export async function registerPushToken(userId?: string) {
         .update({ expo_push_token: result.data })
         .eq("id", userId);
 
-      if (error) console.error("[EYESITE] push token save error:", error);
+      if (error) reportAppError(error, { area: "push", action: "save_token" });
+      else addAppBreadcrumb("Token push registrado", undefined, "push");
     }
 
     return result.data ?? null;
   } catch (error) {
-    console.warn("[EYESITE] push registration error:", error);
+    reportAppError(error, { area: "push", action: "register", severity: "warning" });
     return null;
   }
 }
