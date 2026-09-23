@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { View, Text, TextInput, Pressable, StyleSheet, Alert, ActivityIndicator, Platform } from "react-native";
+import { View, Text, TextInput, Pressable, StyleSheet, Alert, ActivityIndicator } from "react-native";
 import { router } from "expo-router";
 import { supabase } from "@/lib/supabase";
 
@@ -22,10 +22,7 @@ export default function ForgotPasswordScreen() {
     setLoading(true);
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(cleanEmail, {
-        redirectTo:
-          Platform.OS === "web"
-            ? "https://auth.eyesite.mx/auth/callback?type=recovery"
-            : "eyesite://auth/callback?type=recovery",
+        redirectTo: "https://auth.eyesite.mx/auth/callback?type=recovery",
       });
 
       if (error) {
@@ -55,31 +52,11 @@ export default function ForgotPasswordScreen() {
       <Text style={styles.description}>
         Ingresa tu correo electrónico y te enviaremos un enlace seguro para crear una nueva contraseña.
       </Text>
-
-      <TextInput
-        value={email}
-        onChangeText={setEmail}
-        placeholder="Correo electrónico"
-        placeholderTextColor="#777"
-        keyboardType="email-address"
-        autoCapitalize="none"
-        autoCorrect={false}
-        autoComplete="email"
-        style={styles.input}
-        editable={!loading}
-      />
-
-      <Pressable
-        onPress={handleResetPassword}
-        disabled={loading}
-        style={[styles.button, loading && styles.disabled]}
-      >
+      <TextInput value={email} onChangeText={setEmail} placeholder="Correo electrónico" placeholderTextColor="#777" keyboardType="email-address" autoCapitalize="none" autoCorrect={false} autoComplete="email" style={styles.input} editable={!loading}/>
+      <Pressable onPress={handleResetPassword} disabled={loading} style={[styles.button, loading && styles.disabled]}>
         {loading ? <ActivityIndicator color="#0E0E0E" /> : <Text style={styles.buttonText}>ENVIAR ENLACE</Text>}
       </Pressable>
-
-      <Pressable onPress={() => router.back()} disabled={loading}>
-        <Text style={styles.backText}>Volver al inicio de sesión</Text>
-      </Pressable>
+      <Pressable onPress={() => router.back()} disabled={loading}><Text style={styles.backText}>Volver al inicio de sesión</Text></Pressable>
     </View>
   );
 }
