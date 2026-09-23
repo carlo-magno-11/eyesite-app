@@ -36,7 +36,6 @@ export function useNotifications(userId?: string) {
       .select("*")
       .eq("user_id", userId)
       .eq("estado_envio", "sent")
-      .lte("programada_para", new Date().toISOString())
       .order("created_at", { ascending: false })
       .limit(100);
 
