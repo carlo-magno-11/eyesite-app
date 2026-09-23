@@ -23,7 +23,7 @@ type Filter = "all" | "unread";
 
 export default function NotificationsScreen() {
   const { user } = useAuth();
-  const { items, loading, unread, markRead, refetch } = useNotifications(user?.id);
+  const { items, loading, unread, markRead, refetch, error } = useNotifications(user?.id);
   const { items: announcements, loading: announcementsLoading } = useAnnouncements();
   const params = useLocalSearchParams<{ announcement_id?: string }>();
   const [tab, setTab] = useState<Tab>(() => params.announcement_id ? "announcements" : "notifications");
@@ -113,6 +113,15 @@ export default function NotificationsScreen() {
 
           {loading && !items.length ? (
             <ActivityIndicator color="#C9A84C" style={{ marginTop: 40 }} />
+          ) : error && !items.length ? (
+            <View style={s.e}>
+              <Text style={s.i}>⚠️</Text>
+              <Text style={s.et}>No se pudieron cargar</Text>
+              <Text style={s.es}>{error}</Text>
+              <Pressable onPress={() => void refetch()} style={s.retryButton}>
+                <Text style={s.retryText}>REINTENTAR</Text>
+              </Pressable>
+            </View>
           ) : (
             <FlatList
               data={visibleNotifications}
@@ -228,5 +237,7 @@ const s = StyleSheet.create({
   heroImage:{width:"100%",height:190,borderRadius:10,marginTop:12,backgroundColor:"#222"},gallery:{gap:8,paddingTop:10},galleryImage:{width:150,height:100,borderRadius:9,backgroundColor:"#222"},linkButton:{marginTop:14,alignSelf:"flex-start",paddingVertical:9,paddingHorizontal:14,borderRadius:9,backgroundColor:"#C9A84C"},linkText:{color:"#0E0E0E",fontSize:11,fontWeight:"800"},e:{alignItems:"center",padding:50},
   i:{fontSize:50},
   et:{color:"#FFF",fontSize:18,fontWeight:"700",marginTop:15},
-  es:{color:"#888",textAlign:"center",marginTop:8,lineHeight:20}
+  es:{color:"#888",textAlign:"center",marginTop:8,lineHeight:20},
+  retryButton:{marginTop:18,paddingVertical:10,paddingHorizontal:18,borderRadius:9,backgroundColor:"#C9A84C"},
+  retryText:{color:"#0E0E0E",fontSize:11,fontWeight:"900",letterSpacing:1}
 });
