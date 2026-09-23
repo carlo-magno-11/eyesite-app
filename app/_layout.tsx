@@ -10,12 +10,14 @@ import { View, ActivityIndicator, Text, StatusBar } from "react-native";
 import Constants from "expo-constants";
 import * as Sentry from "@sentry/react-native";
 import { supabase } from "@/lib/supabase";
+import { addAppBreadcrumb, reportAppError, setAppMonitoringContext } from "@/lib/monitoring";
 
 Sentry.init({
   dsn: "https://2b9f8a4dc404528b87957977fe39da0c@o4512088794333184.ingest.us.sentry.io/4512088804556800",
   sendDefaultPii: false,
   // Diagnóstico de errores sin grabación de sesiones ni formularios de feedback de terceros.
   enableLogs: false,
+  release: `eyesite@${Constants.expoConfig?.version ?? "unknown"}`,
 });
 
 const queryClient = new QueryClient({
@@ -106,6 +108,8 @@ export default Sentry.wrap(function RootLayout() {
   const router = useRouter();
 
   useEffect(() => {
+    setAppMonitoringContext();
+    addAppBreadcrumb("EYESITE inició el monitoreo de la sesión");
     let mounted = true;
     let responseSubscription: { remove: () => void } | undefined;
 
@@ -123,6 +127,7 @@ export default Sentry.wrap(function RootLayout() {
       }
 
       if (announcementId) {
+        addAppBreadcrumb("Notificación abierta", { hasProperty: false, hasAnnouncement: true }, "notification");
         void supabase.rpc("registrar_anuncio_evento", {
           p_announcement_id: announcementId,
           p_evento: "opened",
@@ -153,7 +158,7 @@ export default Sentry.wrap(function RootLayout() {
         openNotification(lastResponse);
       }
     }).catch((error) => {
-      console.warn("[EYESITE] notification response listener error:", error);
+      reportAppError(error, { area: "notifications", action: "register_response_listener" });
     });
 
     return () => {
