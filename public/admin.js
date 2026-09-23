@@ -1119,18 +1119,22 @@ async function cerrarSesion() {
 
 async function cargarPropiedades() {
   try {
-    const { data, error } = await s
-      .from(TABLE_PROPERTIES_VIEW)
-      .select("*")
-      .order("created_at", {
-        ascending: false,
-      });
+    const { data: sessionData, error: sessionError } = await s.auth.getSession();
+
+    if (sessionError || !sessionData?.session?.user) {
+      location.replace("./admin_seguro.html");
+      return [];
+    }
+
+    const { data, error } = await s.rpc("admin_list_properties");
 
     if (error) {
       throw error;
     }
 
-    propiedades = Array.isArray(data) ? data : [];
+    propiedades = Array.isArray(data)
+      ? [...data].sort((a, b) => String(b?.created_at || "").localeCompare(String(a?.created_at || "")))
+      : [];
 
     return propiedades;
   } catch (error) {
