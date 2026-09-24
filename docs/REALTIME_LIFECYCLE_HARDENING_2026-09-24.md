@@ -69,3 +69,15 @@ Change on `app/(tabs)/map.tsx`:
 - Native iOS/Android keeps the existing flex-based behavior.
 - No Google Maps or Google Cloud dependency was introduced.
 - The map data source and `propiedades_publicas` flow were not changed.
+
+
+## 2026-09-24 — mapa: exploración libre de Yucatán
+
+- El mapa inicia con una vista amplia de Yucatán.
+- Se eliminó el filtro por radio de 10/25/50/100 km.
+- Las propiedades activas con coordenadas válidas ya no se descartan por distancia.
+- El usuario controla manualmente zoom y desplazamiento para explorar la zona que le interese.
+- Se eliminó el ajuste automático `fitBounds` de todos los marcadores, que podía mover la cámara lejos de la vista inicial.
+- La distancia a la ubicación del usuario se conserva únicamente como información/ordenamiento cuando existe ubicación disponible; no funciona como límite de búsqueda.
+- Se mantuvo la implementación Leaflet/OpenStreetMap + WebView, sin Google Cloud.
+- Commit: `2ec04cbf313a5c9f48636841e06b44210b32c72a`.
