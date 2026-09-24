@@ -55,3 +55,10 @@ La validación final debe incluir:
 5. Prueba iOS física después de confirmar que el cambio responsive no introdujo errores nativos.
 
 Esta rama no debe fusionarse a `main` hasta cerrar esas comprobaciones.
+
+
+## 2026-09-24 — revisión funcional posterior
+
+Durante la revisión de las pantallas de cuenta se detectó una pérdida de datos de UI: `mi-cuenta.tsx` consume `ciudad` y `presupuesto` desde `useAuth`, pero el hook no los seleccionaba desde `profiles`. La base de datos sí contiene ambas columnas como `text`. Se corrigió `hooks/useAuth.tsx` para incluir `ciudad` y `presupuesto` en la consulta del perfil. No se modificó la lógica de autorización, estado de aprobación ni los permisos de usuario.
+
+La corrección está aislada en `fix/profile-fields-sync`, basada en `fix/responsive-layout-web`; `main` permanece sin cambios. Debe pasar TypeScript/CI antes de integrarse.
