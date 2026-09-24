@@ -36,10 +36,10 @@ export default function HomeScreen() {
 
 
   return (
-    <ScreenContainer edges={['top', 'left', 'right']} containerClassName="bg-[#0B0B0B]">
+    <ScreenContainer edges={['top', 'left', 'right']} containerClassName="bg-[#0D0D0D]">
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 110, backgroundColor: "#0B0B0B" }}
+        contentContainerStyle={{ paddingBottom: 100, backgroundColor: '#0D0D0D' }}
       >
         {/* Header with Tagline */}
         <View style={[styles.taglineContainer, { paddingHorizontal: horizontalPadding }]}>
@@ -103,10 +103,8 @@ export default function HomeScreen() {
                 onPress={() => handleCategoryPress(cat.key)}
                 style={({ pressed }) => [styles.categoryCard, pressed && { opacity: 0.7 }]}
               >
-                <View style={styles.categoryIconWrap}>
                 <Text style={styles.categoryIcon}>{cat.icon}</Text>
-              </View>
-              <Text style={styles.categoryLabel}>{cat.label}</Text>
+                <Text style={styles.categoryLabel}>{cat.label}</Text>
               </Pressable>
             ))}
           </ScrollView>
@@ -125,13 +123,9 @@ export default function HomeScreen() {
               <ActivityIndicator color="#C9A84C" size="large" />
             </View>
           ) : (
-            <View style={isDesktop ? styles.featuredGrid : undefined}>
-              {highlightedProperties.map((property) => (
-                <View key={property.id} style={isDesktop ? styles.featuredItem : undefined}>
-                  <PropertyCard property={property} />
-                </View>
-              ))}
-            </View>
+            highlightedProperties.map((property) => (
+              <PropertyCard key={property.id} property={property} />
+            ))
           )}
         </View>
       </ScrollView>
@@ -145,15 +139,15 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
   },
   taglineContainer: {
-    backgroundColor: "#141414",
+    backgroundColor: '#1C1C1C',
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderBottomWidth: 1,
-    borderBottomColor: "#C9A84C",
+    borderBottomColor: '#C9A84C',
   },
   tagline: {
     fontSize: 13,
-    color: "#C9A84C",
+    color: '#C9A84C',
     fontStyle: 'italic',
     textAlign: 'center',
     fontWeight: '500',
@@ -166,7 +160,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
   },
-  unreadBadge: { position: 'absolute', top: -7, right: -8, minWidth: 15, height: 15, paddingHorizontal: 3, borderRadius: 8, backgroundColor: "#C9A84C", alignItems: 'center', justifyContent: 'center' },
+  unreadBadge: { position: 'absolute', top: -7, right: -8, minWidth: 15, height: 15, paddingHorizontal: 3, borderRadius: 8, backgroundColor: '#C9A84C', alignItems: 'center', justifyContent: 'center' },
   unreadText: { color: '#0E0E0E', fontSize: 9, fontWeight: '800' },
   headerButtons: {
     flexDirection: 'row',
@@ -204,8 +198,12 @@ const styles = StyleSheet.create({
     height: '100%',
   },
   heroOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(11,11,11,0.42)',
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
   },
   heroContent: {
     position: 'absolute',
@@ -225,7 +223,7 @@ const styles = StyleSheet.create({
   heroTitle: {
     fontSize: 22,
     fontWeight: '700',
-    color: "#F5F5F5",
+    color: '#FFFFFF',
     marginBottom: 16,
     lineHeight: 28,
   },
@@ -237,7 +235,7 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
   },
   heroButtonText: {
-    color: "#0B0B0B",
+    color: '#0D0D0D',
     fontWeight: '600',
     fontSize: 12,
     letterSpacing: 1,
@@ -269,25 +267,13 @@ const styles = StyleSheet.create({
   },
   categoryCard: {
     alignItems: 'center',
-    width: 92,
-    marginRight: 10,
-    paddingVertical: 10,
-    paddingHorizontal: 8,
-    borderRadius: 14,
-    backgroundColor: "#141414",
-    borderWidth: 1,
-    borderColor: "#2A2A2A",
+    marginRight: 16,
+    paddingVertical: 12,
   },
-  categoryIconWrap: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: "#211D13",
+  categoryIcon: {
+    fontSize: 32,
     marginBottom: 8,
   },
-  categoryIcon: { fontSize: 25 },
   categoryLabel: {
     fontSize: 12,
     color: '#FFFFFF',
@@ -297,13 +283,5 @@ const styles = StyleSheet.create({
   loadingContainer: {
     paddingVertical: 40,
     alignItems: 'center',
-  },
-  featuredGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-  },
-  featuredItem: {
-    width: '32%',
   },
 });
