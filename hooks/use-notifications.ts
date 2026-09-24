@@ -32,6 +32,17 @@ export function useNotifications(userId?: string) {
     setLoading(true);
     setErrorMessage(null);
 
+    // The notification table is user-scoped. Re-read the current Supabase
+    // session before the protected request so a stale persisted access token
+    // can be refreshed instead of producing a 401 on app startup.
+    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+    if (sessionError || sessionData.session?.user?.id !== userId) {
+      setItems([]);
+      setErrorMessage(sessionError?.message || "La sesión ya no está disponible.");
+      setLoading(false);
+      return;
+    }
+
     const { data, error } = await supabase
       .from("notificaciones")
       .select("*")
