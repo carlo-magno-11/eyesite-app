@@ -235,3 +235,8 @@ Se conserva la decisión original de diseño: **Propiedades no aparece como pest
 ## 2026-09-24 — Segunda mejora de carga visual de fotografías
 
 Después de revisar el comportamiento observado en el APK, se añadió una segunda capa para evitar una superficie negra durante la decodificación inicial de una fotografía: la galería muestra un fondo controlado, indicador de carga y, cuando existe, utiliza la portada como placeholder de las fotografías posteriores. La caché `memory-disk` y la precarga permanecen activas.
+
+
+## 2026-09-24 — Caché visual de comunicación y portada de Inicio
+
+Se extendió la misma estrategia de imágenes optimizadas a dos superficies que también descargan imágenes remotas: la portada principal de Inicio y las imágenes de Anuncios/Comunicación. Se usa `expo-image` con `memory-disk` para evitar descargas/decodificaciones innecesarias al volver a esas pantallas. No se modificó el contenido ni la lógica de anuncios.
