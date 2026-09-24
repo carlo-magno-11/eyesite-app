@@ -10,7 +10,7 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import * as Location from "expo-location";
-import { WebView } from "react-native-webview";
+import { LeafletMap } from "@/components/leaflet-map";
 
 import { useProperties } from "@/hooks/use-properties";
 import { formatPrice } from "@/lib/properties-data";
@@ -260,13 +260,15 @@ function createMapHtml(properties: NearbyProperty[], initialRegion: Region) {
   ).addTo(map);
 
   function sendToApp(payload) {
+    const message = JSON.stringify(payload);
+
     if (
       window.ReactNativeWebView &&
       window.ReactNativeWebView.postMessage
     ) {
-      window.ReactNativeWebView.postMessage(
-        JSON.stringify(payload)
-      );
+      window.ReactNativeWebView.postMessage(message);
+    } else if (window.parent && window.parent !== window) {
+      window.parent.postMessage(message, "*");
     }
   }
 
@@ -399,13 +401,43 @@ export default function MapScreen() {
   const [locating, setLocating] = useState(false);
 
   const requestLocation = useCallback(async () => {
-    if (Platform.OS === "web") {
-      return;
-    }
-
     setLocating(true);
 
     try {
+      if (Platform.OS === "web") {
+        if (!("geolocation" in navigator)) {
+          throw new Error("El navegador no ofrece geolocalización.");
+        }
+
+        await new Promise<void>((resolve, reject) => {
+          navigator.geolocation.getCurrentPosition(
+            (position) => {
+              const coords = {
+                latitude: position.coords.latitude,
+                longitude: position.coords.longitude,
+              };
+
+              setUserLocation(coords);
+              setRegion({
+                latitude: coords.latitude,
+                longitude: coords.longitude,
+                latitudeDelta: 0.25,
+                longitudeDelta: 0.25,
+              });
+              resolve();
+            },
+            reject,
+            {
+              enableHighAccuracy: false,
+              maximumAge: 60_000,
+              timeout: 10_000,
+            },
+          );
+        });
+
+        return;
+      }
+
       const { status } = await Location.requestForegroundPermissionsAsync();
 
       if (status !== Location.PermissionStatus.GRANTED) {
@@ -426,7 +458,6 @@ export default function MapScreen() {
       };
 
       setUserLocation(coords);
-
       setRegion({
         latitude: coords.latitude,
         longitude: coords.longitude,
@@ -446,10 +477,6 @@ export default function MapScreen() {
   }, []);
 
   useEffect(() => {
-    if (Platform.OS === "web") {
-      return;
-    }
-
     const timer = setTimeout(() => {
       requestLocation();
     }, 250);
@@ -496,16 +523,13 @@ export default function MapScreen() {
     [nearby, region],
   );
 
-  const handleWebViewMessage = useCallback(
-    (event: any) => {
+  const handleMapMessage = useCallback(
+    (rawData: string) => {
       try {
-        const data = JSON.parse(event?.nativeEvent?.data ?? "{}");
+        const data = JSON.parse(rawData || "{}");
 
         if (data?.type === "property" || data?.type === "property_marker") {
-          if (!data.id) {
-            return;
-          }
-
+          if (!data.id) return;
           router.push(`/property/${String(data.id)}` as any);
         }
       } catch (error) {
@@ -531,7 +555,7 @@ export default function MapScreen() {
           </Text>
         </View>
 
-        {Platform.OS !== "web" && (
+        {(
           <Pressable
             onPress={requestLocation}
             style={styles.locationButton}
@@ -569,54 +593,32 @@ export default function MapScreen() {
       </View>
 
       <View style={styles.mapWrap}>
-        {Platform.OS === "web" ? (
-          <View style={styles.emptyOverlay}>
-            <Text style={styles.emptyTitle}>
-              Mapa disponible en la aplicación móvil
-            </Text>
+        <>
+          <LeafletMap
+            html={mapHtml}
+            onMessage={handleMapMessage}
+            style={StyleSheet.absoluteFill}
+          />
 
-            <Text style={styles.emptyText}>
-              Abre EYESITE en Android o iOS para utilizar el mapa y la
-              ubicación.
-            </Text>
-          </View>
-        ) : (
-          <>
-            <WebView
-              originWhitelist={["*"]}
-              source={{ html: mapHtml }}
-              onMessage={handleWebViewMessage}
-              javaScriptEnabled
-              domStorageEnabled
-              startInLoadingState
-              renderLoading={() => (
-                <View style={styles.loadingOverlay}>
-                  <ActivityIndicator color="#C9A84C" size="large" />
-                </View>
-              )}
-              style={StyleSheet.absoluteFill}
-            />
+          {loading && (
+            <View style={styles.loadingOverlay}>
+              <ActivityIndicator color="#C9A84C" size="large" />
+            </View>
+          )}
 
-            {loading && (
-              <View style={styles.loadingOverlay}>
-                <ActivityIndicator color="#C9A84C" size="large" />
-              </View>
-            )}
+          {!loading && geoProperties.length === 0 && (
+            <View style={styles.emptyOverlay}>
+              <Text style={styles.emptyTitle}>
+                Aún no hay propiedades ubicadas
+              </Text>
 
-            {!loading && geoProperties.length === 0 && (
-              <View style={styles.emptyOverlay}>
-                <Text style={styles.emptyTitle}>
-                  Aún no hay propiedades ubicadas
-                </Text>
-
-                <Text style={styles.emptyText}>
-                  Solo aparecen propiedades EYESITE activas, publicadas por
-                  administración y con coordenadas válidas.
-                </Text>
-              </View>
-            )}
-          </>
-        )}
+              <Text style={styles.emptyText}>
+                Solo aparecen propiedades EYESITE activas, publicadas por
+                administración y con coordenadas válidas.
+              </Text>
+            </View>
+          )}
+        </>
       </View>
 
       <View style={styles.footer}>
