@@ -5,7 +5,6 @@ import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 import { useResponsive } from "@/hooks/use-responsive";
 import { ScreenContainer } from "@/components/screen-container";
-import { EYESITE_THEME } from "@/lib/eysite-theme";
 
 export default function MyRequestsScreen() {
   const { user } = useAuth();
@@ -96,20 +95,20 @@ export default function MyRequestsScreen() {
 
 const s = StyleSheet.create({
   page: { paddingTop: 24, paddingBottom: 100 },
-  back: { color: EYESITE_THEME.colors.gold, fontWeight: "800", marginBottom: 18 },
-  title: { color:EYESITE_THEME.colors.text, fontSize: 26, fontWeight: "900", marginBottom: 18 },
+  back: { color: "#C9A84C", fontWeight: "800", marginBottom: 18 },
+  title: { color:"#F5F5F5", fontSize: 26, fontWeight: "900", marginBottom: 18 },
   card: {
-    backgroundColor:EYESITE_THEME.colors.surface,
+    backgroundColor:"#141414",
     borderWidth: 1,
-    borderColor:EYESITE_THEME.colors.border,
+    borderColor:"#2A2A2A",
     borderRadius: 12,
     padding: 16,
     marginBottom: 10,
   },
   name: { color: "#FFF", fontSize: 16, fontWeight: "800" },
-  meta: { color:EYESITE_THEME.colors.muted, marginTop: 5 },
+  meta: { color:"#9A9A9A", marginTop: 5 },
   status: { color: "#C9A84C", fontWeight: "800", marginTop: 10 },
   reason: { color: "#E57373", fontSize: 12, marginTop: 8 },
   link: { color: "#C9A84C", fontWeight: "900", marginTop: 12 },
-  empty: { color:EYESITE_THEME.colors.muted, marginTop: 20 },
+  empty: { color:"#9A9A9A", marginTop: 20 },
 });
