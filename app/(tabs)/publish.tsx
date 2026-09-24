@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 import { useResponsive } from '@/hooks/use-responsive';
-import { Platform, View, Text, TextInput, ScrollView, Pressable, StyleSheet, Alert, ActivityIndicator, Image, FlatList } from 'react-native';
+import { Platform, View, Text, TextInput, ScrollView, Pressable, StyleSheet, Alert, ActivityIndicator, FlatList } from 'react-native';
+import { Image } from 'expo-image';
 import { ScreenContainer } from '@/components/screen-container';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { useSubmitProperty } from '@/hooks/use-submit-property';
@@ -858,7 +859,9 @@ const handlePropertyMapMessage = (
                     keyExtractor={(_, i) => i.toString()}
                     renderItem={({ item, index }) => (
                       <View style={styles.photoItem}>
-                        <Image source={{ uri: item.uri }} style={styles.photoThumbnail} resizeMode="cover" />
+                        <Image source={{ uri: item.uri }} style={styles.photoThumbnail}
+                    contentFit="cover"
+                    cachePolicy="memory-disk" resizeMode="cover" />
                         <Pressable
                           onPress={() => removeImage(index)}
                           style={styles.photoRemove}
@@ -897,7 +900,9 @@ const handlePropertyMapMessage = (
                 <View style={styles.videoPreviewWrap}>
                   <View style={styles.videoPreview}>
                     {videoThumb ? (
-                      <Image source={{ uri: videoThumb }} style={styles.videoThumb} resizeMode="cover" />
+                      <Image source={{ uri: videoThumb }} style={styles.videoThumb}
+          contentFit="cover"
+          cachePolicy="memory-disk" resizeMode="cover" />
                     ) : (
                       <View style={[styles.videoThumb, styles.videoThumbPlaceholder]}>
                         <Text style={styles.videoThumbPlaceholderText}>🎬</Text>
