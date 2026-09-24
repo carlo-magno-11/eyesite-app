@@ -16,6 +16,7 @@ import { LeafletMap } from "@/components/leaflet-map";
 import { useProperties } from "@/hooks/use-properties";
 import { formatPrice } from "@/lib/properties-data";
 import { ScreenContainer } from "@/components/screen-container";
+import { EYESITE_THEME } from "@/lib/eysite-theme";
 
 type UserCoords = {
   latitude: number;
@@ -165,7 +166,7 @@ function createMapHtml(properties: NearbyProperty[], initialRegion: Region) {
     height: 100%;
     margin: 0;
     padding: 0;
-    background: #0d0d0d;
+    background: #0b0b0b;
   }
 
   body {
@@ -178,9 +179,9 @@ function createMapHtml(properties: NearbyProperty[], initialRegion: Region) {
   }
 
   .leaflet-control-zoom a {
-    background: #151515 !important;
+    background: #141414 !important;
     color: #f5f5f5 !important;
-    border-color: #303030 !important;
+    border-color: #2a2a2a !important;
   }
 
   .leaflet-control-attribution {
@@ -190,7 +191,7 @@ function createMapHtml(properties: NearbyProperty[], initialRegion: Region) {
   }
 
   .leaflet-control-attribution a {
-    color: #c9a84c !important;
+    color: #d8b968 !important;
   }
 
   .property-popup {
@@ -213,7 +214,7 @@ function createMapHtml(properties: NearbyProperty[], initialRegion: Region) {
   .property-price {
     font-size: 13px;
     font-weight: 700;
-    color: #9a7626;
+    color: #c9a84c;
     margin-bottom: 4px;
   }
 
@@ -249,7 +250,7 @@ function createMapHtml(properties: NearbyProperty[], initialRegion: Region) {
     attributionControl: true,
   }).setView(
     [INITIAL_REGION.latitude, INITIAL_REGION.longitude],
-    11
+    8
   );
 
   L.tileLayer(
@@ -644,14 +645,14 @@ const styles = StyleSheet.create({
   },
 
   title: {
-    color: "#F5F5F5",
+    color: EYESITE_THEME.colors.text,
     fontSize: 17,
     fontWeight: "800",
     letterSpacing: 1.2,
   },
 
   subtitle: {
-    color: "#9A9A9A",
+    color: EYESITE_THEME.colors.muted,
     fontSize: 12,
     marginTop: 4,
   },
@@ -660,14 +661,14 @@ const styles = StyleSheet.create({
     width: 42,
     height: 42,
     borderRadius: 21,
-    backgroundColor: "#C9A84C",
+    backgroundColor: EYESITE_THEME.colors.gold,
     alignItems: "center",
     justifyContent: "center",
     marginLeft: 12,
   },
 
   locationButtonText: {
-    color: "#0D0D0D",
+    color: EYESITE_THEME.colors.background,
     fontSize: 23,
     fontWeight: "900",
   },
@@ -678,7 +679,7 @@ const styles = StyleSheet.create({
   },
 
   mapHintText: {
-    color: "#8E8E8E",
+    color: EYESITE_THEME.colors.muted,
     fontSize: 11,
   },
 
@@ -689,7 +690,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     overflow: "hidden",
     borderWidth: 1,
-    borderColor: "#2A2A2A",
+    borderColor: EYESITE_THEME.colors.border,
     position: "relative",
   },
 
@@ -697,7 +698,7 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFill,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "rgba(13,13,13,.45)",
+    backgroundColor: "rgba(11,11,11,.55)",
   },
 
   emptyOverlay: {
@@ -707,7 +708,7 @@ const styles = StyleSheet.create({
     bottom: 24,
     padding: 16,
     borderRadius: 12,
-    backgroundColor: "rgba(13,13,13,.92)",
+    backgroundColor: "rgba(11,11,11,.94)",
     borderWidth: 1,
     borderColor: "#C9A84C",
   },
@@ -738,7 +739,7 @@ const styles = StyleSheet.create({
   },
 
   footerNote: {
-    color: "#777777",
+    color: EYESITE_THEME.colors.mutedDark,
     fontSize: 10,
     marginBottom: 4,
   },
@@ -754,7 +755,7 @@ const styles = StyleSheet.create({
     width: 30,
     height: 30,
     borderRadius: 15,
-    backgroundColor: "#1D1D1D",
+    backgroundColor: EYESITE_THEME.colors.surfaceElevated,
     alignItems: "center",
     justifyContent: "center",
   },
