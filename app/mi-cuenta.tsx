@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { useResponsive } from "@/hooks/use-responsive";
 import { router } from "expo-router";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
@@ -11,6 +13,7 @@ type ProfileFormProps = {
 };
 
 function AccountForm({ user, profile }: ProfileFormProps) {
+  const { isDesktop, contentMaxWidth, horizontalPadding } = useResponsive();
   const [nombre, setNombre] = useState(profile.nombre ?? "");
   const [telefono, setTelefono] = useState(profile.telefono ?? "");
   const [ciudad, setCiudad] = useState(profile.ciudad ?? "");
@@ -143,7 +146,7 @@ const styles = StyleSheet.create({
   title:{color:"#F5F5F5",fontSize:28,fontWeight:"900",letterSpacing:1},
   subtitle:{color:"#999",fontSize:13,marginTop:5,marginBottom:20},
   card:{backgroundColor:"#171717",borderWidth:1,borderColor:"#2A2A2A",borderRadius:12,padding:16,marginBottom:14},
-  sectionTitle:{color:"#C9A84C",fontSize:13,fontWeight:"900",letterSpacing:1,marginBottom:16},
+  sectionHeader:{flexDirection:"row",alignItems:"center",marginBottom:16},\n  sectionIcon:{width:38,height:38,borderRadius:10,backgroundColor:"#201D15",alignItems:"center",justifyContent:"center",marginRight:11},\n  sectionTitle:{color:"#F5F5F5",fontSize:15,fontWeight:"900",letterSpacing:.2},\n  sectionHint:{color:"#777",fontSize:11,marginTop:2},
   label:{color:"#999",fontSize:10,fontWeight:"800",letterSpacing:.7,marginTop:10,marginBottom:6},
   readonly:{backgroundColor:"#101010",borderRadius:8,padding:14,borderWidth:1,borderColor:"#2A2A2A"},
   readonlyText:{color:"#777"},
