@@ -81,3 +81,30 @@ Change on `app/(tabs)/map.tsx`:
 - La distancia a la ubicación del usuario se conserva únicamente como información/ordenamiento cuando existe ubicación disponible; no funciona como límite de búsqueda.
 - Se mantuvo la implementación Leaflet/OpenStreetMap + WebView, sin Google Cloud.
 - Commit: `2ec04cbf313a5c9f48636841e06b44210b32c72a`.
+
+
+## Revisión de retrocompatibilidad y capa visual — 2026-09-24
+
+Esta etapa se realizó sobre `fix/realtime-lifecycle-android-ios` sin tocar `main` y sin generar un nuevo APK.
+
+### Compatibilidad multiplataforma revisada
+- Se mantuvo el mismo stack Expo/React Native/React Native Web y no se cambió el contrato de Supabase.
+- Se conservaron los puntos específicos por plataforma existentes: `expo-location` nativo frente a `navigator.geolocation` en Web, notificaciones push deshabilitadas en Web y WebView/Leaflet para el mapa.
+- Se corrigió la animación del fondo de autenticación para que Web no solicite `useNativeDriver`; iOS/Android conservan el driver nativo.
+- Se revisó la navegación de tabs sin volver a mostrar Propiedades en la barra inferior, porque su acceso actual desde Inicio es intencional.
+- Se mantuvieron Bundle ID, scheme, EAS project ID, Privacy Manifest, runtimeVersion y configuración de plataformas existentes.
+- Se mantuvo el objetivo sin Google Cloud: mapa Leaflet/OpenStreetMap y ubicación mediante APIs de la plataforma.
+
+### Primera etapa visual aplicada
+- Se creó `lib/eysite-theme.ts` con tokens compartidos para fondo, superficies, bordes, dorados y textos.
+- Se refinó Inicio: jerarquía de encabezado, botones de cuenta/notificaciones, hero con degradado, categorías en tarjetas y cuadrícula de oportunidades para escritorio.
+- Se refinó Oportunidades y PropertyCard con superficies y bordes de mayor profundidad visual, manteniendo la identidad negro/dorado.
+- Se refinó Mapa: vista inicial amplia de Yucatán, zoom inicial 8 y controles con la misma gama visual.
+- Se refinó Comunicación/Notificaciones, Mi cuenta, Mis terrenos, Mis solicitudes y Configuración con la misma capa visual.
+- Se refinó Login/Registro conservando validaciones, flujo de Supabase y aceptación legal.
+
+### Regla de seguridad de esta etapa
+No se modificó lógica de autorización, RPCs administrativos, esquema Supabase ni flujo de publicación para conseguir cambios visuales. La prioridad es evitar regresiones funcionales mientras se mejora la presentación.
+
+### Pendiente antes de APK
+Esta etapa visual todavía requiere validación local en Web y Android, seguida de iOS/Expo según disponibilidad. El APK no debe regenerarse hasta cerrar la validación de Realtime y navegación indicada en este documento.
