@@ -485,7 +485,7 @@ const styles = StyleSheet.create({
   },
 
   subtitle: {
-    color: EYESITE_THEME.colors.muted,
+    color: "#9A9A9A",
     fontSize: 14,
     lineHeight: 20,
   },
@@ -505,9 +505,9 @@ const styles = StyleSheet.create({
   inputWrap: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: EYESITE_THEME.colors.surfaceElevated,
+    backgroundColor: "#1A1A1A",
     borderWidth: 1,
-    borderColor: EYESITE_THEME.colors.border,
+    borderColor: "#333",
     borderRadius: 10,
     minHeight: 54,
   },
@@ -519,7 +519,7 @@ const styles = StyleSheet.create({
 
   input: {
     flex: 1,
-    color: EYESITE_THEME.colors.text,
+    color: "#FFFFFF",
     fontSize: 15,
     paddingVertical: 14,
     paddingRight: 12,
@@ -533,7 +533,7 @@ const styles = StyleSheet.create({
   optional: { color: "#777", fontWeight: "400" },
 
   legalBox: {
-    backgroundColor: EYESITE_THEME.colors.surface,
+    backgroundColor: "#171717",
     borderWidth: 1,
     borderColor: "#333",
     borderRadius: 10,
@@ -551,7 +551,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  checkboxOn: { backgroundColor: EYESITE_THEME.colors.gold, borderColor: EYESITE_THEME.colors.gold },
+  checkboxOn: { backgroundColor: "#C9A84C", borderColor: "#C9A84C" },
   legalText: { color: "#C0C0C0", flex: 1, fontSize: 12, lineHeight: 18 },
   legalLink: {
     color: "#C9A84C",
@@ -574,14 +574,14 @@ const styles = StyleSheet.create({
   },
   modalTitle: { color: "#C9A84C", fontSize: 18, fontWeight: "900" },
   modalScroll: { maxHeight: 420, marginVertical: 14 },
-  modalText: { color: EYESITE_THEME.colors.text, fontSize: 14, lineHeight: 22 },
+  modalText: { color: "#F5F5F5", fontSize: 14, lineHeight: 22 },
   acceptTermsBtn: {
     backgroundColor: "#C9A84C",
     padding: 15,
     borderRadius: 10,
     alignItems: "center",
   },
-  acceptTermsText: { color: EYESITE_THEME.colors.background, fontWeight: "900" },
+  acceptTermsText: { color: "#0E0E0E", fontWeight: "900" },
   closeTerms: { padding: 12, alignItems: "center" },
   closeTermsText: { color: "#888" },
   button: {
