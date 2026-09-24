@@ -16,7 +16,6 @@ import { LeafletMap } from "@/components/leaflet-map";
 import { useProperties } from "@/hooks/use-properties";
 import { formatPrice } from "@/lib/properties-data";
 import { ScreenContainer } from "@/components/screen-container";
-import { EYESITE_THEME } from "@/lib/eysite-theme";
 
 type UserCoords = {
   latitude: number;
@@ -645,14 +644,14 @@ const styles = StyleSheet.create({
   },
 
   title: {
-    color: EYESITE_THEME.colors.text,
+    color: "#F5F5F5",
     fontSize: 17,
     fontWeight: "800",
     letterSpacing: 1.2,
   },
 
   subtitle: {
-    color: EYESITE_THEME.colors.muted,
+    color: "#9A9A9A",
     fontSize: 12,
     marginTop: 4,
   },
@@ -661,14 +660,14 @@ const styles = StyleSheet.create({
     width: 42,
     height: 42,
     borderRadius: 21,
-    backgroundColor: EYESITE_THEME.colors.gold,
+    backgroundColor: "#C9A84C",
     alignItems: "center",
     justifyContent: "center",
     marginLeft: 12,
   },
 
   locationButtonText: {
-    color: EYESITE_THEME.colors.background,
+    color: "#0B0B0B",
     fontSize: 23,
     fontWeight: "900",
   },
@@ -679,7 +678,7 @@ const styles = StyleSheet.create({
   },
 
   mapHintText: {
-    color: EYESITE_THEME.colors.muted,
+    color: "#9A9A9A",
     fontSize: 11,
   },
 
@@ -690,7 +689,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     overflow: "hidden",
     borderWidth: 1,
-    borderColor: EYESITE_THEME.colors.border,
+    borderColor: "#2A2A2A",
     position: "relative",
   },
 
@@ -739,7 +738,7 @@ const styles = StyleSheet.create({
   },
 
   footerNote: {
-    color: EYESITE_THEME.colors.mutedDark,
+    color: "#9A9A9A"Dark,
     fontSize: 10,
     marginBottom: 4,
   },
@@ -755,7 +754,7 @@ const styles = StyleSheet.create({
     width: 30,
     height: 30,
     borderRadius: 15,
-    backgroundColor: EYESITE_THEME.colors.surfaceElevated,
+    backgroundColor: "#141414"Elevated,
     alignItems: "center",
     justifyContent: "center",
   },
