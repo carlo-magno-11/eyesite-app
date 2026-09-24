@@ -62,3 +62,12 @@ Esta rama no debe fusionarse a `main` hasta cerrar esas comprobaciones.
 Durante la revisión de las pantallas de cuenta se detectó una pérdida de datos de UI: `mi-cuenta.tsx` consume `ciudad` y `presupuesto` desde `useAuth`, pero el hook no los seleccionaba desde `profiles`. La base de datos sí contiene ambas columnas como `text`. Se corrigió `hooks/useAuth.tsx` para incluir `ciudad` y `presupuesto` en la consulta del perfil. No se modificó la lógica de autorización, estado de aprobación ni los permisos de usuario.
 
 La corrección está aislada en `fix/profile-fields-sync`, basada en `fix/responsive-layout-web`; `main` permanece sin cambios. Debe pasar TypeScript/CI antes de integrarse.
+
+
+## 2026-09-24 — Sincronización de aprobación de cuenta
+- Se detectó que `useAuth` solo cargaba `profiles` durante `getSession` y cambios de autenticación.
+- La aprobación administrativa puede modificar `profiles.estado` mientras el usuario permanece dentro de la app; sin una nueva sesión, el cliente podía quedarse en `/pending` hasta recargar o cambiar de estado de autenticación.
+- Se añadió una suscripción Realtime específica al registro de `profiles` del usuario autenticado. Cuando cambia el perfil, se vuelve a cargar el perfil y `AuthGate` puede reaccionar al nuevo `estado`.
+- También se tiparon `ciudad` y `presupuesto` en `AuthProfile`, manteniendo la consulta existente.
+- No se cambió la lógica de aprobación administrativa ni se concedió ningún permiso adicional al cliente.
+- Pendiente de validación: CI del commit actual y prueba real de aprobación desde el panel mientras un usuario permanece en la pantalla de espera.
