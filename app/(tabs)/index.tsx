@@ -20,7 +20,7 @@ export default function HomeScreen() {
   const { properties, loading } = useProperties();
   const { user, session } = useAuth();
   const { unread } = useNotifications(user?.id);
-  const { width, horizontalPadding, contentMaxWidth, isDesktop, isLargeDesktop } = useResponsive();
+  const { horizontalPadding, contentMaxWidth, isDesktop, isLargeDesktop } = useResponsive();
   const featuredProperties = properties.filter((p) => p.featured || p.destacada);
   // Si todavía no hay propiedades marcadas como destacadas, mostramos las
   // primeras oportunidades reales para evitar una sección vacía en producción.
