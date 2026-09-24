@@ -6,6 +6,7 @@ import { Property, formatPrice, formatSurface, getReturnColor } from '@/lib/prop
 import { useFavorites } from '@/hooks/use-favorites';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { getFirstImage } from '@/lib/property-media';
+import { EYESITE_THEME } from '@/lib/eysite-theme';
 
 interface PropertyCardProps {
   property: Property;
@@ -156,11 +157,11 @@ const hasVideo =
 const styles = StyleSheet.create({
   card: {
     width: '100%',
-    backgroundColor: '#1A1A1A',
+    backgroundColor: EYESITE_THEME.colors.surface,
     borderRadius: 14,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: '#2A2A2A',
+    borderColor: EYESITE_THEME.colors.border,
     marginBottom: 16,
     minHeight: 392,
   },
@@ -186,7 +187,7 @@ const styles = StyleSheet.create({
   },
   videoPlayIcon: {
     fontSize: 34,
-    color: '#C9A84C',
+    color: EYESITE_THEME.colors.gold,
     textShadowColor: 'rgba(0,0,0,0.7)',
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 6,
@@ -236,7 +237,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-start',
   },
   title: {
-    color: '#F5F5F5',
+    color: EYESITE_THEME.colors.text,
     fontSize: 15,
     fontWeight: '700',
     marginBottom: 7,
@@ -251,7 +252,7 @@ const styles = StyleSheet.create({
     minHeight: 18,
   },
   location: {
-    color: '#9A9A9A',
+    color: EYESITE_THEME.colors.muted,
     fontSize: 12,
   },
   priceRow: {
@@ -301,7 +302,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 8,
     right: 8,
-    backgroundColor: '#FFD60A',
+    backgroundColor: EYESITE_THEME.colors.goldBright,
     borderRadius: 20,
     padding: 6,
   },
@@ -309,13 +310,13 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   noPhotoFallback: {
-    backgroundColor: '#1E1E1E',
+    backgroundColor: EYESITE_THEME.colors.surfaceElevated,
     alignItems: 'center',
     justifyContent: 'center',
   },
   noPhotoIcon: {
     fontSize: 40,
-    color: '#4A4A4A',
+    color: EYESITE_THEME.colors.mutedDark,
   },
   // Compact styles
   compactCard: {
