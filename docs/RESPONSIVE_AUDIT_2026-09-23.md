@@ -230,3 +230,8 @@ Pendiente para el cierre del ciclo: ejecutar/confirmar export Web y pruebas func
 ## 2026-09-24 — Ajuste de navegación confirmado
 
 Se conserva la decisión original de diseño: **Propiedades no aparece como pestaña en la barra inferior**. El acceso principal a las propiedades continúa siendo mediante los botones **“Ver oportunidades” / “Ver todas”** de Inicio. No se modificaron las demás pestañas ni los accesos de sesión.
+
+
+## 2026-09-24 — Segunda mejora de carga visual de fotografías
+
+Después de revisar el comportamiento observado en el APK, se añadió una segunda capa para evitar una superficie negra durante la decodificación inicial de una fotografía: la galería muestra un fondo controlado, indicador de carga y, cuando existe, utiliza la portada como placeholder de las fotografías posteriores. La caché `memory-disk` y la precarga permanecen activas.
