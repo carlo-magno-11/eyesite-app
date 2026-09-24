@@ -179,11 +179,11 @@ export default function NotificationsScreen() {
                 <Ionicons name="megaphone-outline" size={18} color="#C9A84C" />
               </View>
               <Text style={s.ty}>{String(item.tipo || "informacion").toUpperCase()}</Text>
-              {item.imagen_url ? <Image source={{ uri: item.imagen_url }} style={s.heroImage} contentFit="cover" cachePolicy="memory-disk" transition={150} /> : null}
+              {item.imagen_url ? <Image source={{ uri: String(item.imagen_url) }} style={s.heroImage} contentFit="cover" cachePolicy="memory-disk" transition={150} /> : null}
               {Array.isArray(item.imagenes) && item.imagenes.length > 1 ? (
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.gallery}>
                   {item.imagenes.map((uri, index) => (
-                    <Image key={`${item.id}-${index}`} source={{ uri }} style={s.galleryImage} contentFit="cover" cachePolicy="memory-disk" transition={150} />
+                    <Image key={`${item.id}-${index}`} source={{ uri: String(uri) }} style={s.galleryImage} contentFit="cover" cachePolicy="memory-disk" transition={150} />
                   ))}
                 </ScrollView>
               ) : null}

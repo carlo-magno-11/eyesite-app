@@ -245,3 +245,8 @@ Se extendió la misma estrategia de imágenes optimizadas a dos superficies que 
 ## 2026-09-24 — Publicación: paridad visual y previews de medios
 
 Se mejoró la pantalla Publicar sin modificar el flujo de Supabase: el formulario ahora tiene ancho máximo y centrado en escritorio, mantiene padding adaptable y sus previews de fotografías/vídeo usan `expo-image` con caché. El mapa Leaflet continúa siendo compartido entre Web y nativo mediante `LeafletMap`.
+
+
+## 2026-09-24 — Corrección TypeScript del último CI
+
+El workflow #228 detectó tres errores TypeScript en el merge del PR #23: dos fuentes de imagen de anuncios en `app/notifications.tsx` y el uso de `StyleSheet.absoluteFillObject` en `app/property/[id].tsx`. Se corrigieron sin cambiar el comportamiento funcional: las URLs de anuncios se normalizan explícitamente a texto para `expo-image` y el estilo de relleno usa la API disponible `StyleSheet.absoluteFill`. El job `native-config` ya había pasado en ese mismo workflow; se requiere una nueva ejecución para validar TypeScript y lint.
