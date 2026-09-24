@@ -56,7 +56,7 @@ const DEFAULT_REGION: Region = {
   longitudeDelta: 0.8,
 };
 
-const RADIUS_OPTIONS = [10, 25, 50, 100] as const;
+
 
 function distanceKm(a: UserCoords, b: UserCoords) {
   const R = 6371;
@@ -396,10 +396,6 @@ export default function MapScreen() {
 
   const [userLocation, setUserLocation] = useState<UserCoords | null>(null);
 
-  const [region, setRegion] = useState<Region>(DEFAULT_REGION);
-
-  const [radius, setRadius] = useState<number>(25);
-
   const [locating, setLocating] = useState(false);
 
   const requestLocation = useCallback(async () => {
@@ -420,12 +416,6 @@ export default function MapScreen() {
               };
 
               setUserLocation(coords);
-              setRegion({
-                latitude: coords.latitude,
-                longitude: coords.longitude,
-                latitudeDelta: 0.25,
-                longitudeDelta: 0.25,
-              });
               resolve();
             },
             reject,
@@ -460,12 +450,6 @@ export default function MapScreen() {
       };
 
       setUserLocation(coords);
-      setRegion({
-        latitude: coords.latitude,
-        longitude: coords.longitude,
-        latitudeDelta: 0.25,
-        longitudeDelta: 0.25,
-      });
     } catch (error) {
       console.error("[EYESITE] map location error", error);
 
@@ -518,13 +502,12 @@ export default function MapScreen() {
           longitude: getLongitude(property),
         }),
       }))
-      .filter((property: any) => Number(property.distance) <= radius)
       .sort((a: any, b: any) => Number(a.distance) - Number(b.distance));
   }, [geoProperties, radius, userLocation]);
 
   const mapHtml = useMemo(
-    () => createMapHtml(nearby, region),
-    [nearby, region],
+    () => createMapHtml(nearby, DEFAULT_REGION),
+    [nearby],
   );
 
   // On web, flex: 1 competes with the header, radius controls and results list,
@@ -559,7 +542,7 @@ export default function MapScreen() {
 
           <Text style={styles.subtitle}>
             {userLocation
-              ? `${nearby.length} oportunidades en ${radius} km`
+              ? `${nearby.length} oportunidades en la zona visible`
               : `${geoProperties.length} propiedades con ubicación`}
           </Text>
         </View>
@@ -579,26 +562,10 @@ export default function MapScreen() {
         )}
       </View>
 
-      <View style={styles.radiusRow}>
-        {RADIUS_OPTIONS.map((value) => (
-          <Pressable
-            key={value}
-            onPress={() => setRadius(value)}
-            style={[
-              styles.radiusChip,
-              radius === value && styles.radiusChipActive,
-            ]}
-          >
-            <Text
-              style={[
-                styles.radiusText,
-                radius === value && styles.radiusTextActive,
-              ]}
-            >
-              {value} km
-            </Text>
-          </Pressable>
-        ))}
+      <View style={styles.mapHintRow}>
+        <Text style={styles.mapHintText}>
+          Explora Yucatán libremente: acerca, aleja y mueve el mapa para buscar.
+        </Text>
       </View>
 
       <View style={styles.mapWrap}>
@@ -715,35 +682,14 @@ const styles = StyleSheet.create({
     fontWeight: "900",
   },
 
-  radiusRow: {
-    flexDirection: "row",
-    gap: 8,
+  mapHintRow: {
     paddingHorizontal: 18,
     paddingBottom: 10,
   },
 
-  radiusChip: {
-    borderWidth: 1,
-    borderColor: "#303030",
-    borderRadius: 18,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    backgroundColor: "#181818",
-  },
-
-  radiusChipActive: {
-    backgroundColor: "#C9A84C",
-    borderColor: "#C9A84C",
-  },
-
-  radiusText: {
-    color: "#B8B8B8",
-    fontSize: 12,
-    fontWeight: "700",
-  },
-
-  radiusTextActive: {
-    color: "#0D0D0D",
+  mapHintText: {
+    color: "#8E8E8E",
+    fontSize: 11,
   },
 
   mapWrap: {
