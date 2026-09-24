@@ -5,7 +5,6 @@ import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 import { useResponsive } from "@/hooks/use-responsive";
 import { ScreenContainer } from "@/components/screen-container";
-import { EYESITE_THEME } from "@/lib/eysite-theme";
 
 export default function MyPropertiesScreen() {
   const { user } = useAuth();
@@ -98,19 +97,19 @@ export default function MyPropertiesScreen() {
 
 const s = StyleSheet.create({
   page: { paddingTop: 24, paddingBottom: 100 },
-  back: { color: EYESITE_THEME.colors.gold, fontWeight: "800", marginBottom: 18 },
-  title: { color:EYESITE_THEME.colors.text, fontSize: 26, fontWeight: "900", marginBottom: 18 },
+  back: { color: "#C9A84C", fontWeight: "800", marginBottom: 18 },
+  title: { color:"#F5F5F5", fontSize: 26, fontWeight: "900", marginBottom: 18 },
   card: {
-    backgroundColor:EYESITE_THEME.colors.surface,
+    backgroundColor:"#141414",
     borderWidth: 1,
-    borderColor:EYESITE_THEME.colors.border,
+    borderColor:"#2A2A2A",
     borderRadius: 12,
     padding: 16,
     marginBottom: 10,
   },
   name: { color: "#FFF", fontSize: 16, fontWeight: "800" },
-  meta: { color:EYESITE_THEME.colors.muted, marginTop: 5 },
+  meta: { color:"#9A9A9A", marginTop: 5 },
   price: { color: "#C9A84C", fontWeight: "900", fontSize: 17, marginTop: 10 },
-  status: { color:EYESITE_THEME.colors.muted, fontSize: 11, marginTop: 6 },
+  status: { color:"#9A9A9A", fontSize: 11, marginTop: 6 },
   empty: { color: "#888", marginTop: 20 },
 });
