@@ -35,7 +35,7 @@ export function useAuth() {
       // id, email, role, nombre, telefono, estado, terminos_aceptados, terminos_fecha
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, email, role, nombre, telefono, estado, terminos_aceptados, terminos_version')
+        .select('id, email, role, nombre, telefono, ciudad, presupuesto, estado, terminos_aceptados, terminos_version')
         .eq('id', uid)
         .maybeSingle();
       if (error) {
