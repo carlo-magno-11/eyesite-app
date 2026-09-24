@@ -748,7 +748,6 @@ const styles = StyleSheet.create({
 
   mapWrap: {
     flex: Platform.OS === "web" ? 0 : 1,
-    height: Platform.OS === "web" ? webMapHeight : undefined,
     minHeight: 360,
     marginHorizontal: 12,
     borderRadius: 16,
