@@ -738,7 +738,7 @@ const styles = StyleSheet.create({
   },
 
   footerNote: {
-    color: "#9A9A9A"Dark,
+    color: "#707070",
     fontSize: 10,
     marginBottom: 4,
   },
@@ -754,7 +754,7 @@ const styles = StyleSheet.create({
     width: 30,
     height: 30,
     borderRadius: 15,
-    backgroundColor: "#141414"Elevated,
+    backgroundColor: "#1A1A1A",
     alignItems: "center",
     justifyContent: "center",
   },
