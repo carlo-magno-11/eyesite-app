@@ -16,7 +16,6 @@ create policy "public can read property change events"
   on public.propiedades_cambios for select to anon, authenticated using (true);
 
 revoke insert, update, delete on public.propiedades_cambios from anon, authenticated;
-revoke all on sequence public.propiedades_cambios_id_seq from anon, authenticated;
 
 create or replace function public.emit_propiedad_cambio()
 returns trigger language plpgsql security definer
