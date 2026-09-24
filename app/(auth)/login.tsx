@@ -19,6 +19,7 @@ import AuthBackground from '@/components/AuthBackground';
 import { useResponsive } from '@/hooks/use-responsive';
 
 export default function LoginScreen() {
+  const { isDesktop } = useResponsive();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
