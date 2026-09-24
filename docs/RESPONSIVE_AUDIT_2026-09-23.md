@@ -71,3 +71,11 @@ La corrección está aislada en `fix/profile-fields-sync`, basada en `fix/respon
 - También se tiparon `ciudad` y `presupuesto` en `AuthProfile`, manteniendo la consulta existente.
 - No se cambió la lógica de aprobación administrativa ni se concedió ningún permiso adicional al cliente.
 - Pendiente de validación: CI del commit actual y prueba real de aprobación desde el panel mientras un usuario permanece en la pantalla de espera.
+
+## 2026-09-24 — Corrección de CI y frontend de Mi Cuenta
+- El workflow de GitHub para el commit anterior del branch falló en la etapa TypeScript.
+- La inspección del archivo `app/mi-cuenta.tsx` encontró un defecto de sintaxis real: había secuencias literales `\\n` dentro del objeto de `StyleSheet.create`, además de imports/variables que podían quedar sin uso.
+- Se reemplazó la pantalla por una versión limpia y responsive que sí utiliza `useResponsive` e iconos de Ionicons.
+- Se conservaron las operaciones existentes de guardar perfil, cerrar sesión y eliminación de cuenta; no se cambiaron permisos ni lógica de Supabase.
+- El nuevo commit correctivo es `e8220cc4e1cea218f6998616c8fe7f0ce9dec2c3`.
+- Pendiente: nueva ejecución de GitHub Actions para confirmar TypeScript/lint del commit correctivo.
