@@ -94,3 +94,52 @@ La corrección está aislada en `fix/profile-fields-sync`, basada en `fix/respon
 - Solo después de una promoción completa, `admin_approve_property_request` recibe las URLs públicas definitivas.
 - La aplicación normaliza y consume medios desde `eyesite-media`; las referencias a `eyesite-staging`/`eyesite-private` se rechazan deliberadamente.
 - La Edge Function está activa en producción (versión 3). Por tanto, el flujo de medios no debe modificarse a ciegas; la siguiente validación necesaria es una publicación real con foto y otra con video, seguida de aprobación desde el panel y comprobación en iOS/Web.
+
+
+## 2026-09-24 — Paridad web y corrección de Realtime
+
+### Error observado en navegador
+Se detectó:
+`cannot add \`postgres_changes\` callbacks ... after \`subscribe()\``.
+
+La causa estaba en `useAuth`: durante el arranque, `getSession()` y `onAuthStateChange()` podían entrar casi al mismo tiempo y crear/reemplazar el mismo canal de perfil mientras la suscripción Realtime todavía estaba en proceso. Supabase requiere registrar los callbacks `postgres_changes` antes de `subscribe()`; añadirlos después de que el canal haya entrado genera el error. citeturn0search0turn0search3
+
+Se corrigió el ciclo de vida del canal:
+- un solo canal por UID;
+- se evita crear una segunda suscripción si ya existe;
+- el callback se registra antes de `subscribe()`;
+- ante `CHANNEL_ERROR`, `TIMED_OUT` o `CLOSED` se conserva la carga REST del perfil como respaldo;
+- se mantiene Realtime para detectar aprobación/cambios de perfil sin recargar.
+
+### Paridad de funciones en Web
+Se detectó que el mapa estaba deliberadamente deshabilitado en Web porque `react-native-webview` es un componente para vistas nativas. En lugar de quitar la función, se creó un adaptador multiplataforma:
+- `components/leaflet-map.tsx`: WebView para iOS/Android.
+- `components/leaflet-map.web.tsx`: iframe con `srcDoc` para navegador.
+- El mismo HTML Leaflet/OpenStreetMap y la misma navegación de propiedades se reutilizan.
+- El navegador usa `navigator.geolocation` al pulsar ubicación; iOS/Android continúan usando `expo-location`.
+- Se conserva la ruta sin Google Cloud.
+
+Expo documenta que las diferencias de plataforma deben resolverse mediante módulos específicos y que WebView es una API nativa; también permite componentes web específicos. citeturn1search0turn1search3turn1search9
+
+### Notificaciones
+Se eliminó el registro del listener de respuesta de `expo-notifications` en Web para quitar el warning de API nativa. El centro de notificaciones in-app continúa funcionando mediante Supabase Realtime en Web. El push remoto seguirá siendo una capacidad de dispositivo; no se finge soporte web donde la API instalada no lo proporciona.
+
+### Tarjetas de propiedades
+Se estabilizó la tarjeta:
+- ancho 100% del elemento de cuadrícula;
+- imagen con relación 16:10 en lugar de una altura fija que se veía diferente según columna;
+- contenido con altura mínima;
+- título con espacio reservado para dos líneas;
+- fila de precio/superficie con altura estable.
+
+Esto evita que propiedades con títulos o ubicaciones de distinta longitud deformen la cuadrícula. La cuadrícula existente mantiene 1/2/3/4 columnas según ancho de pantalla.
+
+### Validación pendiente de esta rama
+- `pnpm run check`
+- `pnpm run lint`
+- `pnpm test`
+- `pnpm run build:web`
+- prueba visual Safari/Chrome en 375/430/768/1024/1280/1440+ px;
+- prueba de mapa web y geolocalización tras dar permiso al navegador;
+- prueba iOS/Android del mismo mapa;
+- confirmar que no reaparece el error Realtime en el navegador.
