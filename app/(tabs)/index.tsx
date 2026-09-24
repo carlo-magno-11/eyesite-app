@@ -82,7 +82,7 @@ export default function HomeScreen() {
             cachePolicy="memory-disk"
             transition={150}
           />
-          <View <LinearGradient
+          <LinearGradient
             colors={["transparent", "rgba(11,11,11,0.82)"]}
             locations={[0.25, 1]}
             style={styles.heroOverlay}
