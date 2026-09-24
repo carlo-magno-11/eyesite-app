@@ -429,7 +429,7 @@ const handlePropertyMapMessage = (
     });
   };
 
-  const pickVideo = async () =>
+  const pickVideo = async () => {
     try {
       setProcessingVideo(true);
       const result = await ImagePicker.launchImageLibraryAsync({
