@@ -1,5 +1,5 @@
 import { StyleProp, StyleSheet, ViewStyle } from "react-native";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef } from "react";\nimport type React from "react";
 
 export type LeafletMapHandle = {
   runScript: (script: string) => void;
@@ -36,7 +36,7 @@ export function LeafletMap({ html, onMessage, style, onLoad, command }: LeafletM
       title="Mapa de propiedades EYESITE"
       srcDoc={html}
       onLoad={onLoad}
-      style={{ ...StyleSheet.flatten(style), border: "none", display: "block" }}
+      style={{ ...(StyleSheet.flatten(style) as React.CSSProperties), border: "none", display: "block" }}
     />
   );
 }
