@@ -15,6 +15,7 @@ type NotificationItem = {
 };
 
 const isExpoGo = Constants.executionEnvironment === "storeClient";
+let notificationChannelGeneration = 0;
 
 export function useNotifications(userId?: string) {
   const [items, setItems] = useState<NotificationItem[]>([]);
@@ -55,8 +56,9 @@ export function useNotifications(userId?: string) {
 
     if (!userId) return () => clearTimeout(timer);
 
+    const channelId = ++notificationChannelGeneration;
     const channel = supabase
-      .channel(`user-notifications-${userId}`)
+      .channel(`user-notifications-${userId}-${channelId}`)
       .on("postgres_changes", {
         event: "*",
         schema: "public",
