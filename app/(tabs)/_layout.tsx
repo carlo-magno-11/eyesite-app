@@ -43,8 +43,8 @@ export default function TabLayout() {
       <Tabs.Screen
         name="properties"
         options={{
-          title: "Propiedades",
-          tabBarIcon: ({ color }) => <IconSymbol size={24} name="building.2.fill" color={color} />,
+          // Las propiedades se abren desde Inicio mediante "Ver oportunidades".
+          href: null,
         }}
       />
       <Tabs.Screen
