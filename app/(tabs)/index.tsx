@@ -284,7 +284,7 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: "#141414"Soft,
+    backgroundColor: "#211D13",
     marginBottom: 8,
   },
   categoryIcon: { fontSize: 25 },
