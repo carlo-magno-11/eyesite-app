@@ -8,6 +8,7 @@ import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as VideoThumbnails from 'expo-video-thumbnails';
 import * as Location from 'expo-location';
+import { Platform } from 'react-native';
 import { LeafletMap, LeafletMapHandle } from '@/components/leaflet-map';
 
 const PROPERTY_TYPES_OPTIONS = [
@@ -276,29 +277,43 @@ export default function PublishScreen() {
   setLocating(true);
 
   try {
-    const { status } =
-      await Location.requestForegroundPermissionsAsync();
+    let latitude: number;
+    let longitude: number;
 
-    if (
-      status !== Location.PermissionStatus.GRANTED
-    ) {
-      Alert.alert(
-        'Permiso de ubicación',
-        'Necesitamos tu ubicación solo para colocar el punto de la propiedad en el mapa.'
-      );
-      return;
-    }
+    if (Platform.OS === 'web') {
+      if (!navigator.geolocation) {
+        Alert.alert('Ubicación', 'Tu navegador no permite obtener la ubicación.');
+        return;
+      }
 
-    const current =
-      await Location.getCurrentPositionAsync({
+      const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, {
+          enableHighAccuracy: false,
+          maximumAge: 60000,
+          timeout: 10000,
+        });
+      });
+
+      latitude = position.coords.latitude;
+      longitude = position.coords.longitude;
+    } else {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+
+      if (status !== Location.PermissionStatus.GRANTED) {
+        Alert.alert(
+          'Permiso de ubicación',
+          'Necesitamos tu ubicación solo para colocar el punto de la propiedad en el mapa.'
+        );
+        return;
+      }
+
+      const current = await Location.getCurrentPositionAsync({
         accuracy: Location.Accuracy.Balanced,
       });
 
-    const latitude =
-      current.coords.latitude;
-
-    const longitude =
-      current.coords.longitude;
+      latitude = current.coords.latitude;
+      longitude = current.coords.longitude;
+    }
 
     setForm((prev) => ({
       ...prev,
