@@ -563,14 +563,24 @@ export function useProperty(id?: string) {
   useEffect(() => {
     void fetchProperty();
 
+    if (!id) {
+      return;
+    }
+
+    /*
+     * El feed de cambios es público de solo lectura.
+     * Filtramos por propiedad para que editar otra propiedad
+     * no fuerce una recarga innecesaria del detalle actual.
+     */
     const channel = supabase
-      .channel(`eyesite-live-property-${id ?? 'none'}`)
+      .channel(`eyesite-live-property-${id}`)
       .on(
         'postgres_changes',
         {
           event: '*',
           schema: 'public',
           table: 'propiedades_cambios',
+          filter: `propiedad_id=eq.${id}`,
         },
         () => {
           void fetchProperty();
