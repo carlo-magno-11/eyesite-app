@@ -56,54 +56,95 @@ export function useAuth() {
   useEffect(() => {
     let mounted = true;
     let profileChannel: ReturnType<typeof supabase.channel> | null = null;
+    let subscribedUid: string | null = null;
 
-    const syncProfile = async (uid: string) => {
-      await loadProfile(uid);
-      if (!mounted) return;
+    const closeProfileChannel = async () => {
+      if (!profileChannel) return;
+      const channel = profileChannel;
+      profileChannel = null;
+      subscribedUid = null;
+      await supabase.removeChannel(channel);
+    };
 
-      profileChannel?.unsubscribe();
+    const ensureProfileChannel = (uid: string) => {
+      if (!mounted || subscribedUid === uid && profileChannel) return;
+
+      if (profileChannel) {
+        void supabase.removeChannel(profileChannel);
+        profileChannel = null;
+      }
+
+      subscribedUid = uid;
+
+      // Register the postgres_changes handler BEFORE subscribe().
+      // Supabase rejects adding a callback after a channel has joined.
       profileChannel = supabase
-        .channel("profile-" + uid)
+        .channel(`profile-${uid}`)
         .on(
           "postgres_changes",
-          { event: "UPDATE", schema: "public", table: "profiles", filter: "id=eq." + uid },
+          {
+            event: "UPDATE",
+            schema: "public",
+            table: "profiles",
+            filter: `id=eq.${uid}`,
+          },
           () => {
             void loadProfile(uid);
           },
         )
-        .subscribe();
+        .subscribe((status) => {
+          if (
+            status === "CHANNEL_ERROR" ||
+            status === "TIMED_OUT" ||
+            status === "CLOSED"
+          ) {
+            if (mounted && subscribedUid === uid) {
+              // Keep the profile usable even when Realtime is temporarily unavailable.
+              void loadProfile(uid);
+            }
+          }
+        });
     };
 
-    supabase.auth.getSession().then(async ({ data: { session: s } }) => {
+    const applySession = (nextSession: Session | null, markReady = false) => {
       if (!mounted) return;
-      setSession(s);
-      setUser(s?.user ?? null);
-      if (s?.user?.id) {
-        // Esperar al perfil para que AuthGate no redirija con datos incompletos (anti-flash).
-        await syncProfile(s.user.id);
-      }
-      if (mounted) setLoading(false);
-    });
 
-    const { data: sub } = supabase.auth.onAuthStateChange(async (_event, s) => {
-      if (!mounted) return;
-      setSession(s);
-      setUser(s?.user ?? null);
-      if (s?.user?.id) {
-        await syncProfile(s.user.id);
-      } else {
-        profileChannel?.unsubscribe();
-        profileChannel = null;
+      const nextUser = nextSession?.user ?? null;
+      setSession(nextSession);
+      setUser(nextUser);
+
+      if (!nextUser?.id) {
+        void closeProfileChannel();
         setProfile(null);
         setEstado(null);
+        if (markReady) setLoading(false);
+        return;
       }
-      if (mounted) setLoading(false);
+
+      // Do not await here. getSession() and onAuthStateChange() can fire
+      // almost simultaneously during startup. Keeping one channel per UID
+      // prevents the "callback after subscribe()" Realtime race.
+      ensureProfileChannel(nextUser.id);
+
+      void loadProfile(nextUser.id).finally(() => {
+        if (mounted && markReady) setLoading(false);
+      });
+    };
+
+    supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
+      if (!mounted) return;
+      applySession(currentSession, true);
+    });
+
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+      if (!mounted) return;
+      applySession(nextSession, true);
     });
 
     return () => {
       mounted = false;
       sub.subscription.unsubscribe();
-      profileChannel?.unsubscribe();
+      void closeProfileChannel();
     };
   }, [loadProfile]);
 
