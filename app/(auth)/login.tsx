@@ -16,6 +16,7 @@ import { Link } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '@/lib/supabase';
 import AuthBackground from '@/components/AuthBackground';
+import { useResponsive } from '@/hooks/use-responsive';
 
 export default function LoginScreen() {
 
@@ -126,7 +127,7 @@ export default function LoginScreen() {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          <View style={styles.container}>
+          <View style={[styles.container, isDesktop && styles.desktopContainer]}>
             {/* Header */}
             <View style={styles.header}>
               <View style={styles.logoMark}>
@@ -328,6 +329,12 @@ const styles = StyleSheet.create({
   // -----------------------------
   // Header
   // -----------------------------
+
+  desktopContainer: {
+    width: '100%',
+    maxWidth: 460,
+    alignSelf: 'center',
+  },
 
   header: {
     alignItems: 'center',
