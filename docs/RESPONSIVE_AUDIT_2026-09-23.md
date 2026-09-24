@@ -268,3 +268,8 @@ La verificación directa de producción confirmó que la tabla existe, el trigge
 El commit `0a7d9f34fbad159757bb3c8bfa2a8a0eaca8281a` en `fix/web-parity-visual-cards` pasó los dos checks de GitHub Actions: `quality` y `native-config`. Por tanto, TypeScript/lint y la generación/validación de configuración iOS quedaron en SUCCESS para este estado de la rama.
 
 Sigue pendiente la validación funcional física de la versión actual en iPhone/Android y la exportación Web completa; esos pasos no se consideran sustituidos por CI.
+
+
+## 2026-09-24 — Optimización del Realtime del detalle
+
+El detalle de una propiedad continúa escuchando exclusivamente el feed público `propiedades_cambios`, pero ahora filtra el canal por `propiedad_id`. Esto evita que una modificación administrativa de otra propiedad provoque una consulta REST innecesaria del detalle actualmente abierto. La lectura continúa pasando únicamente por `propiedades_publicas`.
