@@ -22,6 +22,8 @@ export type Announcement = {
   publicada_en: string | null;
 };
 
+let announcementChannelGeneration = 0;
+
 export function useAnnouncements() {
   const [items, setItems] = useState<Announcement[]>([]);
   const [loading, setLoading] = useState(true);
@@ -53,7 +55,7 @@ export function useAnnouncements() {
     void load();
 
     const channel = supabase
-      .channel("public-announcements")
+      .channel(`public-announcements-${++announcementChannelGeneration}`)
       .on("postgres_changes", {
         event: "*",
         schema: "public",
