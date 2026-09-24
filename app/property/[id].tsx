@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
-import { View, Text, Image, ScrollView, Pressable, Linking, StyleSheet, Share, ActivityIndicator, Modal, FlatList, Alert, useWindowDimensions } from 'react-native';
+import { View, Text, ScrollView, Pressable, Linking, StyleSheet, Share, ActivityIndicator, Modal, FlatList, Alert, useWindowDimensions } from 'react-native';
+import { Image } from 'expo-image';
 import { useLocalSearchParams, router } from 'expo-router';
 import { VideoView, useVideoPlayer } from 'expo-video';
 import { formatPrice, formatSurface, getReturnColor } from '@/lib/properties-data';
@@ -137,6 +138,18 @@ export default function PropertyDetailScreen() {
 
     return list;
   }, [property, videoUrl]);
+
+  // Precalentamos la galería en la caché nativa/Web para evitar el
+  // primer render negro mientras cada imagen se descarga.
+  useEffect(() => {
+    const imageUrls = mediaList
+      .filter((item) => item.type === 'image')
+      .map((item) => item.url)
+      .filter(Boolean);
+    if (imageUrls.length) {
+      void Image.prefetch(imageUrls, 'memory-disk').catch(() => {});
+    }
+  }, [mediaList]);
 
   if (loading) {
     return (
@@ -347,7 +360,9 @@ export default function PropertyDetailScreen() {
                       <Image
                         source={{ uri: item.poster }}
                         style={StyleSheet.absoluteFill}
-                        resizeMode="contain"
+                        contentFit="contain"
+                        cachePolicy="memory-disk"
+                        transition={150}
                       />
                     ) : null}
                     <View style={styles.carouselPlayBtn}>
@@ -359,7 +374,9 @@ export default function PropertyDetailScreen() {
                 <Image
                   source={{ uri: item.url }}
                   style={{ width: contentWidth, height: 300 }}
-                  resizeMode="cover"
+                  contentFit="cover"
+                  cachePolicy="memory-disk"
+                  transition={150}
                 />
               )
             }
