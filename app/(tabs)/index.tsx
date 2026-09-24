@@ -103,10 +103,8 @@ export default function HomeScreen() {
                 onPress={() => handleCategoryPress(cat.key)}
                 style={({ pressed }) => [styles.categoryCard, pressed && { opacity: 0.7 }]}
               >
-                <View style={styles.categoryIconWrap}>
                 <Text style={styles.categoryIcon}>{cat.icon}</Text>
-              </View>
-              <Text style={styles.categoryLabel}>{cat.label}</Text>
+                <Text style={styles.categoryLabel}>{cat.label}</Text>
               </Pressable>
             ))}
           </ScrollView>
@@ -125,13 +123,9 @@ export default function HomeScreen() {
               <ActivityIndicator color="#C9A84C" size="large" />
             </View>
           ) : (
-            <View style={isDesktop ? styles.featuredGrid : undefined}>
-              {highlightedProperties.map((property) => (
-                <View key={property.id} style={isDesktop ? styles.featuredItem : undefined}>
-                  <PropertyCard property={property} />
-                </View>
-              ))}
-            </View>
+            highlightedProperties.map((property) => (
+              <PropertyCard key={property.id} property={property} />
+            ))
           )}
         </View>
       </ScrollView>
@@ -204,7 +198,11 @@ const styles = StyleSheet.create({
     height: '100%',
   },
   heroOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     backgroundColor: 'rgba(11, 11, 11, 0.48)',
   },
   heroContent: {
@@ -278,17 +276,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#2A2A2A',
   },
-  categoryIconWrap: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#211D13',
-    marginBottom: 8,
-  },
   categoryIcon: {
-    fontSize: 25,
+    fontSize: 28,
+    marginBottom: 8,
   },
   categoryLabel: {
     fontSize: 12,
@@ -299,13 +289,5 @@ const styles = StyleSheet.create({
   loadingContainer: {
     paddingVertical: 40,
     alignItems: 'center',
-  },
-  featuredGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-  },
-  featuredItem: {
-    width: '32%',
   },
 });
