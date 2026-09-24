@@ -98,18 +98,18 @@ export default function MyPropertiesScreen() {
 const s = StyleSheet.create({
   page: { paddingTop: 24, paddingBottom: 100 },
   back: { color: "#C9A84C", fontWeight: "800", marginBottom: 18 },
-  title: { color:"#F5F5F5", fontSize: 26, fontWeight: "900", marginBottom: 18 },
+  title: { color: "#FFF", fontSize: 26, fontWeight: "900", marginBottom: 18 },
   card: {
-    backgroundColor:"#141414",
+    backgroundColor: "#171717",
     borderWidth: 1,
-    borderColor:"#2A2A2A",
+    borderColor: "#2A2A2A",
     borderRadius: 12,
     padding: 16,
     marginBottom: 10,
   },
   name: { color: "#FFF", fontSize: 16, fontWeight: "800" },
-  meta: { color:"#9A9A9A", marginTop: 5 },
+  meta: { color: "#999", marginTop: 5 },
   price: { color: "#C9A84C", fontWeight: "900", fontSize: 17, marginTop: 10 },
-  status: { color:"#9A9A9A", fontSize: 11, marginTop: 6 },
+  status: { color: "#888", fontSize: 11, marginTop: 6 },
   empty: { color: "#888", marginTop: 20 },
 });
