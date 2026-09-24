@@ -79,7 +79,7 @@ export default function HomeScreen() {
           <View style={styles.heroOverlay} />
           <View style={styles.heroContent}>
             <Text style={styles.heroTagline}>FIND YOUR LAND</Text>
-            <Text style={styles.heroTitle}>TODO BUEN PROYECTO INICIA CON UN BUEN TERRENO</Text>
+            <Text style={[styles.heroTitle, { fontSize: isLargeDesktop ? 30 : isDesktop ? 26 : 22 }]}>TODO BUEN PROYECTO INICIA CON UN BUEN TERRENO</Text>
             <Pressable
               onPress={() => router.push('/(tabs)/properties' as any)}
               style={({ pressed }) => [styles.heroButton, pressed && { opacity: 0.85 }]}
@@ -217,7 +217,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   heroTitle: {
-    fontSize: width >= 1440 ? 30 : width >= 1024 ? 26 : 22,
+    fontSize: 22,
     fontWeight: '700',
     color: '#FFFFFF',
     marginBottom: 16,
