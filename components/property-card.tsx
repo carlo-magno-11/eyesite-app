@@ -6,7 +6,6 @@ import { Property, formatPrice, formatSurface, getReturnColor } from '@/lib/prop
 import { useFavorites } from '@/hooks/use-favorites';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { getFirstImage } from '@/lib/property-media';
-import { EYESITE_THEME } from '@/lib/eysite-theme';
 
 interface PropertyCardProps {
   property: Property;
@@ -157,11 +156,11 @@ const hasVideo =
 const styles = StyleSheet.create({
   card: {
     width: '100%',
-    backgroundColor: EYESITE_THEME.colors.surface,
+    backgroundColor: "#141414",
     borderRadius: 14,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: EYESITE_THEME.colors.border,
+    borderColor: "#2A2A2A",
     marginBottom: 16,
     minHeight: 392,
   },
@@ -187,7 +186,7 @@ const styles = StyleSheet.create({
   },
   videoPlayIcon: {
     fontSize: 34,
-    color: EYESITE_THEME.colors.gold,
+    color: "#C9A84C",
     textShadowColor: 'rgba(0,0,0,0.7)',
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 6,
@@ -237,7 +236,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-start',
   },
   title: {
-    color: EYESITE_THEME.colors.text,
+    color: "#F5F5F5",
     fontSize: 15,
     fontWeight: '700',
     marginBottom: 7,
@@ -252,7 +251,7 @@ const styles = StyleSheet.create({
     minHeight: 18,
   },
   location: {
-    color: EYESITE_THEME.colors.muted,
+    color: "#9A9A9A",
     fontSize: 12,
   },
   priceRow: {
@@ -302,7 +301,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 8,
     right: 8,
-    backgroundColor: EYESITE_THEME.colors.goldBright,
+    backgroundColor: "#C9A84C"Bright,
     borderRadius: 20,
     padding: 6,
   },
@@ -310,13 +309,13 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   noPhotoFallback: {
-    backgroundColor: EYESITE_THEME.colors.surfaceElevated,
+    backgroundColor: "#141414"Elevated,
     alignItems: 'center',
     justifyContent: 'center',
   },
   noPhotoIcon: {
     fontSize: 40,
-    color: EYESITE_THEME.colors.mutedDark,
+    color: "#9A9A9A"Dark,
   },
   // Compact styles
   compactCard: {
