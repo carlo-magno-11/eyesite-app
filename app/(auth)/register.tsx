@@ -21,6 +21,7 @@ import AuthBackground from "@/components/AuthBackground";
 
 export default function RegisterScreen() {
   const router = useRouter();
+  const { isDesktop } = useResponsive();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -205,7 +206,7 @@ export default function RegisterScreen() {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          <View style={styles.container}>
+          <View style={[styles.container, isDesktop && styles.desktopContainer]}>
             {/* ENCABEZADO */}
             <View style={styles.header}>
               <Text style={styles.brand}>CREAR CUENTA</Text>
@@ -462,6 +463,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingVertical: 32,
     justifyContent: "center",
+  },
+
+  desktopContainer: {
+    width: '100%',
+    maxWidth: 560,
+    alignSelf: 'center',
   },
 
   header: {
