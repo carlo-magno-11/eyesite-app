@@ -195,3 +195,20 @@ No se cambió el límite de negocio de 50 MB ni se expuso el bucket de staging.
 La validación CI de la integración Web detectó un error de sintaxis en `publish.tsx` dentro de `pickVideo`: faltaba la llave de apertura del cuerpo de la función. Se corrigió únicamente esa estructura, sin alterar la selección, validación de tamaño, generación de miniatura ni subida del vídeo.
 
 La ejecución que detectó el problema confirmó además que la generación del proyecto iOS y la validación del Privacy Manifest siguen pasando; queda volver a ejecutar la calidad completa para confirmar TypeScript y lint después de la corrección.
+
+
+## 2026-09-24 — Revisión del APK Android y carga de imágenes en detalle
+
+Se revisó la captura del APK Android anterior a la última ronda de paridad Web. La captura muestra que el estado sin sesión dejaba visibles únicamente Inicio y Mapa en la barra inferior; Propiedades y Nosotros existían como rutas pero estaban ocultas con `href: null`. Se ajustó la navegación primaria para que Propiedades y Nosotros sean accesibles también sin sesión. Publicar y Favoritos siguen condicionados a sesión para no convertir acciones privadas en accesos públicos.
+
+También se corrigió una ruta de rendimiento en el detalle de propiedad:
+- `useProperty(id)` ya no descarga todo el catálogo para encontrar una sola propiedad; consulta únicamente el registro activo solicitado desde `propiedades_publicas`.
+- El detalle usa `expo-image` con caché memoria/disco y transición corta.
+- La galería precarga sus imágenes mediante `Image.prefetch(..., 'memory-disk')` para reducir el periodo en negro al entrar al terreno.
+- La imagen de la galería conserva el mismo orden portada → video → galería.
+
+Esto no modifica RLS, buckets ni el límite de seguridad de leer propiedades únicamente desde `propiedades_publicas`.
+
+## 2026-09-24 — Corrección CI de Leaflet Web y validación de publicación
+
+El workflow detectó un carácter de escape literal en `components/leaflet-map.web.tsx` que rompía TypeScript. Se corrigió la importación y también se limpió la lectura de tamaño de video en `publish.tsx` para consultar `FileSystem.getInfoAsync` una sola vez y estrechar correctamente el tipo. Se mantiene pendiente la nueva ejecución de CI después de estos commits.
