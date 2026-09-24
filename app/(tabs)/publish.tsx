@@ -967,6 +967,9 @@ mapInstruction: {
 },
   
   header: {
+    width: '100%',
+    maxWidth: 900,
+    alignSelf: 'center',
     paddingHorizontal: 16,
     paddingVertical: 20,
     borderBottomWidth: 1,
@@ -983,6 +986,9 @@ mapInstruction: {
     color: '#9A9A9A',
   },
   form: {
+    width: '100%',
+    maxWidth: 900,
+    alignSelf: 'center',
     padding: 16,
     gap: 20,
   },
