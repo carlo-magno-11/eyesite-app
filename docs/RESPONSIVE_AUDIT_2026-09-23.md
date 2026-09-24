@@ -102,7 +102,7 @@ La corrección está aislada en `fix/profile-fields-sync`, basada en `fix/respon
 Se detectó:
 `cannot add \`postgres_changes\` callbacks ... after \`subscribe()\``.
 
-La causa estaba en `useAuth`: durante el arranque, `getSession()` y `onAuthStateChange()` podían entrar casi al mismo tiempo y crear/reemplazar el mismo canal de perfil mientras la suscripción Realtime todavía estaba en proceso. Supabase requiere registrar los callbacks `postgres_changes` antes de `subscribe()`; añadirlos después de que el canal haya entrado genera el error. citeturn0search0turn0search3
+La causa estaba en `useAuth`: durante el arranque, `getSession()` y `onAuthStateChange()` podían entrar casi al mismo tiempo y crear/reemplazar el mismo canal de perfil mientras la suscripción Realtime todavía estaba en proceso. Supabase requiere registrar los callbacks `postgres_changes` antes de `subscribe()`; añadirlos después de que el canal haya entrado genera el error.
 
 Se corrigió el ciclo de vida del canal:
 - un solo canal por UID;
@@ -119,7 +119,7 @@ Se detectó que el mapa estaba deliberadamente deshabilitado en Web porque `reac
 - El navegador usa `navigator.geolocation` al pulsar ubicación; iOS/Android continúan usando `expo-location`.
 - Se conserva la ruta sin Google Cloud.
 
-Expo documenta que las diferencias de plataforma deben resolverse mediante módulos específicos y que WebView es una API nativa; también permite componentes web específicos. citeturn1search0turn1search3turn1search9
+Expo documenta que las diferencias de plataforma deben resolverse mediante módulos específicos y que WebView es una API nativa; también permite componentes web específicos.
 
 ### Notificaciones
 Se eliminó el registro del listener de respuesta de `expo-notifications` en Web para quitar el warning de API nativa. El centro de notificaciones in-app continúa funcionando mediante Supabase Realtime en Web. El push remoto seguirá siendo una capacidad de dispositivo; no se finge soporte web donde la API instalada no lo proporciona.
