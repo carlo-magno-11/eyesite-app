@@ -225,3 +225,8 @@ El workflow EYESITE checks #216 terminó correctamente después de las correccio
 El fallo anterior de lint provenía de las listas de cuenta adaptadas a Web (`my-properties` y `my-requests`) por actualización síncrona de estado dentro de un efecto; se corrigió sin cambiar las consultas ni su modelo de datos. También se consolidó la importación de `Platform` en publicación.
 
 Pendiente para el cierre del ciclo: ejecutar/confirmar export Web y pruebas funcionales en dispositivo físico con el APK/IPA generado desde la rama actual. No se considera el APK antiguo de la captura como validación de la versión actual.
+
+
+## 2026-09-24 — Ajuste de navegación confirmado
+
+Se conserva la decisión original de diseño: **Propiedades no aparece como pestaña en la barra inferior**. El acceso principal a las propiedades continúa siendo mediante los botones **“Ver oportunidades” / “Ver todas”** de Inicio. No se modificaron las demás pestañas ni los accesos de sesión.
