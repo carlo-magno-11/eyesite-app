@@ -112,3 +112,15 @@ Esta etapa visual todavía requiere validación local en Web y Android, seguida 
 ### Validación CI de la capa visual
 - En el último ciclo de GitHub Actions, TypeScript, lint, tests y la configuración nativa iOS avanzaron correctamente; el Web export estaba ejecutándose al cierre de esta revisión.
 - Se detectó y corrigió una regresión de tipado causada por reemplazos automáticos de tokens de color (por ejemplo, sufijos `Soft`/`Elevated` pegados a literales). Se eliminó esa estrategia para no introducir cambios ciegos.
+
+
+## 2026-09-24 — corrección de recursos visuales de autenticación
+
+Durante la revisión del bundle multiplataforma se detectó una discrepancia real entre los nombres usados por `components/AuthBackground.tsx` y los archivos existentes en `assets/images/auth/`: el código referenciaba `casa1.jpg`, `casa2.jpg`, `casa3.jpg`, mientras el repositorio contiene `casa1.jpeg`, `casa2.jpeg`, `casa3.jpeg`.
+
+Se corrigieron las tres referencias a `.jpeg`. Esto evita depender de un recurso inexistente en el bundle y es especialmente importante antes de generar otro binario nativo.
+
+- Commit: `33efd2ecb6c8cb458cbdd17196c3eab3a6beb622`.
+- No se agregaron dependencias.
+- No se modificó `main`.
+- El flujo visual de autenticación, validaciones y Supabase permanece igual.
