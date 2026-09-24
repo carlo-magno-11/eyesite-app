@@ -447,7 +447,7 @@ const handlePropertyMapMessage = (
         try {
           const size = Platform.OS === 'web'
             ? (await fetch(uri).then((response) => response.blob())).size
-            : ((await FileSystem.getInfoAsync(uri)).size ?? 0);
+            : (((await FileSystem.getInfoAsync(uri)).exists && 'size' in (await FileSystem.getInfoAsync(uri))) ? ((await FileSystem.getInfoAsync(uri)).size ?? 0) : 0);
           if (size > MAX_VIDEO_BYTES) {
             Alert.alert(
               'Video muy pesado',
