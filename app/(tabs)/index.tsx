@@ -36,10 +36,10 @@ export default function HomeScreen() {
 
 
   return (
-    <ScreenContainer edges={['top', 'left', 'right']} containerClassName="bg-[#0D0D0D]">
+    <ScreenContainer edges={['top', 'left', 'right']} containerClassName="bg-[#0B0B0B]">
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 100, backgroundColor: '#0D0D0D' }}
+        contentContainerStyle={{ paddingBottom: 110, backgroundColor: '#0B0B0B' }}
       >
         {/* Header with Tagline */}
         <View style={[styles.taglineContainer, { paddingHorizontal: horizontalPadding }]}>
@@ -103,8 +103,10 @@ export default function HomeScreen() {
                 onPress={() => handleCategoryPress(cat.key)}
                 style={({ pressed }) => [styles.categoryCard, pressed && { opacity: 0.7 }]}
               >
+                <View style={styles.categoryIconWrap}>
                 <Text style={styles.categoryIcon}>{cat.icon}</Text>
-                <Text style={styles.categoryLabel}>{cat.label}</Text>
+              </View>
+              <Text style={styles.categoryLabel}>{cat.label}</Text>
               </Pressable>
             ))}
           </ScrollView>
@@ -123,9 +125,13 @@ export default function HomeScreen() {
               <ActivityIndicator color="#C9A84C" size="large" />
             </View>
           ) : (
-            highlightedProperties.map((property) => (
-              <PropertyCard key={property.id} property={property} />
-            ))
+            <View style={isDesktop ? styles.featuredGrid : undefined}>
+              {highlightedProperties.map((property) => (
+                <View key={property.id} style={isDesktop ? styles.featuredItem : undefined}>
+                  <PropertyCard property={property} />
+                </View>
+              ))}
+            </View>
           )}
         </View>
       </ScrollView>
@@ -198,12 +204,8 @@ const styles = StyleSheet.create({
     height: '100%',
   },
   heroOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(11, 11, 11, 0.48)',
   },
   heroContent: {
     position: 'absolute',
@@ -267,12 +269,26 @@ const styles = StyleSheet.create({
   },
   categoryCard: {
     alignItems: 'center',
-    marginRight: 16,
-    paddingVertical: 12,
+    width: 92,
+    marginRight: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 8,
+    borderRadius: 14,
+    backgroundColor: '#141414',
+    borderWidth: 1,
+    borderColor: '#2A2A2A',
+  },
+  categoryIconWrap: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#211D13',
+    marginBottom: 8,
   },
   categoryIcon: {
-    fontSize: 32,
-    marginBottom: 8,
+    fontSize: 25,
   },
   categoryLabel: {
     fontSize: 12,
@@ -283,5 +299,13 @@ const styles = StyleSheet.create({
   loadingContainer: {
     paddingVertical: 40,
     alignItems: 'center',
+  },
+  featuredGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+  featuredItem: {
+    width: '32%',
   },
 });
