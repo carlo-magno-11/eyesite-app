@@ -212,3 +212,16 @@ Esto no modifica RLS, buckets ni el límite de seguridad de leer propiedades ún
 ## 2026-09-24 — Corrección CI de Leaflet Web y validación de publicación
 
 El workflow detectó un carácter de escape literal en `components/leaflet-map.web.tsx` que rompía TypeScript. Se corrigió la importación y también se limpió la lectura de tamaño de video en `publish.tsx` para consultar `FileSystem.getInfoAsync` una sola vez y estrechar correctamente el tipo. Se mantiene pendiente la nueva ejecución de CI después de estos commits.
+
+
+## 2026-09-24 — Validación final de esta ronda
+
+El workflow EYESITE checks #216 terminó correctamente después de las correcciones:
+- TypeScript: SUCCESS.
+- Lint: SUCCESS.
+- Generación del proyecto iOS: SUCCESS.
+- Validación del Privacy Manifest: SUCCESS.
+
+El fallo anterior de lint provenía de las listas de cuenta adaptadas a Web (`my-properties` y `my-requests`) por actualización síncrona de estado dentro de un efecto; se corrigió sin cambiar las consultas ni su modelo de datos. También se consolidó la importación de `Platform` en publicación.
+
+Pendiente para el cierre del ciclo: ejecutar/confirmar export Web y pruebas funcionales en dispositivo físico con el APK/IPA generado desde la rama actual. No se considera el APK antiguo de la captura como validación de la versión actual.
