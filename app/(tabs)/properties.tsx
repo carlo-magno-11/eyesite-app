@@ -141,13 +141,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   headerTitle: {
-    color: '#F5F5F5',
+    color: "#F5F5F5",
     fontSize: 18,
     fontWeight: '800',
     letterSpacing: 2,
   },
   headerCount: {
-    color: '#9A9A9A',
+    color: "#9A9A9A",
     fontSize: 13,
   },
   searchContainer: {
@@ -157,12 +157,12 @@ const styles = StyleSheet.create({
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#1A1A1A',
+    backgroundColor: "#141414",
     borderRadius: 10,
     paddingHorizontal: 14,
     paddingVertical: 12,
     borderWidth: 1,
-    borderColor: '#2A2A2A',
+    borderColor: "#2A2A2A",
     gap: 10,
   },
   searchInput: {
