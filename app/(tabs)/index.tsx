@@ -8,6 +8,8 @@ import { useAuth } from '@/hooks/useAuth';
 import { useNotifications } from '@/hooks/use-notifications';
 import { useResponsive } from '@/hooks/use-responsive';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
+import { EYESITE_THEME } from '@/lib/eysite-theme';
 
 const CATEGORIES = [
   { key: 'terreno', label: 'Terrenos', icon: '🌿' },
@@ -36,10 +38,10 @@ export default function HomeScreen() {
 
 
   return (
-    <ScreenContainer edges={['top', 'left', 'right']} containerClassName="bg-[#0D0D0D]">
+    <ScreenContainer edges={['top', 'left', 'right']} containerClassName="bg-[#0B0B0B]">
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 100, backgroundColor: '#0D0D0D' }}
+        contentContainerStyle={{ paddingBottom: 110, backgroundColor: EYESITE_THEME.colors.background }}
       >
         {/* Header with Tagline */}
         <View style={[styles.taglineContainer, { paddingHorizontal: horizontalPadding }]}>
@@ -80,7 +82,11 @@ export default function HomeScreen() {
             cachePolicy="memory-disk"
             transition={150}
           />
-          <View style={styles.heroOverlay} />
+          <View <LinearGradient
+            colors={["transparent", "rgba(11,11,11,0.82)"]}
+            locations={[0.25, 1]}
+            style={styles.heroOverlay}
+          />
           <View style={styles.heroContent}>
             <Text style={styles.heroTagline}>FIND YOUR LAND</Text>
             <Text style={[styles.heroTitle, { fontSize: isLargeDesktop ? 30 : isDesktop ? 26 : 22 }]}>TODO BUEN PROYECTO INICIA CON UN BUEN TERRENO</Text>
@@ -103,8 +109,10 @@ export default function HomeScreen() {
                 onPress={() => handleCategoryPress(cat.key)}
                 style={({ pressed }) => [styles.categoryCard, pressed && { opacity: 0.7 }]}
               >
+                <View style={styles.categoryIconWrap}>
                 <Text style={styles.categoryIcon}>{cat.icon}</Text>
-                <Text style={styles.categoryLabel}>{cat.label}</Text>
+              </View>
+              <Text style={styles.categoryLabel}>{cat.label}</Text>
               </Pressable>
             ))}
           </ScrollView>
@@ -139,15 +147,15 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
   },
   taglineContainer: {
-    backgroundColor: '#1C1C1C',
+    backgroundColor: EYESITE_THEME.colors.surface,
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#C9A84C',
+    borderBottomColor: EYESITE_THEME.colors.gold,
   },
   tagline: {
     fontSize: 13,
-    color: '#C9A84C',
+    color: EYESITE_THEME.colors.gold,
     fontStyle: 'italic',
     textAlign: 'center',
     fontWeight: '500',
@@ -160,7 +168,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
   },
-  unreadBadge: { position: 'absolute', top: -7, right: -8, minWidth: 15, height: 15, paddingHorizontal: 3, borderRadius: 8, backgroundColor: '#C9A84C', alignItems: 'center', justifyContent: 'center' },
+  unreadBadge: { position: 'absolute', top: -7, right: -8, minWidth: 15, height: 15, paddingHorizontal: 3, borderRadius: 8, backgroundColor: EYESITE_THEME.colors.gold, alignItems: 'center', justifyContent: 'center' },
   unreadText: { color: '#0E0E0E', fontSize: 9, fontWeight: '800' },
   headerButtons: {
     flexDirection: 'row',
@@ -198,12 +206,7 @@ const styles = StyleSheet.create({
     height: '100%',
   },
   heroOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    ...StyleSheet.absoluteFillObject,
   },
   heroContent: {
     position: 'absolute',
@@ -223,7 +226,7 @@ const styles = StyleSheet.create({
   heroTitle: {
     fontSize: 22,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: EYESITE_THEME.colors.text,
     marginBottom: 16,
     lineHeight: 28,
   },
@@ -235,7 +238,7 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
   },
   heroButtonText: {
-    color: '#0D0D0D',
+    color: EYESITE_THEME.colors.background,
     fontWeight: '600',
     fontSize: 12,
     letterSpacing: 1,
@@ -267,13 +270,25 @@ const styles = StyleSheet.create({
   },
   categoryCard: {
     alignItems: 'center',
-    marginRight: 16,
-    paddingVertical: 12,
+    width: 92,
+    marginRight: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 8,
+    borderRadius: 14,
+    backgroundColor: EYESITE_THEME.colors.surface,
+    borderWidth: 1,
+    borderColor: EYESITE_THEME.colors.border,
   },
-  categoryIcon: {
-    fontSize: 32,
+  categoryIconWrap: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: EYESITE_THEME.colors.surfaceSoft,
     marginBottom: 8,
   },
+  categoryIcon: { fontSize: 25 },
   categoryLabel: {
     fontSize: 12,
     color: '#FFFFFF',
