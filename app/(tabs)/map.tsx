@@ -371,17 +371,7 @@ function createMapHtml(properties: NearbyProperty[], initialRegion: Region) {
     });
   }
 
-  if (markers.length > 0) {
-    const group = L.featureGroup(markers);
-
-    map.fitBounds(
-      group.getBounds(),
-      {
-        padding: [30, 30],
-        maxZoom: 14,
-      }
-    );
-  }
+  // Keep Yucatán as the initial view. Users choose the area by panning and zooming.
 </script>
 </body>
 </html>
@@ -503,7 +493,7 @@ export default function MapScreen() {
         }),
       }))
       .sort((a: any, b: any) => Number(a.distance) - Number(b.distance));
-  }, [geoProperties, radius, userLocation]);
+  }, [geoProperties, userLocation]);
 
   const mapHtml = useMemo(
     () => createMapHtml(nearby, DEFAULT_REGION),
@@ -542,7 +532,7 @@ export default function MapScreen() {
 
           <Text style={styles.subtitle}>
             {userLocation
-              ? `${nearby.length} oportunidades en la zona visible`
+              ? `${nearby.length} oportunidades en Yucatán`
               : `${geoProperties.length} propiedades con ubicación`}
           </Text>
         </View>
@@ -599,7 +589,7 @@ export default function MapScreen() {
 
       <View style={styles.footer}>
         <Text style={styles.footerTitle}>
-          {userLocation ? "Más cercanas" : "Propiedades ubicadas"}
+          {userLocation ? "Propiedades más cercanas" : "Propiedades ubicadas"}
         </Text>
 
         <Text style={styles.footerNote}>
