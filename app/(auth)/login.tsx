@@ -17,6 +17,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '@/lib/supabase';
 import AuthBackground from '@/components/AuthBackground';
 import { useResponsive } from '@/hooks/use-responsive';
+import { EYESITE_THEME } from '@/lib/eysite-theme';
 
 export default function LoginScreen() {
   const { isDesktop } = useResponsive();
@@ -355,7 +356,7 @@ const styles = StyleSheet.create({
   },
 
   logoMarkText: {
-    color: '#C9A84C',
+    color: EYESITE_THEME.colors.gold,
     fontSize: 25,
     fontWeight: '900',
   },
@@ -420,9 +421,9 @@ const styles = StyleSheet.create({
     height: 54,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#171717',
+    backgroundColor: EYESITE_THEME.colors.surface,
     borderWidth: 1,
-    borderColor: '#303030',
+    borderColor: EYESITE_THEME.colors.border,
     borderRadius: 11,
   },
 
