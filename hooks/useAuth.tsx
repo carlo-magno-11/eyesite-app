@@ -2,6 +2,8 @@ import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import type { Session, User } from '@supabase/supabase-js';
 
+let profileChannelGeneration = 0;
+
 export interface AuthProfile {
   id: string;
   email?: string | null;
@@ -78,8 +80,9 @@ export function useAuth() {
 
       // Register the postgres_changes handler BEFORE subscribe().
       // Supabase rejects adding a callback after a channel has joined.
+      const channelId = ++profileChannelGeneration;
       profileChannel = supabase
-        .channel(`profile-${uid}`)
+        .channel(`profile-${uid}-${channelId}`)
         .on(
           "postgres_changes",
           {
