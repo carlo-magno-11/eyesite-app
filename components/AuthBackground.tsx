@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   Animated,
+  Platform,
   StyleSheet,
   View,
   type ImageSourcePropType,
@@ -53,13 +54,13 @@ export default function AuthBackground({ children, style }: AuthBackgroundProps)
       Animated.timing(fade, {
         toValue: 0,
         duration: 600,
-        useNativeDriver: true,
+        useNativeDriver: Platform.OS !== 'web',
       }).start(() => {
         setIndex((prev) => (prev + 1) % images.length);
         Animated.timing(fade, {
           toValue: 1,
           duration: 600,
-          useNativeDriver: true,
+          useNativeDriver: Platform.OS !== 'web',
         }).start();
       });
     }, 4000);
