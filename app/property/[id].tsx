@@ -22,6 +22,7 @@ export default function PropertyDetailScreen() {
   const { session } = useAuth();
   const { isFav, toggleFav } = useFavorites();
   const [activeImage, setActiveImage] = useState(0);
+  const [imageLoading, setImageLoading] = useState(true);
   const [signedDocuments, setSignedDocuments] = useState<Record<string, string>>({});
 
   useEffect(() => {
@@ -341,6 +342,7 @@ export default function PropertyDetailScreen() {
             onMomentumScrollEnd={(e) => {
               const index = Math.round(e.nativeEvent.contentOffset.x / contentWidth);
               setActiveImage(index);
+              setImageLoading(true);
             }}
             renderItem={({ item }) =>
               item.type === 'video' ? (
@@ -371,13 +373,27 @@ export default function PropertyDetailScreen() {
                   </Pressable>
                 )
               ) : (
-                <Image
-                  source={{ uri: item.url }}
-                  style={{ width: contentWidth, height: 300 }}
-                  contentFit="cover"
-                  cachePolicy="memory-disk"
-                  transition={150}
-                />
+                <View style={{ width: contentWidth, height: 300, backgroundColor: '#151515' }}>
+                  <Image
+                    source={{ uri: item.url }}
+                    placeholder={item.url !== property.portada_url && property.portada_url ? { uri: property.portada_url } : undefined}
+                    style={{ width: contentWidth, height: 300 }}
+                    contentFit="cover"
+                    cachePolicy="memory-disk"
+                    transition={150}
+                    onLoadStart={() => {
+                      if (mediaList[activeImage]?.url === item.url) setImageLoading(true);
+                    }}
+                    onLoad={() => {
+                      if (mediaList[activeImage]?.url === item.url) setImageLoading(false);
+                    }}
+                  />
+                  {mediaList[activeImage]?.url === item.url && imageLoading ? (
+                    <View pointerEvents="none" style={styles.imageLoadingOverlay}>
+                      <ActivityIndicator color="#C9A84C" size="large" />
+                    </View>
+                  ) : null}
+                </View>
               )
             }
           />
@@ -700,6 +716,12 @@ const styles = StyleSheet.create({
     borderColor: '#FFD60A',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  imageLoadingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0,0,0,0.18)',
   },
   carouselPlayIcon: {
     fontSize: 22,
