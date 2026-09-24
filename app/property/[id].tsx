@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { View, Text, Image, ScrollView, Pressable, Linking, StyleSheet, Dimensions, Share, ActivityIndicator, Modal, FlatList, Alert } from 'react-native';
+import { View, Text, Image, ScrollView, Pressable, Linking, StyleSheet, Share, ActivityIndicator, Modal, FlatList, Alert, useWindowDimensions } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { VideoView, useVideoPlayer } from 'expo-video';
 import { formatPrice, formatSurface, getReturnColor } from '@/lib/properties-data';
@@ -10,13 +10,13 @@ import { useProperty } from '@/hooks/use-properties';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
-
 const WHATSAPP = '+52 9813674060';
 const PHONE = '+52 9813674060';
 
 export default function PropertyDetailScreen() {
   const { id, play } = useLocalSearchParams<{ id: string; play?: string }>();
+  const { width: windowWidth } = useWindowDimensions();
+  const contentWidth = Math.min(windowWidth, 1200);
   const { property, loading } = useProperty(id);
   const { session } = useAuth();
   const { isFav, toggleFav } = useFavorites();
@@ -318,7 +318,7 @@ export default function PropertyDetailScreen() {
     <View style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 120 }}>
         {/* Galería V6.3: orden fijo — portada (foto) → video (con poster) → resto. Sin negro. */}
-        <View style={styles.galleryContainer}>
+        <View style={[styles.galleryContainer, { width: contentWidth, alignSelf: 'center' }]}>
           <FlatList
             horizontal
             pagingEnabled
@@ -326,7 +326,7 @@ export default function PropertyDetailScreen() {
             keyExtractor={(item) => item.id}
             showsHorizontalScrollIndicator={false}
             onMomentumScrollEnd={(e) => {
-              const index = Math.round(e.nativeEvent.contentOffset.x / SCREEN_WIDTH);
+              const index = Math.round(e.nativeEvent.contentOffset.x / contentWidth);
               setActiveImage(index);
             }}
             renderItem={({ item }) =>
@@ -336,12 +336,12 @@ export default function PropertyDetailScreen() {
                     player={carouselPlayer}
                     nativeControls
                     contentFit="contain"
-                    style={{ width: SCREEN_WIDTH, height: 300, backgroundColor: '#000' }}
+                    style={{ width: contentWidth, height: 300, backgroundColor: '#000' }}
                   />
                 ) : (
                   <Pressable
                     onPress={handleCarouselPlay}
-                    style={{ width: SCREEN_WIDTH, height: 300, backgroundColor: '#000' }}
+                    style={{ width: contentWidth, height: 300, backgroundColor: '#000' }}
                   >
                     {item.poster ? (
                       <Image
@@ -414,7 +414,7 @@ export default function PropertyDetailScreen() {
         </View>
 
         {/* Contenido */}
-        <View style={styles.content}>
+        <View style={[styles.content, { width: contentWidth, alignSelf: 'center' }]}>
           {/* Tipo */}
           <View style={styles.typeTag}>
             <Text style={styles.typeTagText}>{(property.type || property.tipo || 'PROPIEDAD').toUpperCase()}</Text>
@@ -753,6 +753,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   content: {
+    maxWidth: 1200,
     padding: 20,
   },
   typeTag: {
@@ -1041,7 +1042,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   videoModalContent: {
-    width: SCREEN_WIDTH - 32,
+    width: Math.min(windowWidth - 32, 1000),
     aspectRatio: 16 / 9,
     backgroundColor: '#000',
     borderRadius: 12,
