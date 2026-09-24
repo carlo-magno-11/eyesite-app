@@ -477,6 +477,8 @@ export default function MapScreen() {
   }, []);
 
   useEffect(() => {
+    if (Platform.OS === "web") return;
+
     const timer = setTimeout(() => {
       requestLocation();
     }, 250);
