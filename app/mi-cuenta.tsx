@@ -6,6 +6,7 @@ import { router } from "expo-router";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 import { ScreenContainer } from "@/components/screen-container";
+import { EYESITE_THEME } from "@/lib/eysite-theme";
 
 type ProfileFormProps = {
   user: NonNullable<ReturnType<typeof useAuth>["user"]>;
@@ -316,7 +317,7 @@ const styles = StyleSheet.create({
     marginRight: 13,
   },
   avatarText: {
-    color: "#C9A84C",
+    color: EYESITE_THEME.colors.gold,
     fontSize: 21,
     fontWeight: "900",
   },
@@ -338,14 +339,14 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   subtitle: {
-    color: "#888",
+    color:EYESITE_THEME.colors.muted,
     fontSize: 12,
     marginTop: 3,
   },
   card: {
-    backgroundColor: "#171717",
+    backgroundColor:EYESITE_THEME.colors.surface,
     borderWidth: 1,
-    borderColor: "#2A2A2A",
+    borderColor:EYESITE_THEME.colors.border,
     borderRadius: 14,
     padding: 17,
     marginBottom: 22,
@@ -378,7 +379,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   label: {
-    color: "#999",
+    color:EYESITE_THEME.colors.muted,
     fontSize: 10,
     fontWeight: "800",
     letterSpacing: 0.7,
@@ -398,7 +399,7 @@ const styles = StyleSheet.create({
   },
   input: {
     backgroundColor: "#101010",
-    color: "#FFF",
+    color:EYESITE_THEME.colors.text,
     borderWidth: 1,
     borderColor: "#333",
     borderRadius: 8,
