@@ -154,3 +154,10 @@ También se eliminó del login el uso directo de las propiedades `shadowColor/sh
 Se verificó además que las rutas utilizadas desde Mi cuenta existan en el proyecto: configuración, nosotros, mis propiedades, mis solicitudes y notificaciones.
 
 La validación final de esta segunda pasada continúa pendiente de CI y export Web; no se considera terminada hasta comprobar TypeScript, lint, tests y bundle Web.
+
+
+## 2026-09-24 — Listas de cuenta adaptadas a Web
+
+Se adaptaron Favoritos, Mis terrenos y Mis solicitudes al mismo sistema responsive de propiedades: una columna en teléfono y columnas múltiples en pantallas amplias cuando corresponde. Mis terrenos y Mis solicitudes ahora usan un contenedor máximo centrado y el mismo espaciado lateral que el resto de la aplicación.
+
+Se conservó la lógica Supabase existente; estos cambios son de presentación y distribución, sin ampliar permisos ni modificar RLS.
