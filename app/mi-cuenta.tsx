@@ -338,14 +338,14 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   subtitle: {
-    color: "#888",
+    color:"#9A9A9A",
     fontSize: 12,
     marginTop: 3,
   },
   card: {
-    backgroundColor: "#171717",
+    backgroundColor:"#141414",
     borderWidth: 1,
-    borderColor: "#2A2A2A",
+    borderColor:"#2A2A2A",
     borderRadius: 14,
     padding: 17,
     marginBottom: 22,
@@ -378,7 +378,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   label: {
-    color: "#999",
+    color:"#9A9A9A",
     fontSize: 10,
     fontWeight: "800",
     letterSpacing: 0.7,
@@ -398,7 +398,7 @@ const styles = StyleSheet.create({
   },
   input: {
     backgroundColor: "#101010",
-    color: "#FFF",
+    color:"#F5F5F5",
     borderWidth: 1,
     borderColor: "#333",
     borderRadius: 8,
