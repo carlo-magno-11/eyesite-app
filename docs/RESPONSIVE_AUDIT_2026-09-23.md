@@ -170,3 +170,12 @@ Se detectó que Publicar propiedad todavía importaba `react-native-webview` dir
 Se reutilizó el componente multiplataforma `LeafletMap`: Web usa iframe con `srcDoc`, mientras iOS/Android conservan WebView. Los comandos para colocar la ubicación actual y los eventos de selección de coordenadas ahora viajan por un contrato común de mensajes.
 
 No se modificó el formato de almacenamiento de coordenadas ni la lógica de envío de la solicitud. La validación de TypeScript, lint, tests y export Web queda pendiente después de estos cambios.
+
+
+## 2026-09-24 — Geolocalización y comunicación en Web
+
+La pantalla Publicar propiedad ahora utiliza `navigator.geolocation` cuando corre en Web y conserva `expo-location` en iOS/Android. El mapa de selección ya usa el adaptador Leaflet multiplataforma.
+
+Notificaciones y Configuración también recibieron contenedor responsive centrado para escritorio, conservando la lógica existente de Supabase y preferencias.
+
+La geolocalización Web depende de que el navegador y el sitio permitan ubicación segura (HTTPS/localhost) y de la autorización del usuario.
