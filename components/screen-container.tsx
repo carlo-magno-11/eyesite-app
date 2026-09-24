@@ -50,10 +50,10 @@ export function ScreenContainer({
   <View
     className={cn(
       "flex-1",
-      "bg-[#0B0B0B]",
+      "bg-[#0D0D0D]",
       containerClassName
     )}
-    style={{ backgroundColor: "#0B0B0B", flex: 1 }}
+    style={{ backgroundColor: '#0D0D0D', flex: 1 }}
     {...props}
   >
     <SafeAreaView
