@@ -79,3 +79,18 @@ La corrección está aislada en `fix/profile-fields-sync`, basada en `fix/respon
 - Se conservaron las operaciones existentes de guardar perfil, cerrar sesión y eliminación de cuenta; no se cambiaron permisos ni lógica de Supabase.
 - El nuevo commit correctivo es `e8220cc4e1cea218f6998616c8fe7f0ce9dec2c3`.
 - Pendiente: nueva ejecución de GitHub Actions para confirmar TypeScript/lint del commit correctivo.
+
+
+## 2026-09-24 — CI posterior a la corrección
+- El workflow `EYESITE checks` #186 ejecutado sobre el commit `03d85a72dd8ed644bfa316439785ab0a4c70a5bc` terminó en **SUCCESS**.
+- `native-config`: SUCCESS, incluyendo generación del proyecto iOS y validación del Privacy Manifest.
+- `quality`: SUCCESS, incluyendo TypeScript y lint.
+- Esto valida el estado del commit documentado; todavía no sustituye las pruebas físicas de iPhone/Android ni las pruebas funcionales reales de correo, push y aprobación.
+
+## 2026-09-24 — Flujo de medios de solicitudes revisado
+- La publicación del usuario sube medios primero a `eyesite-staging`, bucket privado.
+- El panel administrativo llama a `promote-submission-media` antes de aprobar una solicitud.
+- La Edge Function valida administrador, propietario del archivo, ruta, MIME y tamaño; después copia el medio a `eyesite-media` y verifica el destino.
+- Solo después de una promoción completa, `admin_approve_property_request` recibe las URLs públicas definitivas.
+- La aplicación normaliza y consume medios desde `eyesite-media`; las referencias a `eyesite-staging`/`eyesite-private` se rechazan deliberadamente.
+- La Edge Function está activa en producción (versión 3). Por tanto, el flujo de medios no debe modificarse a ciegas; la siguiente validación necesaria es una publicación real con foto y otra con video, seguida de aprobación desde el panel y comprobación en iOS/Web.
