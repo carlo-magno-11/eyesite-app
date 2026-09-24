@@ -131,9 +131,13 @@ export default function HomeScreen() {
               <ActivityIndicator color="#C9A84C" size="large" />
             </View>
           ) : (
-            highlightedProperties.map((property) => (
-              <PropertyCard key={property.id} property={property} />
-            ))
+            <View style={isDesktop ? styles.featuredGrid : undefined}>
+              {highlightedProperties.map((property) => (
+                <View key={property.id} style={isDesktop ? styles.featuredItem : undefined}>
+                  <PropertyCard property={property} />
+                </View>
+              ))}
+            </View>
           )}
         </View>
       </ScrollView>
@@ -298,5 +302,13 @@ const styles = StyleSheet.create({
   loadingContainer: {
     paddingVertical: 40,
     alignItems: 'center',
+  },
+  featuredGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+  featuredItem: {
+    width: '32%',
   },
 });
