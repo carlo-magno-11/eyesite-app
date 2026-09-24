@@ -240,3 +240,8 @@ Después de revisar el comportamiento observado en el APK, se añadió una segun
 ## 2026-09-24 — Caché visual de comunicación y portada de Inicio
 
 Se extendió la misma estrategia de imágenes optimizadas a dos superficies que también descargan imágenes remotas: la portada principal de Inicio y las imágenes de Anuncios/Comunicación. Se usa `expo-image` con `memory-disk` para evitar descargas/decodificaciones innecesarias al volver a esas pantallas. No se modificó el contenido ni la lógica de anuncios.
+
+
+## 2026-09-24 — Publicación: paridad visual y previews de medios
+
+Se mejoró la pantalla Publicar sin modificar el flujo de Supabase: el formulario ahora tiene ancho máximo y centrado en escritorio, mantiene padding adaptable y sus previews de fotografías/vídeo usan `expo-image` con caché. El mapa Leaflet continúa siendo compartido entre Web y nativo mediante `LeafletMap`.
