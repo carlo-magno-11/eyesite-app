@@ -143,3 +143,14 @@ Esto evita que propiedades con títulos o ubicaciones de distinta longitud defor
 - prueba de mapa web y geolocalización tras dar permiso al navegador;
 - prueba iOS/Android del mismo mapa;
 - confirmar que no reaparece el error Realtime en el navegador.
+
+
+## 2026-09-24 — Segunda pasada visual Web
+
+Se revisaron las pantallas principales para evitar que el tamaño del navegador cambie de forma desproporcionada la interfaz.
+
+También se eliminó del login el uso directo de las propiedades `shadowColor/shadowOffset/shadowOpacity/shadowRadius`, sustituyéndolas por `boxShadow` para el estilo Web moderno, manteniendo `elevation` para las plataformas nativas.
+
+Se verificó además que las rutas utilizadas desde Mi cuenta existan en el proyecto: configuración, nosotros, mis propiedades, mis solicitudes y notificaciones.
+
+La validación final de esta segunda pasada continúa pendiente de CI y export Web; no se considera terminada hasta comprobar TypeScript, lint, tests y bundle Web.
