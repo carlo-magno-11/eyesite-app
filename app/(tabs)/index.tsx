@@ -84,7 +84,6 @@ export default function HomeScreen() {
           />
           <LinearGradient
             colors={["transparent", "rgba(11,11,11,0.82)"]}
-            locations={[0.25, 1]}
             style={styles.heroOverlay}
           />
           <View style={styles.heroContent}>
