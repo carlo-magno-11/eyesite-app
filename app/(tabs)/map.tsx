@@ -7,6 +7,7 @@ import {
   StyleSheet,
   Text,
   View,
+  useWindowDimensions,
 } from "react-native";
 import { useRouter } from "expo-router";
 import * as Location from "expo-location";
@@ -389,6 +390,7 @@ function createMapHtml(properties: NearbyProperty[], initialRegion: Region) {
 
 export default function MapScreen() {
   const router = useRouter();
+  const { height: windowHeight } = useWindowDimensions();
 
   const { properties, loading } = useProperties();
 
@@ -524,6 +526,11 @@ export default function MapScreen() {
     () => createMapHtml(nearby, region),
     [nearby, region],
   );
+
+  // On web, flex: 1 competes with the header, radius controls and results list,
+  // which can leave the WebView visually short. Give the map an explicit,
+  // responsive viewport height on desktop/web while keeping native behavior unchanged.
+  const webMapHeight = Math.max(520, Math.min(windowHeight * 0.68, 760));
 
   const handleMapMessage = useCallback(
     (rawData: string) => {
@@ -740,7 +747,8 @@ const styles = StyleSheet.create({
   },
 
   mapWrap: {
-    flex: 1,
+    flex: Platform.OS === "web" ? 0 : 1,
+    height: Platform.OS === "web" ? webMapHeight : undefined,
     minHeight: 360,
     marginHorizontal: 12,
     borderRadius: 16,
