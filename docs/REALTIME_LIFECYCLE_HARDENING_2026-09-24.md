@@ -124,3 +124,26 @@ Se corrigieron las tres referencias a `.jpeg`. Esto evita depender de un recurso
 - No se agregaron dependencias.
 - No se modificó `main`.
 - El flujo visual de autenticación, validaciones y Supabase permanece igual.
+
+
+## 2026-09-24 — consolidación del ciclo de autenticación Realtime
+
+La revisión de rutas encontró un problema adicional importante: `useAuth()` se utiliza desde varias pantallas y layouts simultáneamente. Aunque cada instancia ya tenía un nombre de canal diferente, eso podía crear varios listeners de Supabase para la misma sesión y hacer más frágil el arranque/remontaje.
+
+Se corrigió `hooks/useAuth.tsx` para que:
+- exista un solo listener global de `supabase.auth.onAuthStateChange()` por runtime;
+- exista un solo canal Realtime de `profiles` para el usuario activo;
+- todas las pantallas consuman el mismo estado de sesión/perfil;
+- el canal se configure completamente antes de `.subscribe()`;
+- el cambio de usuario cierre el canal anterior;
+- no se destruya el runtime compartido cuando una pantalla individual se desmonta.
+
+También se aislaron con generaciones monotónicas los canales de:
+- `hooks/use-properties.ts`;
+- `hooks/use-announcements.ts`.
+
+Esto evita reutilizar nombres de topics entre montajes simultáneos o rápidos.
+
+No se modificó la base de datos, RLS, autenticación de Supabase ni la navegación intencional de la barra inferior.
+
+Commit principal de consolidación: `e0b6c541915502c726db40495ac7e6b80726331a`.
