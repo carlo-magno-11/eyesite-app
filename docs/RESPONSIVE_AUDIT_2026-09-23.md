@@ -161,3 +161,12 @@ La validación final de esta segunda pasada continúa pendiente de CI y export W
 Se adaptaron Favoritos, Mis terrenos y Mis solicitudes al mismo sistema responsive de propiedades: una columna en teléfono y columnas múltiples en pantallas amplias cuando corresponde. Mis terrenos y Mis solicitudes ahora usan un contenedor máximo centrado y el mismo espaciado lateral que el resto de la aplicación.
 
 Se conservó la lógica Supabase existente; estos cambios son de presentación y distribución, sin ampliar permisos ni modificar RLS.
+
+
+## 2026-09-24 — Mapa de ubicación al publicar: paridad Web
+
+Se detectó que Publicar propiedad todavía importaba `react-native-webview` directamente. En Web eso podía dejar el selector geográfico sin un adaptador equivalente.
+
+Se reutilizó el componente multiplataforma `LeafletMap`: Web usa iframe con `srcDoc`, mientras iOS/Android conservan WebView. Los comandos para colocar la ubicación actual y los eventos de selección de coordenadas ahora viajan por un contrato común de mensajes.
+
+No se modificó el formato de almacenamiento de coordenadas ni la lógica de envío de la solicitud. La validación de TypeScript, lint, tests y export Web queda pendiente después de estos cambios.
