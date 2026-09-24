@@ -6,6 +6,7 @@ import { PROPERTY_TYPES_OPTIONS } from '@/lib/properties-data';
 import { PropertyCard } from '@/components/property-card';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { useProperties } from '@/hooks/use-properties';
+import { useResponsive } from '@/hooks/use-responsive';
 
 export default function PropertiesScreen() {
   const params = useLocalSearchParams<{ filter?: string }>();
@@ -13,6 +14,7 @@ export default function PropertiesScreen() {
   const initialFilter = typeof params.filter === 'string' && params.filter ? params.filter : 'all';
   const [activeFilter, setActiveFilter] = useState<string>(initialFilter);
   const { properties, loading, error, refetch: fetchProperties } = useProperties();
+  const { propertyColumns, horizontalPadding, contentMaxWidth, isDesktop } = useResponsive();
 
   const filtered = useMemo(() => {
     return properties.filter((p) => {
@@ -29,13 +31,16 @@ export default function PropertiesScreen() {
   return (
     <ScreenContainer edges={['top', 'left', 'right']} containerClassName="bg-background">
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.content, { paddingHorizontal: horizontalPadding, maxWidth: contentMaxWidth }, isDesktop && styles.contentCentered]}>
+        <View style={styles.header}>
         <Text style={styles.headerTitle}>OPORTUNIDADES</Text>
         <Text style={styles.headerCount}>{filtered.length} propiedades</Text>
       </View>
 
+        </View>
+
       {/* Barra de búsqueda */}
-      <View style={styles.searchContainer}>
+      <View style={[styles.searchContainer, { paddingHorizontal: horizontalPadding, maxWidth: contentMaxWidth }, isDesktop && styles.contentCentered]}>
         <View style={styles.searchBar}>
           <IconSymbol name="magnifyingglass" size={16} color="#9A9A9A" />
           <TextInput
@@ -55,7 +60,7 @@ export default function PropertiesScreen() {
       </View>
 
       {/* Filtros */}
-      <View style={styles.filtersWrapper}>
+      <View style={[styles.filtersWrapper, { maxWidth: contentMaxWidth }, isDesktop && styles.contentCentered]}>
         <FlatList
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -96,9 +101,12 @@ export default function PropertiesScreen() {
           keyExtractor={(item) => item.id}
           refreshing={loading}
           onRefresh={fetchProperties}
-          contentContainerStyle={styles.listContainer}
+          key={`properties-grid-${propertyColumns}`}
+          numColumns={propertyColumns}
+          columnWrapperStyle={propertyColumns > 1 ? styles.columnWrapper : undefined}
+          contentContainerStyle={[styles.listContainer, { paddingHorizontal: horizontalPadding, maxWidth: contentMaxWidth }, isDesktop && styles.contentCentered]}
           showsVerticalScrollIndicator={false}
-          renderItem={({ item }) => <PropertyCard property={item} />}
+          renderItem={({ item }) => <View style={propertyColumns > 1 ? styles.gridItem : styles.singleItem}><PropertyCard property={item} /></View>}
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
               <Text style={styles.emptyIcon}>🔍</Text>
@@ -117,6 +125,13 @@ export default function PropertiesScreen() {
 }
 
 const styles = StyleSheet.create({
+  content: {
+    width: '100%',
+    alignSelf: 'center',
+  },
+  contentCentered: {
+    alignSelf: 'center',
+  },
   header: {
     paddingHorizontal: 20,
     paddingTop: 16,
@@ -184,8 +199,20 @@ const styles = StyleSheet.create({
     color: '#0D0D0D',
   },
   listContainer: {
-    paddingHorizontal: 20,
+    width: '100%',
+    alignSelf: 'center',
     paddingBottom: 100,
+  },
+  columnWrapper: {
+    justifyContent: 'space-between',
+    gap: 16,
+  },
+  gridItem: {
+    flex: 1,
+    minWidth: 0,
+  },
+  singleItem: {
+    width: '100%',
   },
   loadingContainer: {
     flex: 1,
