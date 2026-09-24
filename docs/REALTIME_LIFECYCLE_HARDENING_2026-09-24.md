@@ -96,10 +96,10 @@ Esta etapa se realizó sobre `fix/realtime-lifecycle-android-ios` sin tocar `mai
 - Se mantuvo el objetivo sin Google Cloud: mapa Leaflet/OpenStreetMap y ubicación mediante APIs de la plataforma.
 
 ### Primera etapa visual aplicada
-- Se creó `lib/eysite-theme.ts` con tokens compartidos para fondo, superficies, bordes, dorados y textos.
-- Se refinó Inicio: jerarquía de encabezado, botones de cuenta/notificaciones, hero con degradado, categorías en tarjetas y cuadrícula de oportunidades para escritorio.
+- Se probó una capa de tokens compartidos, pero se retiró de esta rama para mantener el tipado Expo/TypeScript estable; la paleta visual se mantiene mediante estilos locales deliberados.
+- Se refinó Inicio: jerarquía de encabezado, botones de cuenta/notificaciones, hero con overlay oscuro, categorías en tarjetas y ajustes de espaciado; se evitó añadir dependencias visuales nuevas.
 - Se refinó Oportunidades y PropertyCard con superficies y bordes de mayor profundidad visual, manteniendo la identidad negro/dorado.
-- Se refinó Mapa: vista inicial amplia de Yucatán, zoom inicial 8 y controles con la misma gama visual.
+- Se refinó Mapa: vista inicial amplia de Yucatán, zoom inicial 8 y controles con la misma gama visual, manteniendo Leaflet/OpenStreetMap.
 - Se refinó Comunicación/Notificaciones, Mi cuenta, Mis terrenos, Mis solicitudes y Configuración con la misma capa visual.
 - Se refinó Login/Registro conservando validaciones, flujo de Supabase y aceptación legal.
 
@@ -108,3 +108,7 @@ No se modificó lógica de autorización, RPCs administrativos, esquema Supabase
 
 ### Pendiente antes de APK
 Esta etapa visual todavía requiere validación local en Web y Android, seguida de iOS/Expo según disponibilidad. El APK no debe regenerarse hasta cerrar la validación de Realtime y navegación indicada en este documento.
+
+### Validación CI de la capa visual
+- En el último ciclo de GitHub Actions, TypeScript, lint, tests y la configuración nativa iOS avanzaron correctamente; el Web export estaba ejecutándose al cierre de esta revisión.
+- Se detectó y corrigió una regresión de tipado causada por reemplazos automáticos de tokens de color (por ejemplo, sufijos `Soft`/`Elevated` pegados a literales). Se eliminó esa estrategia para no introducir cambios ciegos.
