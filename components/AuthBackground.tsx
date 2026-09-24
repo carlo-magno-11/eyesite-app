@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   Animated,
-  Platform,
   StyleSheet,
   View,
   type ImageSourcePropType,
@@ -10,7 +9,7 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 
-const AUTH_BG = '#0B0B0B';
+const AUTH_BG = '#0E0E0E';
 
 const REMOTE_IMAGES: ImageSourcePropType[] = [
   { uri: 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=1080' },
@@ -54,13 +53,13 @@ export default function AuthBackground({ children, style }: AuthBackgroundProps)
       Animated.timing(fade, {
         toValue: 0,
         duration: 600,
-        useNativeDriver: Platform.OS !== 'web',
+        useNativeDriver: true,
       }).start(() => {
         setIndex((prev) => (prev + 1) % images.length);
         Animated.timing(fade, {
           toValue: 1,
           duration: 600,
-          useNativeDriver: Platform.OS !== 'web',
+          useNativeDriver: true,
         }).start();
       });
     }, 4000);
@@ -95,7 +94,7 @@ export default function AuthBackground({ children, style }: AuthBackgroundProps)
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#0B0B0B', overflow: 'hidden' },
+  root: { flex: 1, backgroundColor: '#0E0E0E', overflow: 'hidden' },
   image: { width: '100%', height: '100%' },
   content: {
     position: 'absolute',
