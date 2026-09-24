@@ -188,3 +188,10 @@ Se detectó una dependencia nativa en `publish.tsx`: `expo-video-thumbnails` no 
 También se adaptó la comprobación del tamaño del vídeo: Web obtiene el tamaño mediante `Blob`; móvil conserva `FileSystem.getInfoAsync`. La subida continúa usando ArrayBuffer hacia el bucket privado de staging y la solicitud sigue entrando en `solicitudes_propiedades` con estado pendiente.
 
 No se cambió el límite de negocio de 50 MB ni se expuso el bucket de staging.
+
+
+## 2026-09-24 — Corrección de validación del flujo de publicación
+
+La validación CI de la integración Web detectó un error de sintaxis en `publish.tsx` dentro de `pickVideo`: faltaba la llave de apertura del cuerpo de la función. Se corrigió únicamente esa estructura, sin alterar la selección, validación de tamaño, generación de miniatura ni subida del vídeo.
+
+La ejecución que detectó el problema confirmó además que la generación del proyecto iOS y la validación del Privacy Manifest siguen pasando; queda volver a ejecutar la calidad completa para confirmar TypeScript y lint después de la corrección.
