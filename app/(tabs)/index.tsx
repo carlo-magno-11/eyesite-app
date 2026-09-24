@@ -8,7 +8,6 @@ import { useAuth } from '@/hooks/useAuth';
 import { useNotifications } from '@/hooks/use-notifications';
 import { useResponsive } from '@/hooks/use-responsive';
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import { EYESITE_THEME } from '@/lib/eysite-theme';
 
 const CATEGORIES = [
@@ -82,10 +81,7 @@ export default function HomeScreen() {
             cachePolicy="memory-disk"
             transition={150}
           />
-          <LinearGradient
-            colors={["transparent", "rgba(11,11,11,0.82)"]}
-            style={styles.heroOverlay}
-          />
+          <View style={styles.heroOverlay} />
           <View style={styles.heroContent}>
             <Text style={styles.heroTagline}>FIND YOUR LAND</Text>
             <Text style={[styles.heroTitle, { fontSize: isLargeDesktop ? 30 : isDesktop ? 26 : 22 }]}>TODO BUEN PROYECTO INICIA CON UN BUEN TERRENO</Text>
@@ -210,6 +206,7 @@ const styles = StyleSheet.create({
   },
   heroOverlay: {
     ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(11,11,11,0.42)',
   },
   heroContent: {
     position: 'absolute',
