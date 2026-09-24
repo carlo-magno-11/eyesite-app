@@ -1,7 +1,6 @@
 import {
   ActivityIndicator,
   FlatList,
-  Image,
   Linking,
   Pressable,
   ScrollView,
@@ -9,6 +8,7 @@ import {
   Text,
   View,
 } from "react-native";
+import { Image } from "expo-image";
 import { ScreenContainer } from "@/components/screen-container";
 import { useAuth } from "@/hooks/useAuth";
 import { registerPushToken, useNotifications } from "@/hooks/use-notifications";
@@ -17,6 +17,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useEffect, useMemo, useState } from "react";
 import { router, useLocalSearchParams } from "expo-router";
 import { supabase } from "@/lib/supabase";
+import { useResponsive } from "@/hooks/use-responsive";
 
 type Tab = "notifications" | "announcements";
 type Filter = "all" | "unread";
@@ -28,6 +29,7 @@ export default function NotificationsScreen() {
   const params = useLocalSearchParams<{ announcement_id?: string }>();
   const [tab, setTab] = useState<Tab>(() => params.announcement_id ? "announcements" : "notifications");
   const [filter, setFilter] = useState<Filter>("all");
+  const { horizontalPadding, contentMaxWidth } = useResponsive();
 
   useEffect(() => {
     if (user?.id) void registerPushToken(user.id);
@@ -76,7 +78,7 @@ export default function NotificationsScreen() {
 
   return (
     <ScreenContainer edges={["top", "left", "right"]} containerClassName="bg-background">
-      <View style={s.h}>
+      <View style={[s.h, { paddingHorizontal: horizontalPadding, maxWidth: contentMaxWidth, width: "100%", alignSelf: "center" }]}>
         <View>
           <Text style={s.t}>COMUNICACIÓN</Text>
           <Text style={s.sub}>{tab === "notifications" ? `${unread} sin leer` : `${announcements.length} anuncios activos`}</Text>
@@ -86,7 +88,7 @@ export default function NotificationsScreen() {
         </Pressable>
       </View>
 
-      <View style={s.tabs}>
+      <View style={[s.tabs, { paddingHorizontal: horizontalPadding, maxWidth: contentMaxWidth, width: "100%", alignSelf: "center" }]}>
         <Pressable onPress={() => setTab("notifications")} style={[s.tab, tab === "notifications" && s.tabActive]}>
           <Text style={[s.tabText, tab === "notifications" && s.tabTextActive]}>Notificaciones</Text>
         </Pressable>
@@ -97,7 +99,7 @@ export default function NotificationsScreen() {
 
       {tab === "notifications" ? (
         <>
-          <View style={s.filters}>
+          <View style={[s.filters, { paddingHorizontal: horizontalPadding, maxWidth: contentMaxWidth, width: "100%", alignSelf: "center" }]}>
             <Pressable onPress={() => setFilter("all")} style={[s.filter, filter === "all" && s.filterActive]}>
               <Text style={[s.filterText, filter === "all" && s.filterTextActive]}>Todas</Text>
             </Pressable>
@@ -126,7 +128,7 @@ export default function NotificationsScreen() {
             <FlatList
               data={visibleNotifications}
               keyExtractor={(item) => item.id}
-              contentContainerStyle={s.l}
+              contentContainerStyle={[s.l, { paddingHorizontal: horizontalPadding, maxWidth: contentMaxWidth, width: "100%", alignSelf: "center" }]}
               ListEmptyComponent={
                 <View style={s.e}>
                   <Text style={s.i}>🔔</Text>
@@ -177,11 +179,11 @@ export default function NotificationsScreen() {
                 <Ionicons name="megaphone-outline" size={18} color="#C9A84C" />
               </View>
               <Text style={s.ty}>{String(item.tipo || "informacion").toUpperCase()}</Text>
-              {item.imagen_url ? <Image source={{ uri: item.imagen_url }} style={s.heroImage} /> : null}
+              {item.imagen_url ? <Image source={{ uri: String(item.imagen_url) }} style={s.heroImage} contentFit="cover" cachePolicy="memory-disk" transition={150} /> : null}
               {Array.isArray(item.imagenes) && item.imagenes.length > 1 ? (
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.gallery}>
                   {item.imagenes.map((uri, index) => (
-                    <Image key={`${item.id}-${index}`} source={{ uri }} style={s.galleryImage} />
+                    <Image key={`${item.id}-${index}`} source={{ uri: String(uri) }} style={s.galleryImage} contentFit="cover" cachePolicy="memory-disk" transition={150} />
                   ))}
                 </ScrollView>
               ) : null}

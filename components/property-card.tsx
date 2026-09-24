@@ -155,16 +155,21 @@ const hasVideo =
 
 const styles = StyleSheet.create({
   card: {
+    width: '100%',
     backgroundColor: '#1A1A1A',
-    borderRadius: 12,
+    borderRadius: 14,
     overflow: 'hidden',
     borderWidth: 1,
     borderColor: '#2A2A2A',
     marginBottom: 16,
+    minHeight: 392,
   },
   imageContainer: {
     position: 'relative',
-    height: 200,
+    width: '100%',
+    aspectRatio: 16 / 10,
+    minHeight: 180,
+    maxHeight: 250,
   },
   image: {
     width: '100%',
@@ -226,20 +231,24 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   content: {
-    padding: 14,
+    padding: 16,
+    minHeight: 184,
+    justifyContent: 'flex-start',
   },
   title: {
     color: '#F5F5F5',
     fontSize: 15,
-    fontWeight: '600',
-    marginBottom: 6,
+    fontWeight: '700',
+    marginBottom: 7,
     lineHeight: 20,
+    minHeight: 40,
   },
   locationRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
     marginBottom: 12,
+    minHeight: 18,
   },
   location: {
     color: '#9A9A9A',
@@ -249,6 +258,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-end',
+    minHeight: 48,
     marginBottom: 10,
   },
   priceLabel: {

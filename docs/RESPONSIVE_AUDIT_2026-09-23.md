@@ -1,0 +1,275 @@
+# EYESITE — Auditoría responsive web
+
+Fecha: 2026-09-23
+Rama: `fix/responsive-layout-web`
+Base: `release/eyesite-definitive`
+
+## Objetivo
+
+Adaptar la interfaz web de EYESITE a teléfono, tablet, laptop y monitor grande sin cambiar la lógica de Supabase, autenticación, propiedades, favoritos, notificaciones, mapa ni seguridad.
+
+## Cambios realizados
+
+### 1. Capa responsive compartida
+Se creó `hooks/use-responsive.ts` usando `useWindowDimensions()` para que el navegador reaccione al redimensionamiento sin depender de un ancho calculado una sola vez.
+
+Breakpoints utilizados:
+- < 600 px: teléfono / una columna.
+- 600–1023 px: tablet / dos columnas.
+- 1024–1439 px: escritorio / tres columnas.
+- >= 1440 px: escritorio grande / cuatro columnas.
+
+También centraliza el padding horizontal y el ancho máximo del contenido.
+
+### 2. Oportunidades
+`app/(tabs)/properties.tsx` ahora cambia la lista de propiedades a una cuadrícula responsive y mantiene una sola columna en teléfonos. En escritorio el contenido queda centrado para evitar tarjetas excesivamente anchas.
+
+### 3. Inicio
+`app/(tabs)/index.tsx` ahora limita el ancho del contenido en pantallas grandes y ajusta la altura del hero. El texto principal también escala moderadamente en escritorio.
+
+### 4. Detalle de propiedad
+`app/property/[id].tsx` dejó de usar `Dimensions.get('window')` estático. Usa `useWindowDimensions()`, limita el contenido multimedia a 1200 px y el modal de video a un ancho máximo de 1000 px. Esto permite que el detalle responda al cambio de tamaño del navegador.
+
+### 5. Autenticación
+Login y registro centran el formulario y aplican un ancho máximo en escritorio, manteniendo el comportamiento flexible de móvil y teclado.
+
+## Lo que deliberadamente NO se modificó
+
+- Supabase y consultas de datos.
+- Auth / recuperación de contraseña.
+- RPCs administrativos y límites de seguridad.
+- Notificaciones y push.
+- Mapa y ruta sin Google Cloud.
+- Flujo de aprobación de propiedades.
+- Lógica de favoritos.
+- Modelo de datos.
+- Navegación funcional.
+
+## Validación pendiente
+
+La validación final debe incluir:
+1. TypeScript/lint del branch.
+2. GitHub Actions de los commits nuevos.
+3. Export web.
+4. Prueba manual en Safari/Chrome con 375, 430, 768, 1024, 1280 y 1440+ px.
+5. Prueba iOS física después de confirmar que el cambio responsive no introdujo errores nativos.
+
+Esta rama no debe fusionarse a `main` hasta cerrar esas comprobaciones.
+
+
+## 2026-09-24 — revisión funcional posterior
+
+Durante la revisión de las pantallas de cuenta se detectó una pérdida de datos de UI: `mi-cuenta.tsx` consume `ciudad` y `presupuesto` desde `useAuth`, pero el hook no los seleccionaba desde `profiles`. La base de datos sí contiene ambas columnas como `text`. Se corrigió `hooks/useAuth.tsx` para incluir `ciudad` y `presupuesto` en la consulta del perfil. No se modificó la lógica de autorización, estado de aprobación ni los permisos de usuario.
+
+La corrección está aislada en `fix/profile-fields-sync`, basada en `fix/responsive-layout-web`; `main` permanece sin cambios. Debe pasar TypeScript/CI antes de integrarse.
+
+
+## 2026-09-24 — Sincronización de aprobación de cuenta
+- Se detectó que `useAuth` solo cargaba `profiles` durante `getSession` y cambios de autenticación.
+- La aprobación administrativa puede modificar `profiles.estado` mientras el usuario permanece dentro de la app; sin una nueva sesión, el cliente podía quedarse en `/pending` hasta recargar o cambiar de estado de autenticación.
+- Se añadió una suscripción Realtime específica al registro de `profiles` del usuario autenticado. Cuando cambia el perfil, se vuelve a cargar el perfil y `AuthGate` puede reaccionar al nuevo `estado`.
+- También se tiparon `ciudad` y `presupuesto` en `AuthProfile`, manteniendo la consulta existente.
+- No se cambió la lógica de aprobación administrativa ni se concedió ningún permiso adicional al cliente.
+- Pendiente de validación: CI del commit actual y prueba real de aprobación desde el panel mientras un usuario permanece en la pantalla de espera.
+
+## 2026-09-24 — Corrección de CI y frontend de Mi Cuenta
+- El workflow de GitHub para el commit anterior del branch falló en la etapa TypeScript.
+- La inspección del archivo `app/mi-cuenta.tsx` encontró un defecto de sintaxis real: había secuencias literales `\\n` dentro del objeto de `StyleSheet.create`, además de imports/variables que podían quedar sin uso.
+- Se reemplazó la pantalla por una versión limpia y responsive que sí utiliza `useResponsive` e iconos de Ionicons.
+- Se conservaron las operaciones existentes de guardar perfil, cerrar sesión y eliminación de cuenta; no se cambiaron permisos ni lógica de Supabase.
+- El nuevo commit correctivo es `e8220cc4e1cea218f6998616c8fe7f0ce9dec2c3`.
+- Pendiente: nueva ejecución de GitHub Actions para confirmar TypeScript/lint del commit correctivo.
+
+
+## 2026-09-24 — CI posterior a la corrección
+- El workflow `EYESITE checks` #186 ejecutado sobre el commit `03d85a72dd8ed644bfa316439785ab0a4c70a5bc` terminó en **SUCCESS**.
+- `native-config`: SUCCESS, incluyendo generación del proyecto iOS y validación del Privacy Manifest.
+- `quality`: SUCCESS, incluyendo TypeScript y lint.
+- Esto valida el estado del commit documentado; todavía no sustituye las pruebas físicas de iPhone/Android ni las pruebas funcionales reales de correo, push y aprobación.
+
+## 2026-09-24 — Flujo de medios de solicitudes revisado
+- La publicación del usuario sube medios primero a `eyesite-staging`, bucket privado.
+- El panel administrativo llama a `promote-submission-media` antes de aprobar una solicitud.
+- La Edge Function valida administrador, propietario del archivo, ruta, MIME y tamaño; después copia el medio a `eyesite-media` y verifica el destino.
+- Solo después de una promoción completa, `admin_approve_property_request` recibe las URLs públicas definitivas.
+- La aplicación normaliza y consume medios desde `eyesite-media`; las referencias a `eyesite-staging`/`eyesite-private` se rechazan deliberadamente.
+- La Edge Function está activa en producción (versión 3). Por tanto, el flujo de medios no debe modificarse a ciegas; la siguiente validación necesaria es una publicación real con foto y otra con video, seguida de aprobación desde el panel y comprobación en iOS/Web.
+
+
+## 2026-09-24 — Paridad web y corrección de Realtime
+
+### Error observado en navegador
+Se detectó:
+`cannot add \`postgres_changes\` callbacks ... after \`subscribe()\``.
+
+La causa estaba en `useAuth`: durante el arranque, `getSession()` y `onAuthStateChange()` podían entrar casi al mismo tiempo y crear/reemplazar el mismo canal de perfil mientras la suscripción Realtime todavía estaba en proceso. Supabase requiere registrar los callbacks `postgres_changes` antes de `subscribe()`; añadirlos después de que el canal haya entrado genera el error.
+
+Se corrigió el ciclo de vida del canal:
+- un solo canal por UID;
+- se evita crear una segunda suscripción si ya existe;
+- el callback se registra antes de `subscribe()`;
+- ante `CHANNEL_ERROR`, `TIMED_OUT` o `CLOSED` se conserva la carga REST del perfil como respaldo;
+- se mantiene Realtime para detectar aprobación/cambios de perfil sin recargar.
+
+### Paridad de funciones en Web
+Se detectó que el mapa estaba deliberadamente deshabilitado en Web porque `react-native-webview` es un componente para vistas nativas. En lugar de quitar la función, se creó un adaptador multiplataforma:
+- `components/leaflet-map.tsx`: WebView para iOS/Android.
+- `components/leaflet-map.web.tsx`: iframe con `srcDoc` para navegador.
+- El mismo HTML Leaflet/OpenStreetMap y la misma navegación de propiedades se reutilizan.
+- El navegador usa `navigator.geolocation` al pulsar ubicación; iOS/Android continúan usando `expo-location`.
+- Se conserva la ruta sin Google Cloud.
+
+Expo documenta que las diferencias de plataforma deben resolverse mediante módulos específicos y que WebView es una API nativa; también permite componentes web específicos.
+
+### Notificaciones
+Se eliminó el registro del listener de respuesta de `expo-notifications` en Web para quitar el warning de API nativa. El centro de notificaciones in-app continúa funcionando mediante Supabase Realtime en Web. El push remoto seguirá siendo una capacidad de dispositivo; no se finge soporte web donde la API instalada no lo proporciona.
+
+### Tarjetas de propiedades
+Se estabilizó la tarjeta:
+- ancho 100% del elemento de cuadrícula;
+- imagen con relación 16:10 en lugar de una altura fija que se veía diferente según columna;
+- contenido con altura mínima;
+- título con espacio reservado para dos líneas;
+- fila de precio/superficie con altura estable.
+
+Esto evita que propiedades con títulos o ubicaciones de distinta longitud deformen la cuadrícula. La cuadrícula existente mantiene 1/2/3/4 columnas según ancho de pantalla.
+
+### Validación pendiente de esta rama
+- `pnpm run check`
+- `pnpm run lint`
+- `pnpm test`
+- `pnpm run build:web`
+- prueba visual Safari/Chrome en 375/430/768/1024/1280/1440+ px;
+- prueba de mapa web y geolocalización tras dar permiso al navegador;
+- prueba iOS/Android del mismo mapa;
+- confirmar que no reaparece el error Realtime en el navegador.
+
+
+## 2026-09-24 — Segunda pasada visual Web
+
+Se revisaron las pantallas principales para evitar que el tamaño del navegador cambie de forma desproporcionada la interfaz.
+
+También se eliminó del login el uso directo de las propiedades `shadowColor/shadowOffset/shadowOpacity/shadowRadius`, sustituyéndolas por `boxShadow` para el estilo Web moderno, manteniendo `elevation` para las plataformas nativas.
+
+Se verificó además que las rutas utilizadas desde Mi cuenta existan en el proyecto: configuración, nosotros, mis propiedades, mis solicitudes y notificaciones.
+
+La validación final de esta segunda pasada continúa pendiente de CI y export Web; no se considera terminada hasta comprobar TypeScript, lint, tests y bundle Web.
+
+
+## 2026-09-24 — Listas de cuenta adaptadas a Web
+
+Se adaptaron Favoritos, Mis terrenos y Mis solicitudes al mismo sistema responsive de propiedades: una columna en teléfono y columnas múltiples en pantallas amplias cuando corresponde. Mis terrenos y Mis solicitudes ahora usan un contenedor máximo centrado y el mismo espaciado lateral que el resto de la aplicación.
+
+Se conservó la lógica Supabase existente; estos cambios son de presentación y distribución, sin ampliar permisos ni modificar RLS.
+
+
+## 2026-09-24 — Mapa de ubicación al publicar: paridad Web
+
+Se detectó que Publicar propiedad todavía importaba `react-native-webview` directamente. En Web eso podía dejar el selector geográfico sin un adaptador equivalente.
+
+Se reutilizó el componente multiplataforma `LeafletMap`: Web usa iframe con `srcDoc`, mientras iOS/Android conservan WebView. Los comandos para colocar la ubicación actual y los eventos de selección de coordenadas ahora viajan por un contrato común de mensajes.
+
+No se modificó el formato de almacenamiento de coordenadas ni la lógica de envío de la solicitud. La validación de TypeScript, lint, tests y export Web queda pendiente después de estos cambios.
+
+
+## 2026-09-24 — Geolocalización y comunicación en Web
+
+La pantalla Publicar propiedad ahora utiliza `navigator.geolocation` cuando corre en Web y conserva `expo-location` en iOS/Android. El mapa de selección ya usa el adaptador Leaflet multiplataforma.
+
+Notificaciones y Configuración también recibieron contenedor responsive centrado para escritorio, conservando la lógica existente de Supabase y preferencias.
+
+La geolocalización Web depende de que el navegador y el sitio permitan ubicación segura (HTTPS/localhost) y de la autorización del usuario.
+
+
+## 2026-09-24 — Publicación Web: vídeo real, no fallback
+
+Se detectó una dependencia nativa en `publish.tsx`: `expo-video-thumbnails` no debe asumirse disponible en navegador. Se añadió una ruta Web real para generar la miniatura mediante `HTMLVideoElement + canvas` y mantener `expo-video-thumbnails` en iOS/Android.
+
+También se adaptó la comprobación del tamaño del vídeo: Web obtiene el tamaño mediante `Blob`; móvil conserva `FileSystem.getInfoAsync`. La subida continúa usando ArrayBuffer hacia el bucket privado de staging y la solicitud sigue entrando en `solicitudes_propiedades` con estado pendiente.
+
+No se cambió el límite de negocio de 50 MB ni se expuso el bucket de staging.
+
+
+## 2026-09-24 — Corrección de validación del flujo de publicación
+
+La validación CI de la integración Web detectó un error de sintaxis en `publish.tsx` dentro de `pickVideo`: faltaba la llave de apertura del cuerpo de la función. Se corrigió únicamente esa estructura, sin alterar la selección, validación de tamaño, generación de miniatura ni subida del vídeo.
+
+La ejecución que detectó el problema confirmó además que la generación del proyecto iOS y la validación del Privacy Manifest siguen pasando; queda volver a ejecutar la calidad completa para confirmar TypeScript y lint después de la corrección.
+
+
+## 2026-09-24 — Revisión del APK Android y carga de imágenes en detalle
+
+Se revisó la captura del APK Android anterior a la última ronda de paridad Web. La captura muestra que el estado sin sesión dejaba visibles únicamente Inicio y Mapa en la barra inferior; Propiedades y Nosotros existían como rutas pero estaban ocultas con `href: null`. Se ajustó la navegación primaria para que Propiedades y Nosotros sean accesibles también sin sesión. Publicar y Favoritos siguen condicionados a sesión para no convertir acciones privadas en accesos públicos.
+
+También se corrigió una ruta de rendimiento en el detalle de propiedad:
+- `useProperty(id)` ya no descarga todo el catálogo para encontrar una sola propiedad; consulta únicamente el registro activo solicitado desde `propiedades_publicas`.
+- El detalle usa `expo-image` con caché memoria/disco y transición corta.
+- La galería precarga sus imágenes mediante `Image.prefetch(..., 'memory-disk')` para reducir el periodo en negro al entrar al terreno.
+- La imagen de la galería conserva el mismo orden portada → video → galería.
+
+Esto no modifica RLS, buckets ni el límite de seguridad de leer propiedades únicamente desde `propiedades_publicas`.
+
+## 2026-09-24 — Corrección CI de Leaflet Web y validación de publicación
+
+El workflow detectó un carácter de escape literal en `components/leaflet-map.web.tsx` que rompía TypeScript. Se corrigió la importación y también se limpió la lectura de tamaño de video en `publish.tsx` para consultar `FileSystem.getInfoAsync` una sola vez y estrechar correctamente el tipo. Se mantiene pendiente la nueva ejecución de CI después de estos commits.
+
+
+## 2026-09-24 — Validación final de esta ronda
+
+El workflow EYESITE checks #216 terminó correctamente después de las correcciones:
+- TypeScript: SUCCESS.
+- Lint: SUCCESS.
+- Generación del proyecto iOS: SUCCESS.
+- Validación del Privacy Manifest: SUCCESS.
+
+El fallo anterior de lint provenía de las listas de cuenta adaptadas a Web (`my-properties` y `my-requests`) por actualización síncrona de estado dentro de un efecto; se corrigió sin cambiar las consultas ni su modelo de datos. También se consolidó la importación de `Platform` en publicación.
+
+Pendiente para el cierre del ciclo: ejecutar/confirmar export Web y pruebas funcionales en dispositivo físico con el APK/IPA generado desde la rama actual. No se considera el APK antiguo de la captura como validación de la versión actual.
+
+
+## 2026-09-24 — Ajuste de navegación confirmado
+
+Se conserva la decisión original de diseño: **Propiedades no aparece como pestaña en la barra inferior**. El acceso principal a las propiedades continúa siendo mediante los botones **“Ver oportunidades” / “Ver todas”** de Inicio. No se modificaron las demás pestañas ni los accesos de sesión.
+
+
+## 2026-09-24 — Segunda mejora de carga visual de fotografías
+
+Después de revisar el comportamiento observado en el APK, se añadió una segunda capa para evitar una superficie negra durante la decodificación inicial de una fotografía: la galería muestra un fondo controlado, indicador de carga y, cuando existe, utiliza la portada como placeholder de las fotografías posteriores. La caché `memory-disk` y la precarga permanecen activas.
+
+
+## 2026-09-24 — Caché visual de comunicación y portada de Inicio
+
+Se extendió la misma estrategia de imágenes optimizadas a dos superficies que también descargan imágenes remotas: la portada principal de Inicio y las imágenes de Anuncios/Comunicación. Se usa `expo-image` con `memory-disk` para evitar descargas/decodificaciones innecesarias al volver a esas pantallas. No se modificó el contenido ni la lógica de anuncios.
+
+
+## 2026-09-24 — Publicación: paridad visual y previews de medios
+
+Se mejoró la pantalla Publicar sin modificar el flujo de Supabase: el formulario ahora tiene ancho máximo y centrado en escritorio, mantiene padding adaptable y sus previews de fotografías/vídeo usan `expo-image` con caché. El mapa Leaflet continúa siendo compartido entre Web y nativo mediante `LeafletMap`.
+
+
+## 2026-09-24 — Corrección TypeScript del último CI
+
+El workflow #228 detectó tres errores TypeScript en el merge del PR #23: dos fuentes de imagen de anuncios en `app/notifications.tsx` y el uso de `StyleSheet.absoluteFillObject` en `app/property/[id].tsx`. Se corrigieron sin cambiar el comportamiento funcional: las URLs de anuncios se normalizan explícitamente a texto para `expo-image` y el estilo de relleno usa la API disponible `StyleSheet.absoluteFill`. El job `native-config` ya había pasado en ese mismo workflow; se requiere una nueva ejecución para validar TypeScript y lint.
+
+
+## 2026-09-24 — Realtime de propiedades estabilizado
+
+Se corrigió la base de invalidación de cambios para que la app pueda detectar modificaciones administrativas de propiedades sin leer directamente la tabla privada `propiedades`. Se creó `public.propiedades_cambios` como tabla de eventos mínima y se configuró:
+- RLS habilitado.
+- Lectura pública únicamente (`anon` y `authenticated`).
+- Sin permisos de INSERT/UPDATE/DELETE para clientes.
+- Trigger `trg_propiedades_cambio` sobre `propiedades` para registrar INSERT/UPDATE/DELETE.
+- Tabla incluida en la publicación `supabase_realtime`.
+
+La verificación directa de producción confirmó que la tabla existe, el trigger existe, RLS está activo y la tabla está publicada en Realtime. Esto mantiene el límite de seguridad: la app sigue leyendo propiedades publicadas mediante `propiedades_publicas` y usa el canal de cambios solamente como señal para volver a consultar.
+
+## 2026-09-24 — CI posterior a la estabilización Realtime
+
+El commit `0a7d9f34fbad159757bb3c8bfa2a8a0eaca8281a` en `fix/web-parity-visual-cards` pasó los dos checks de GitHub Actions: `quality` y `native-config`. Por tanto, TypeScript/lint y la generación/validación de configuración iOS quedaron en SUCCESS para este estado de la rama.
+
+Sigue pendiente la validación funcional física de la versión actual en iPhone/Android y la exportación Web completa; esos pasos no se consideran sustituidos por CI.
+
+
+## 2026-09-24 — Optimización del Realtime del detalle
+
+El detalle de una propiedad continúa escuchando exclusivamente el feed público `propiedades_cambios`, pero ahora filtra el canal por `propiedad_id`. Esto evita que una modificación administrativa de otra propiedad provoque una consulta REST innecesaria del detalle actualmente abierto. La lectura continúa pasando únicamente por `propiedades_publicas`.

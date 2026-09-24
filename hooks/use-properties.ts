@@ -1,6 +1,7 @@
 import {
   useState,
   useCallback,
+  useEffect,
 } from 'react';
 import { useFocusEffect } from 'expo-router';
 
@@ -15,7 +16,7 @@ import {
   normalizeMediaArray,
 } from '@/lib/property-media';
 
-function mapProperty(raw: any): Property {
+export function mapProperty(raw: any): Property {
   const fotos =
     normalizeMediaArray(
       raw.fotos ??
@@ -523,27 +524,80 @@ export function useProperties() {
   };
 }
 
-export function useProperty(
-  id?: string
-) {
-  const {
-    properties,
-    loading,
-    error,
-    refetch,
-  } = useProperties();
+export function useProperty(id?: string) {
+  const [property, setProperty] = useState<Property | undefined>(undefined);
+  const [loading, setLoading] = useState(Boolean(id));
+  const [error, setError] = useState<string | null>(null);
 
-  const property =
-    properties.find(
-      (item) =>
-        item.id === id
-    );
+  const fetchProperty = useCallback(async () => {
+    if (!id) {
+      setProperty(undefined);
+      setLoading(false);
+      setError(null);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const { data, error: err } = await supabase
+        .from('propiedades_publicas')
+        .select('*')
+        .eq('id', id)
+        .eq('estado', 'activa')
+        .maybeSingle();
+
+      if (err) throw err;
+
+      setProperty(data ? mapProperty(data) : undefined);
+      setError(null);
+    } catch (e) {
+      const message = e instanceof Error ? e.message : 'Error desconocido';
+      console.error('❌ EYESITE propiedad:', message);
+      setProperty(undefined);
+      setError(message);
+    } finally {
+      setLoading(false);
+    }
+  }, [id]);
+
+  useEffect(() => {
+    void fetchProperty();
+
+    if (!id) {
+      return;
+    }
+
+    /*
+     * El feed de cambios es público de solo lectura.
+     * Filtramos por propiedad para que editar otra propiedad
+     * no fuerce una recarga innecesaria del detalle actual.
+     */
+    const channel = supabase
+      .channel(`eyesite-live-property-${id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'propiedades_cambios',
+          filter: `propiedad_id=eq.${id}`,
+        },
+        () => {
+          void fetchProperty();
+        },
+      )
+      .subscribe();
+
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [fetchProperty, id]);
 
   return {
     property,
-    properties,
+    properties: property ? [property] : [],
     loading,
     error,
-    refetch,
+    refetch: fetchProperty,
   };
 }

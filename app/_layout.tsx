@@ -6,7 +6,7 @@ import { ThemeProvider } from "@/lib/theme-provider";
 import { useAuth } from "@/hooks/useAuth";
 import { registerPushToken } from "@/hooks/use-notifications";
 import { useEffect } from "react";
-import { View, ActivityIndicator, Text, StatusBar } from "react-native";
+import { View, ActivityIndicator, Text, StatusBar, Platform } from "react-native";
 import Constants from "expo-constants";
 import * as Sentry from "@sentry/react-native";
 import { supabase } from "@/lib/supabase";
@@ -142,7 +142,9 @@ export default Sentry.wrap(function RootLayout() {
       router.push("/notifications" as never);
     };
 
-    if (Constants.executionEnvironment === "storeClient") {
+    // Expo Notifications response listeners are native-only. Web keeps the
+    // same in-app notification center through Supabase Realtime.
+    if (Platform.OS === "web" || Constants.executionEnvironment === "storeClient") {
       return () => {
         mounted = false;
       };
