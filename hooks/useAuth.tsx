@@ -7,6 +7,8 @@ export interface AuthProfile {
   email?: string | null;
   nombre?: string | null;
   telefono?: string | null;
+  ciudad?: string | null;
+  presupuesto?: string | null;
   estado?: string | null;
   status?: string | null;
   role?: string | null;
@@ -53,6 +55,24 @@ export function useAuth() {
 
   useEffect(() => {
     let mounted = true;
+    let profileChannel: ReturnType<typeof supabase.channel> | null = null;
+
+    const syncProfile = async (uid: string) => {
+      await loadProfile(uid);
+      if (!mounted) return;
+
+      profileChannel?.unsubscribe();
+      profileChannel = supabase
+        .channel("profile-" + uid)
+        .on(
+          "postgres_changes",
+          { event: "UPDATE", schema: "public", table: "profiles", filter: "id=eq." + uid },
+          () => {
+            void loadProfile(uid);
+          },
+        )
+        .subscribe();
+    };
 
     supabase.auth.getSession().then(async ({ data: { session: s } }) => {
       if (!mounted) return;
@@ -60,7 +80,7 @@ export function useAuth() {
       setUser(s?.user ?? null);
       if (s?.user?.id) {
         // Esperar al perfil para que AuthGate no redirija con datos incompletos (anti-flash).
-        await loadProfile(s.user.id);
+        await syncProfile(s.user.id);
       }
       if (mounted) setLoading(false);
     });
@@ -70,8 +90,10 @@ export function useAuth() {
       setSession(s);
       setUser(s?.user ?? null);
       if (s?.user?.id) {
-        await loadProfile(s.user.id);
+        await syncProfile(s.user.id);
       } else {
+        profileChannel?.unsubscribe();
+        profileChannel = null;
         setProfile(null);
         setEstado(null);
       }
@@ -81,6 +103,7 @@ export function useAuth() {
     return () => {
       mounted = false;
       sub.subscription.unsubscribe();
+      profileChannel?.unsubscribe();
     };
   }, [loadProfile]);
 
