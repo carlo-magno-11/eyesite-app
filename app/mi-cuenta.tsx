@@ -13,7 +13,7 @@ type ProfileFormProps = {
 };
 
 function AccountForm({ user, profile }: ProfileFormProps) {
-  const { isDesktop, contentMaxWidth, horizontalPadding } = useResponsive();
+  const { contentMaxWidth, horizontalPadding } = useResponsive();
   const [nombre, setNombre] = useState(profile.nombre ?? "");
   const [telefono, setTelefono] = useState(profile.telefono ?? "");
   const [ciudad, setCiudad] = useState(profile.ciudad ?? "");
