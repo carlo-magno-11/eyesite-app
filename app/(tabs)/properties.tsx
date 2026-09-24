@@ -7,6 +7,7 @@ import { PropertyCard } from '@/components/property-card';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { useProperties } from '@/hooks/use-properties';
 import { useResponsive } from '@/hooks/use-responsive';
+import { EYESITE_THEME } from '@/lib/eysite-theme';
 
 export default function PropertiesScreen() {
   const params = useLocalSearchParams<{ filter?: string }>();
@@ -141,13 +142,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   headerTitle: {
-    color: '#F5F5F5',
+    color: EYESITE_THEME.colors.text,
     fontSize: 18,
     fontWeight: '800',
     letterSpacing: 2,
   },
   headerCount: {
-    color: '#9A9A9A',
+    color: EYESITE_THEME.colors.muted,
     fontSize: 13,
   },
   searchContainer: {
@@ -157,12 +158,12 @@ const styles = StyleSheet.create({
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#1A1A1A',
+    backgroundColor: EYESITE_THEME.colors.surface,
     borderRadius: 10,
     paddingHorizontal: 14,
     paddingVertical: 12,
     borderWidth: 1,
-    borderColor: '#2A2A2A',
+    borderColor: EYESITE_THEME.colors.border,
     gap: 10,
   },
   searchInput: {
