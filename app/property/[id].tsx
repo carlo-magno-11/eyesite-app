@@ -358,7 +358,7 @@ export default function PropertyDetailScreen() {
               ) : (
                 <Image
                   source={{ uri: item.url }}
-                  style={{ width: SCREEN_WIDTH, height: 300 }}
+                  style={{ width: contentWidth, height: 300 }}
                   resizeMode="cover"
                 />
               )
@@ -657,11 +657,11 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   galleryImage: {
-    width: SCREEN_WIDTH,
+    width: '100%',
     height: 320,
   },
   galleryVideoContainer: {
-    width: SCREEN_WIDTH,
+    width: '100%',
     height: 320,
     backgroundColor: '#000',
   },
