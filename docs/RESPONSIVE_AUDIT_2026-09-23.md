@@ -179,3 +179,12 @@ La pantalla Publicar propiedad ahora utiliza `navigator.geolocation` cuando corr
 Notificaciones y Configuración también recibieron contenedor responsive centrado para escritorio, conservando la lógica existente de Supabase y preferencias.
 
 La geolocalización Web depende de que el navegador y el sitio permitan ubicación segura (HTTPS/localhost) y de la autorización del usuario.
+
+
+## 2026-09-24 — Publicación Web: vídeo real, no fallback
+
+Se detectó una dependencia nativa en `publish.tsx`: `expo-video-thumbnails` no debe asumirse disponible en navegador. Se añadió una ruta Web real para generar la miniatura mediante `HTMLVideoElement + canvas` y mantener `expo-video-thumbnails` en iOS/Android.
+
+También se adaptó la comprobación del tamaño del vídeo: Web obtiene el tamaño mediante `Blob`; móvil conserva `FileSystem.getInfoAsync`. La subida continúa usando ArrayBuffer hacia el bucket privado de staging y la solicitud sigue entrando en `solicitudes_propiedades` con estado pendiente.
+
+No se cambió el límite de negocio de 50 MB ni se expuso el bucket de staging.
