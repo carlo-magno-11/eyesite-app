@@ -48,3 +48,12 @@ npx expo start -c
 ```
 
 Then verify Android and Web startup, profile updates, notifications, navigation, and the previously missing section. Only after those checks pass should a new preview APK be generated.
+
+
+## Follow-up: protected notification request
+
+The browser log showed HTTP 401 for `notificaciones`. Public property reads still succeeded, so this is consistent with the protected notification request being made with an unavailable/expired session rather than a property-data failure.
+
+`useNotifications.load()` now obtains the current Supabase session before querying `notificaciones`. Supabase can refresh a persisted session through `getSession()`; if there is no matching authenticated session, the hook stops before issuing the protected query and exposes a session error instead of repeatedly producing a 401.
+
+This does not weaken RLS or make notifications public.
