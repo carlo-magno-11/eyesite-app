@@ -372,6 +372,8 @@ export function mapProperty(raw: any): Property {
   };
 }
 
+let propertyChannelGeneration = 0;
+
 export function useProperties() {
   const [
     properties,
@@ -490,7 +492,7 @@ export function useProperties() {
       const channel =
         supabase
           .channel(
-            'eyesite-live-properties'
+            `eyesite-live-properties-${++propertyChannelGeneration}`
           )
           .on(
             'postgres_changes',
@@ -573,7 +575,7 @@ export function useProperty(id?: string) {
      * no fuerce una recarga innecesaria del detalle actual.
      */
     const channel = supabase
-      .channel(`eyesite-live-property-${id}`)
+      .channel(`eyesite-live-property-${id}-${++propertyChannelGeneration}`)
       .on(
         'postgres_changes',
         {
