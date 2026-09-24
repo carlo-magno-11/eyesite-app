@@ -1,4 +1,5 @@
-import { View, Text, ScrollView, Image, Pressable, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, Pressable, StyleSheet, ActivityIndicator } from 'react-native';
+import { Image } from 'expo-image';
 import { ScreenContainer } from '@/components/screen-container';
 import { PropertyCard } from '@/components/property-card';
 import { router } from 'expo-router';
@@ -75,6 +76,9 @@ export default function HomeScreen() {
           <Image
             source={{ uri: 'https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=1200&q=80' }}
             style={styles.heroImage}
+            contentFit="cover"
+            cachePolicy="memory-disk"
+            transition={150}
           />
           <View style={styles.heroOverlay} />
           <View style={styles.heroContent}>
