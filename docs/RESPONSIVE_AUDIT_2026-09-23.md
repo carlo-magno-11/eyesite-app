@@ -250,3 +250,21 @@ Se mejoró la pantalla Publicar sin modificar el flujo de Supabase: el formulari
 ## 2026-09-24 — Corrección TypeScript del último CI
 
 El workflow #228 detectó tres errores TypeScript en el merge del PR #23: dos fuentes de imagen de anuncios en `app/notifications.tsx` y el uso de `StyleSheet.absoluteFillObject` en `app/property/[id].tsx`. Se corrigieron sin cambiar el comportamiento funcional: las URLs de anuncios se normalizan explícitamente a texto para `expo-image` y el estilo de relleno usa la API disponible `StyleSheet.absoluteFill`. El job `native-config` ya había pasado en ese mismo workflow; se requiere una nueva ejecución para validar TypeScript y lint.
+
+
+## 2026-09-24 — Realtime de propiedades estabilizado
+
+Se corrigió la base de invalidación de cambios para que la app pueda detectar modificaciones administrativas de propiedades sin leer directamente la tabla privada `propiedades`. Se creó `public.propiedades_cambios` como tabla de eventos mínima y se configuró:
+- RLS habilitado.
+- Lectura pública únicamente (`anon` y `authenticated`).
+- Sin permisos de INSERT/UPDATE/DELETE para clientes.
+- Trigger `trg_propiedades_cambio` sobre `propiedades` para registrar INSERT/UPDATE/DELETE.
+- Tabla incluida en la publicación `supabase_realtime`.
+
+La verificación directa de producción confirmó que la tabla existe, el trigger existe, RLS está activo y la tabla está publicada en Realtime. Esto mantiene el límite de seguridad: la app sigue leyendo propiedades publicadas mediante `propiedades_publicas` y usa el canal de cambios solamente como señal para volver a consultar.
+
+## 2026-09-24 — CI posterior a la estabilización Realtime
+
+El commit `0a7d9f34fbad159757bb3c8bfa2a8a0eaca8281a` en `fix/web-parity-visual-cards` pasó los dos checks de GitHub Actions: `quality` y `native-config`. Por tanto, TypeScript/lint y la generación/validación de configuración iOS quedaron en SUCCESS para este estado de la rama.
+
+Sigue pendiente la validación funcional física de la versión actual en iPhone/Android y la exportación Web completa; esos pasos no se consideran sustituidos por CI.
