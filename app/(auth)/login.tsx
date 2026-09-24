@@ -459,13 +459,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     flexDirection: 'row',
 
-    shadowColor: '#C9A84C',
-    shadowOffset: {
-      width: 0,
-      height: 5,
-    },
-    shadowOpacity: 0.18,
-    shadowRadius: 12,
+    boxShadow: '0px 5px 12px rgba(201, 168, 76, 0.18)',
     elevation: 5,
   },
 
