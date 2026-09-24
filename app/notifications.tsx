@@ -84,7 +84,7 @@ export default function NotificationsScreen() {
           <Text style={s.sub}>{tab === "notifications" ? `${unread} sin leer` : `${announcements.length} anuncios activos`}</Text>
         </View>
         <Pressable onPress={() => router.push("/notification-settings" as never)} hitSlop={10}>
-          <Ionicons name="settings-outline" size={24} color={"#C9A84C"} />
+          <Ionicons name="settings-outline" size={24} color="#C9A84C" />
         </Pressable>
       </View>
 
@@ -214,11 +214,11 @@ export default function NotificationsScreen() {
 const s = StyleSheet.create({
   h:{padding:20,flexDirection:"row",justifyContent:"space-between",borderBottomWidth:1,borderBottomColor:"#2A2A2A"},
   t:{color:"#F5F5F5",fontSize:20,fontWeight:"800",letterSpacing:1},
-  sub:{color:"#9A9A9A",fontSize:12,marginTop:4},
+  sub:{color:"#999",fontSize:12,marginTop:4},
   tabs:{flexDirection:"row",paddingHorizontal:16,paddingTop:14,gap:8},
-  tab:{flex:1,paddingVertical:11,borderRadius:10,backgroundColor:"#141414",alignItems:"center",borderWidth:1,borderColor:"#2A2A2A"},
-  tabActive:{borderColor:"#C9A84C",backgroundColor:"#141414"Soft},
-  tabText:{color:"#9A9A9A",fontSize:12,fontWeight:"700"},
+  tab:{flex:1,paddingVertical:11,borderRadius:10,backgroundColor:"#171717",alignItems:"center",borderWidth:1,borderColor:"#2A2A2A"},
+  tabActive:{borderColor:"#C9A84C",backgroundColor:"#211D13"},
+  tabText:{color:"#888",fontSize:12,fontWeight:"700"},
   tabTextActive:{color:"#C9A84C"},
   filters:{flexDirection:"row",alignItems:"center",padding:16,gap:8},
   filter:{paddingVertical:7,paddingHorizontal:12,borderRadius:20,borderWidth:1,borderColor:"#303030"},
@@ -232,10 +232,10 @@ const s = StyleSheet.create({
   u:{borderColor:"#C9A84C"},
   row:{flexDirection:"row",alignItems:"center",justifyContent:"space-between",gap:8},
   dot:{width:8,height:8,borderRadius:4,backgroundColor:"#C9A84C"},
-  ct:{color:"#F5F5F5",fontSize:16,fontWeight:"700",flex:1},
+  ct:{color:"#FFF",fontSize:16,fontWeight:"700",flex:1},
   ty:{color:"#C9A84C",fontSize:10,fontWeight:"800",marginTop:6},
-  m:{color:"#F5F5F5"Soft,fontSize:14,lineHeight:21,marginTop:8},
-  d:{color:"#9A9A9A"Dark,fontSize:10,marginTop:10},
+  m:{color:"#C0C0C0",fontSize:14,lineHeight:21,marginTop:8},
+  d:{color:"#777",fontSize:10,marginTop:10},
   heroImage:{width:"100%",height:190,borderRadius:10,marginTop:12,backgroundColor:"#222"},gallery:{gap:8,paddingTop:10},galleryImage:{width:150,height:100,borderRadius:9,backgroundColor:"#222"},linkButton:{marginTop:14,alignSelf:"flex-start",paddingVertical:9,paddingHorizontal:14,borderRadius:9,backgroundColor:"#C9A84C"},linkText:{color:"#0E0E0E",fontSize:11,fontWeight:"800"},e:{alignItems:"center",padding:50},
   i:{fontSize:50},
   et:{color:"#FFF",fontSize:18,fontWeight:"700",marginTop:15},
