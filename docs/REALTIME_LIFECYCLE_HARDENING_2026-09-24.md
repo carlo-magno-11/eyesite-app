@@ -57,3 +57,15 @@ The browser log showed HTTP 401 for `notificaciones`. Public property reads stil
 `useNotifications.load()` now obtains the current Supabase session before querying `notificaciones`. Supabase can refresh a persisted session through `getSession()`; if there is no matching authenticated session, the hook stops before issuing the protected query and exposes a session error instead of repeatedly producing a 401.
 
 This does not weaken RLS or make notifications public.
+
+
+## Follow-up: Web map viewport
+
+The Web map was reviewed separately from the Realtime issue. The Leaflet map itself was already configured at 100% width/height, but the outer React Native container relied entirely on `flex: 1` while also sharing the page with the header, radius controls and results list. On Web this could leave the WebView visually short.
+
+Change on `app/(tabs)/map.tsx`:
+- Added `useWindowDimensions()` to measure the browser viewport.
+- Web now gives the map a responsive explicit height: 68% of viewport height, clamped between 520px and 760px.
+- Native iOS/Android keeps the existing flex-based behavior.
+- No Google Maps or Google Cloud dependency was introduced.
+- The map data source and `propiedades_publicas` flow were not changed.
