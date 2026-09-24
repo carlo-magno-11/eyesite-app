@@ -400,7 +400,36 @@ const handlePropertyMapMessage = (
     }
   };
 
-  const pickVideo = async () => {
+  const createWebVideoThumbnail = async (uri: string): Promise<string | undefined> => {
+    if (Platform.OS !== 'web') return undefined;
+    return new Promise((resolve) => {
+      const video = document.createElement('video');
+      const canvas = document.createElement('canvas');
+      let done = false;
+      const finish = (value?: string) => { if (done) return; done = true; video.remove(); canvas.remove(); resolve(value); };
+      video.muted = true;
+      video.playsInline = true;
+      video.preload = 'metadata';
+      video.onloadeddata = () => {
+        video.currentTime = Math.min(1, Number.isFinite(video.duration) ? video.duration : 1);
+      };
+      video.onseeked = () => {
+        const width = Math.min(1280, video.videoWidth || 1280);
+        const height = Math.max(1, Math.round(width * ((video.videoHeight || 720) / (video.videoWidth || 1280))));
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return finish();
+        ctx.drawImage(video, 0, 0, width, height);
+        finish(canvas.toDataURL('image/jpeg', 0.8));
+      };
+      video.onerror = () => finish();
+      video.src = uri;
+      video.load();
+    });
+  };
+
+  const pickVideo = async () =>
     try {
       setProcessingVideo(true);
       const result = await ImagePicker.launchImageLibraryAsync({
@@ -416,8 +445,10 @@ const handlePropertyMapMessage = (
 
         // Verificar peso del video (máx 50MB)
         try {
-          const info = await FileSystem.getInfoAsync(uri);
-          if (info.exists && typeof info.size === 'number' && info.size > MAX_VIDEO_BYTES) {
+          const size = Platform.OS === 'web'
+            ? (await fetch(uri).then((response) => response.blob())).size
+            : ((await FileSystem.getInfoAsync(uri)).size ?? 0);
+          if (size > MAX_VIDEO_BYTES) {
             Alert.alert(
               'Video muy pesado',
               'El video debe pesar máximo 50MB. Selecciona uno más corto o comprímelo.'
@@ -428,13 +459,18 @@ const handlePropertyMapMessage = (
           console.log('No se pudo verificar el tamaño del video:', sizeError);
         }
 
-        // Generar thumbnail (preview) en el segundo 1
+        // Generar thumbnail (preview) en el segundo 1.
+        // Web usa <video> + canvas porque expo-video-thumbnails es nativo.
         let thumbnail: string | undefined;
         try {
-          const { uri: thumbUri } = await VideoThumbnails.getThumbnailAsync(uri, {
-            time: 1000,
-          });
-          thumbnail = thumbUri;
+          if (Platform.OS === 'web') {
+            thumbnail = await createWebVideoThumbnail(uri);
+          } else {
+            const { uri: thumbUri } = await VideoThumbnails.getThumbnailAsync(uri, {
+              time: 1000,
+            });
+            thumbnail = thumbUri;
+          }
         } catch (thumbError) {
           console.log('No se pudo generar thumbnail:', thumbError);
         }
