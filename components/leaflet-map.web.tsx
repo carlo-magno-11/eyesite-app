@@ -1,5 +1,6 @@
 import { StyleProp, StyleSheet, ViewStyle } from "react-native";
-import { useEffect, useRef } from "react";\nimport type React from "react";
+import { useEffect, useRef } from "react";
+import type React from "react";
 
 export type LeafletMapHandle = {
   runScript: (script: string) => void;
