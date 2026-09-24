@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { View, Text, TextInput, ScrollView, Pressable, StyleSheet, Alert, ActivityIndicator, Image, FlatList } from 'react-native';
+import { Platform, View, Text, TextInput, ScrollView, Pressable, StyleSheet, Alert, ActivityIndicator, Image, FlatList } from 'react-native';
 import { ScreenContainer } from '@/components/screen-container';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { useSubmitProperty } from '@/hooks/use-submit-property';
@@ -8,7 +8,6 @@ import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as VideoThumbnails from 'expo-video-thumbnails';
 import * as Location from 'expo-location';
-import { Platform } from 'react-native';
 import { LeafletMap, LeafletMapHandle } from '@/components/leaflet-map';
 
 const PROPERTY_TYPES_OPTIONS = [
