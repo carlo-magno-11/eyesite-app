@@ -2,6 +2,7 @@ import { View, type ViewProps } from "react-native";
 import { SafeAreaView, type Edge } from "react-native-safe-area-context";
 
 import { cn } from "@/lib/utils";
+import { EYESITE_THEME } from "@/lib/eysite-theme";
 export interface ScreenContainerProps extends ViewProps {
   /**
    * SafeArea edges to apply. Defaults to ["top", "left", "right"].
@@ -50,10 +51,10 @@ export function ScreenContainer({
   <View
     className={cn(
       "flex-1",
-      "bg-[#0D0D0D]",
+      "bg-[#0B0B0B]",
       containerClassName
     )}
-    style={{ backgroundColor: '#0D0D0D', flex: 1 }}
+    style={{ backgroundColor: EYESITE_THEME.colors.background, flex: 1 }}
     {...props}
   >
     <SafeAreaView
