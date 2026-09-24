@@ -8,7 +8,7 @@ import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as VideoThumbnails from 'expo-video-thumbnails';
 import * as Location from 'expo-location';
-import { WebView } from 'react-native-webview';
+import { LeafletMap, LeafletMapHandle } from '@/components/leaflet-map';
 
 const PROPERTY_TYPES_OPTIONS = [
   { key: 'terreno', label: 'Terreno' },
@@ -130,19 +130,19 @@ L.tileLayer(
 
 function sendCoordinates(lat, lng) {
 
+  const message = JSON.stringify({
+    type: 'property_location',
+    latitude: Number(lat),
+    longitude: Number(lng),
+  });
+
   if (
     window.ReactNativeWebView &&
     window.ReactNativeWebView.postMessage
   ) {
-
-    window.ReactNativeWebView.postMessage(
-      JSON.stringify({
-        type: 'property_location',
-        latitude: Number(lat),
-        longitude: Number(lng),
-      })
-    );
-
+    window.ReactNativeWebView.postMessage(message);
+  } else {
+    window.parent.postMessage(message, '*');
   }
 }
 
@@ -218,6 +218,19 @@ map.on(
   }
 );
 
+window.addEventListener('message', function(event) {
+  if (typeof event.data !== 'string') return;
+
+  try {
+    const command = JSON.parse(event.data);
+    if (command?.type === 'set_location') {
+      placeMarker(command.latitude, command.longitude, true);
+    }
+  } catch (_) {
+    // Ignore messages that are not map commands.
+  }
+});
+
 </script>
 
 </body>
@@ -257,7 +270,7 @@ export default function PublishScreen() {
   const { submitProperty, loading: submitting } = useSubmitProperty();
   const [uploading, setUploading] = useState(false);
   const [locating, setLocating] = useState(false);
-  const propertyMapRef = useRef<WebView>(null);
+  const propertyMapRef = useRef<LeafletMapHandle>(null);
 
   const useCurrentPropertyLocation = async () => {
   setLocating(true);
@@ -293,14 +306,7 @@ export default function PublishScreen() {
       longitud: longitude,
     }));
 
-    propertyMapRef.current?.injectJavaScript(`
-      placeMarker(
-        ${latitude},
-        ${longitude},
-        true
-      );
-      true;
-    `);
+    propertyMapRef.current?.runScript(JSON.stringify({ type: 'set_location', latitude, longitude }));
 
   } catch (error) {
     console.error(
@@ -705,17 +711,12 @@ const handlePropertyMapMessage = (
 
            <View style={styles.propertyMapContainer}>
 
-           <WebView
+           <LeafletMap
               ref={propertyMapRef}
-               originWhitelist={['*']}
-               source={{
-               html: PROPERTY_LOCATION_MAP_HTML,
-                }}
-               javaScriptEnabled
-              domStorageEnabled
-           onMessage={handlePropertyMapMessage}
-       style={styles.propertyMap}
-       />
+              html={PROPERTY_LOCATION_MAP_HTML}
+              onMessage={(data) => handlePropertyMapMessage({ nativeEvent: { data } })}
+              style={styles.propertyMap}
+           />
 
        </View>
 
