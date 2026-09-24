@@ -4,6 +4,7 @@ import { Platform } from "react-native";
 import { useAuth } from "@/hooks/useAuth";
 import { HapticTab } from "@/components/haptic-tab";
 import { IconSymbol } from "@/components/ui/icon-symbol";
+import { EYESITE_THEME } from "@/lib/eysite-theme";
 
 export default function TabLayout() {
   const { session } = useAuth();
@@ -14,16 +15,16 @@ export default function TabLayout() {
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: '#C9A84C',
-        tabBarInactiveTintColor: '#9A9A9A',
+        tabBarActiveTintColor: EYESITE_THEME.colors.gold,
+        tabBarInactiveTintColor: EYESITE_THEME.colors.muted,
         headerShown: false,
         tabBarButton: (props: any) => <HapticTab {...props} />,
         tabBarStyle: {
           paddingTop: 8,
           paddingBottom: bottomPadding,
           height: tabBarHeight,
-          backgroundColor: '#0D0D0D',
-          borderTopColor: '#2A2A2A',
+          backgroundColor: EYESITE_THEME.colors.background,
+          borderTopColor: EYESITE_THEME.colors.border,
           borderTopWidth: 0.5,
         },
         tabBarLabelStyle: {
