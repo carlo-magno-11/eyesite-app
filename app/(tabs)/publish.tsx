@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react';
+import { useResponsive } from '@/hooks/use-responsive';
 import { Platform, View, Text, TextInput, ScrollView, Pressable, StyleSheet, Alert, ActivityIndicator, Image, FlatList } from 'react-native';
 import { ScreenContainer } from '@/components/screen-container';
 import { IconSymbol } from '@/components/ui/icon-symbol';
@@ -262,6 +263,7 @@ export default function PublishScreen() {
   const [videoType, setVideoType] = useState<string | null>(null);
   const [processingVideo, setProcessingVideo] = useState(false);
   const { user, profile } = useAuth();
+  const { horizontalPadding, contentMaxWidth } = useResponsive();
 
   const updateField = (key: keyof FormData, value: string) => {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -594,7 +596,13 @@ const handlePropertyMapMessage = (
     <ScreenContainer edges={['top', 'left', 'right']} containerClassName="bg-background">
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 120 }}
+        contentContainerStyle={{
+          paddingBottom: 120,
+          paddingHorizontal: horizontalPadding,
+          width: '100%',
+          maxWidth: contentMaxWidth,
+          alignSelf: 'center',
+        }}
         keyboardShouldPersistTaps="handled"
       >
         {/* Header */}
