@@ -1042,7 +1042,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   videoModalContent: {
-    width: Math.min(windowWidth - 32, 1000),
+    width: '94%',
+    maxWidth: 1000,
     aspectRatio: 16 / 9,
     backgroundColor: '#000',
     borderRadius: 12,
