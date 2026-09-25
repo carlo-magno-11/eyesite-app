@@ -19,6 +19,7 @@ export default function PropertyDetailScreen() {
   const { id, play } = useLocalSearchParams<{ id: string; play?: string }>();
   const { width: windowWidth } = useWindowDimensions();
   const contentWidth = Math.min(windowWidth, 1200);
+  const galleryHeight = Math.max(260, Math.min(Math.round(windowWidth * 0.56), windowWidth >= 1024 ? 560 : 420));
   const { property, loading } = useProperty(id);
   const { session } = useAuth();
   const { trackPropertyEvent, registerProspectInterest } = useCommercial();
@@ -352,7 +353,7 @@ export default function PropertyDetailScreen() {
     <View style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 120 }}>
         {/* Galería V6.3: orden fijo — portada (foto) → video (con poster) → resto. Sin negro. */}
-        <View style={[styles.galleryContainer, { width: contentWidth, alignSelf: 'center' }]}>
+        <View style={[styles.galleryContainer, { width: contentWidth, height: galleryHeight, alignSelf: 'center' }]}>
           <FlatList
             horizontal
             pagingEnabled
