@@ -13,6 +13,11 @@ import { useSavedSearches } from '@/hooks/use-commercial';
 export default function PropertiesScreen() {
   const params = useLocalSearchParams<{ filter?: string }>();
   const [search, setSearch] = useState('');
+  const [municipio, setMunicipio] = useState('');
+  const [minPrice, setMinPrice] = useState('');
+  const [maxPrice, setMaxPrice] = useState('');
+  const [minSurface, setMinSurface] = useState('');
+  const [maxSurface, setMaxSurface] = useState('');
   const initialFilter = typeof params.filter === 'string' && params.filter ? params.filter : 'all';
   const [activeFilter, setActiveFilter] = useState<string>(initialFilter);
   const { properties, loading, error, refetch: fetchProperties } = useProperties();
@@ -28,7 +33,16 @@ export default function PropertiesScreen() {
         (p.title || p.titulo || '').toLowerCase().includes(search.toLowerCase()) ||
         (p.location || p.municipio || '').toLowerCase().includes(search.toLowerCase()) ||
         (p.municipality || p.municipio || '').toLowerCase().includes(search.toLowerCase());
-      return matchesType && matchesSearch;
+      const price = Number(p.currentPrice ?? p.precio_actual ?? p.precio ?? 0) || 0;
+      const surface = Number(p.surfaceM2 ?? p.superficie ?? 0) || 0;
+      const wantedMunicipio = municipio.trim().toLowerCase();
+      const actualMunicipio = String(p.municipality ?? p.municipio ?? p.location ?? '').toLowerCase();
+      const matchesMunicipio = !wantedMunicipio || actualMunicipio.includes(wantedMunicipio);
+      const matchesMinPrice = !minPrice || price >= Number(minPrice);
+      const matchesMaxPrice = !maxPrice || price <= Number(maxPrice);
+      const matchesMinSurface = !minSurface || surface >= Number(minSurface);
+      const matchesMaxSurface = !maxSurface || surface <= Number(maxSurface);
+      return matchesType && matchesSearch && matchesMunicipio && matchesMinPrice && matchesMaxPrice && matchesMinSurface && matchesMaxSurface;
     });
   }, [search, activeFilter, properties]);
 
@@ -61,6 +75,14 @@ export default function PropertiesScreen() {
             </Pressable>
           )}
         </View>
+      </View>
+
+      <View style={[styles.advancedFilters, { paddingHorizontal: horizontalPadding, maxWidth: contentMaxWidth }, isDesktop && styles.contentCentered]}>
+        <TextInput style={styles.filterInput} placeholder="Zona / municipio" placeholderTextColor="#777" value={municipio} onChangeText={setMunicipio} />
+        <TextInput style={styles.filterInput} placeholder="Precio mínimo" placeholderTextColor="#777" value={minPrice} onChangeText={setMinPrice} keyboardType="numeric" />
+        <TextInput style={styles.filterInput} placeholder="Precio máximo" placeholderTextColor="#777" value={maxPrice} onChangeText={setMaxPrice} keyboardType="numeric" />
+        <TextInput style={styles.filterInput} placeholder="Superficie mínima m²" placeholderTextColor="#777" value={minSurface} onChangeText={setMinSurface} keyboardType="numeric" />
+        <TextInput style={styles.filterInput} placeholder="Superficie máxima m²" placeholderTextColor="#777" value={maxSurface} onChangeText={setMaxSurface} keyboardType="numeric" />
       </View>
 
       {/* Filtros */}
@@ -108,11 +130,11 @@ export default function PropertiesScreen() {
                   : activeFilter === 'all'
                     ? 'Todas las propiedades'
                     : `Propiedades: ${activeFilter}`,
-                min_price: null,
-                max_price: null,
-                min_surface: null,
-                max_surface: null,
-                municipio: null,
+                min_price: minPrice ? Number(minPrice) : null,
+                max_price: maxPrice ? Number(maxPrice) : null,
+                min_surface: minSurface ? Number(minSurface) : null,
+                max_surface: maxSurface ? Number(maxSurface) : null,
+                municipio: municipio.trim() || null,
                 tipo: activeFilter === 'all' ? null : activeFilter,
                 objetivo: null,
                 plazo_compra: null,
@@ -223,6 +245,26 @@ const styles = StyleSheet.create({
     flex: 1,
     color: '#F5F5F5',
     fontSize: 14,
+  },
+  advancedFilters: {
+    width: '100%',
+    alignSelf: 'center',
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    paddingBottom: 8,
+  },
+  filterInput: {
+    flexGrow: 1,
+    minWidth: 150,
+    backgroundColor: '#141414',
+    borderRadius: 9,
+    borderWidth: 1,
+    borderColor: '#2A2A2A',
+    color: '#F5F5F5',
+    paddingHorizontal: 11,
+    paddingVertical: 10,
+    fontSize: 12,
   },
   filtersWrapper: {
     marginBottom: 8,
