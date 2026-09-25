@@ -6,10 +6,11 @@ import { useFavorites } from '@/hooks/use-favorites';
 import { mapProperty } from '@/hooks/use-properties';
 import { supabase } from '@/lib/supabase';
 import { useResponsive } from '@/hooks/use-responsive';
+import type { Property } from '@/lib/properties-data';
 
 export default function FavoritesScreen() {
   const { favs } = useFavorites();
-  const [favoriteProperties, setFavoriteProperties] = useState<any[]>([]);
+  const [favoriteProperties, setFavoriteProperties] = useState<Property[]>([]);
   const [loading, setLoading] = useState(true);
   const { propertyColumns, horizontalPadding, contentMaxWidth } = useResponsive();
 
