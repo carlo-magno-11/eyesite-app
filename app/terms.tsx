@@ -4,6 +4,7 @@ import { router } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
 import { ScreenContainer } from '@/components/screen-container';
+import { useResponsive } from '@/hooks/use-responsive';
 
 const TEXTOS: Record<string, string> = {
   servicio: `TÉRMINOS Y CONDICIONES EYESI+E\n\n1. Plataforma para búsqueda inmobiliaria en Yucatán.\n2. La información de propiedades es referencial, debe verificarse con asesor.\n3. EYESI+E no garantiza disponibilidad inmediata.\n4. El usuario se compromete a datos veraces.\n\nContacto WhatsApp: 999 746 2162`,
@@ -19,6 +20,7 @@ const TERMS_ITEMS = [
 
 export default function TermsScreen() {
   const { user } = useAuth();
+  const { isDesktop, horizontalPadding, contentMaxWidth } = useResponsive();
   const [accepted, setAccepted] = useState<Record<string, boolean>>({});
   const [leido, setLeido] = useState<Record<string, boolean>>({});
   const [modal, setModal] = useState<string | null>(null);
@@ -115,7 +117,7 @@ export default function TermsScreen() {
 
   return (
     <ScreenContainer edges={['top', 'bottom']} containerClassName="bg-background">
-      <ScrollView contentContainerStyle={styles.container}>
+      <ScrollView contentContainerStyle={[styles.container, { paddingHorizontal: horizontalPadding }]}>\n        <View style={[styles.content, isDesktop && { maxWidth: contentMaxWidth ?? 900 }]}>
         <Text style={styles.title}>TÉRMINOS Y CONDICIONES</Text>
         <Text style={styles.subtitle}>Revisa y acepta para continuar</Text>
 
@@ -173,7 +175,8 @@ export default function TermsScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flexGrow: 1, padding: 20, justifyContent: 'center' },
+  container: { flexGrow: 1, justifyContent: 'center', paddingVertical: 24 },
+  content: { width: '100%', alignSelf: 'center' },
   title: { color: '#FFFFFF', fontSize: 24, fontWeight: '800', letterSpacing: 1, marginBottom: 6 },
   subtitle: { color: '#9A9A9A', fontSize: 13, marginBottom: 20 },
   card: { backgroundColor: '#0E0E0E', borderWidth: 1, borderColor: '#C9A84C', borderRadius: 12, padding: 16, marginBottom: 20, gap: 4 },
