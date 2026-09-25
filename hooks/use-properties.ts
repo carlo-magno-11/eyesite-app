@@ -388,12 +388,16 @@ export type PropertyCatalogOptions = {
   pageSize?: number;
 };
 
+// El catálogo solo necesita datos de tarjeta/listado.
+// Evitamos transferir PDFs, KMZ, JSON, videos y descripciones pesadas.
+// El detalle de una propiedad sí puede solicitar el registro completo.
 const CATALOG_FIELDS = [
   'id','codigo','titulo','tipo','municipio','ubicacion','direccion',
-  'superficie','unidad_superficie','precio_actual','precio_mercado','precio',
-  'precio_esperado','unidad_precio','rendimiento','moneda','destacada',
-  'fotos','fotos_pro','videos','portada_url','portada_tipo','tipo_portada',
-  'video_url','activa','estado','orden','created_at','updated_at','latitud','longitud',
+  'superficie','unidad_superficie','precio_actual','precio_mercado',
+  'precio','precio_esperado','unidad_precio','rendimiento','moneda',
+  'destacada','fotos','portada_url','portada_tipo','tipo_portada',
+  'video_url','activa','estado','orden','created_at','updated_at',
+  'latitud','longitud',
 ].join(',');
 
 function normalizeCatalogNumber(value?: number | null) {
@@ -496,16 +500,28 @@ export function useProperties(options?: PropertyCatalogOptions) {
     useCallback(() => {
       void fetchProperties();
 
+      let refreshTimer: ReturnType<typeof setTimeout> | null = null;
+
       const channel = supabase
         .channel(`eyesite-live-properties-${++propertyChannelGeneration}`)
         .on(
           'postgres_changes',
           { event: '*', schema: 'public', table: 'propiedades_cambios' },
-          () => { void fetchProperties(); },
+          () => {
+            // Agrupa varios cambios consecutivos del panel en una sola lectura.
+            if (refreshTimer) clearTimeout(refreshTimer);
+            refreshTimer = setTimeout(() => {
+              refreshTimer = null;
+              void fetchProperties();
+            }, 500);
+          },
         )
         .subscribe();
 
-      return () => { supabase.removeChannel(channel); };
+      return () => {
+        if (refreshTimer) clearTimeout(refreshTimer);
+        void supabase.removeChannel(channel);
+      };
     }, [fetchProperties]),
   );
 
