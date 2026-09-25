@@ -32,8 +32,8 @@ export function useNotifications(userId?: string) {
     setLoading(true);
     setErrorMessage(null);
 
-    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-    if (sessionError || sessionData.session?.user?.id !== userId) {
+    const { data: userData, error: sessionError } = await supabase.auth.getUser();
+    if (sessionError || userData.user?.id !== userId) {
       setItems([]);
       setErrorMessage(sessionError?.message || "La sesión ya no está disponible.");
       setLoading(false);
@@ -136,8 +136,8 @@ export async function registerPushToken(userId?: string) {
   }
 
   try {
-    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-    const sessionUserId = sessionData.session?.user?.id;
+    const { data: userData, error: sessionError } = await supabase.auth.getUser();
+    const sessionUserId = userData.user?.id;
 
     if (sessionError || !sessionUserId || sessionUserId !== userId) {
       if (sessionError) {
