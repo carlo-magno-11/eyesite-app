@@ -6,11 +6,12 @@ import { ThemeProvider } from "@/lib/theme-provider";
 import { useAuth } from "@/hooks/useAuth";
 import { registerPushToken } from "@/hooks/use-notifications";
 import { useEffect } from "react";
-import { View, ActivityIndicator, Text, StatusBar, Platform } from "react-native";
+import { StatusBar, Platform } from "react-native";
 import Constants from "expo-constants";
 import * as Sentry from "@sentry/react-native";
 import { supabase } from "@/lib/supabase";
 import { addAppBreadcrumb, reportAppError, setAppMonitoringContext } from "@/lib/monitoring";
+import EyesiteLaunchSplash from "@/components/EyesiteLaunchSplash";
 
 Sentry.init({
   dsn: "https://2b9f8a4dc404528b87957977fe39da0c@o4512088794333184.ingest.us.sentry.io/4512088804556800",
@@ -26,12 +27,10 @@ const queryClient = new QueryClient({
 
 function Splash() {
   return (
-    <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#0F172A" }}>
+    <>
       <StatusBar barStyle="light-content" />
-      <Text style={{ fontSize: 32, fontWeight: "900", color: "white", letterSpacing: 1 }}>EYESITE</Text>
-      <Text style={{ fontSize: 12, color: "#94A3B8", marginTop: 8, letterSpacing: 3 }}>PROPERTIES</Text>
-      <ActivityIndicator color="white" style={{ marginTop: 24 }} />
-    </View>
+      <EyesiteLaunchSplash />
+    </>
   );
 }
 
