@@ -156,11 +156,11 @@ const hasVideo =
 const styles = StyleSheet.create({
   card: {
     width: '100%',
-    backgroundColor: '#1A1A1A',
+    backgroundColor: "#141414",
     borderRadius: 14,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: '#2A2A2A',
+    borderColor: "#2A2A2A",
     marginBottom: 16,
     minHeight: 392,
   },
@@ -186,7 +186,7 @@ const styles = StyleSheet.create({
   },
   videoPlayIcon: {
     fontSize: 34,
-    color: '#C9A84C',
+    color: "#C9A84C",
     textShadowColor: 'rgba(0,0,0,0.7)',
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 6,
@@ -236,7 +236,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-start',
   },
   title: {
-    color: '#F5F5F5',
+    color: "#F5F5F5",
     fontSize: 15,
     fontWeight: '700',
     marginBottom: 7,
@@ -251,7 +251,7 @@ const styles = StyleSheet.create({
     minHeight: 18,
   },
   location: {
-    color: '#9A9A9A',
+    color: "#9A9A9A",
     fontSize: 12,
   },
   priceRow: {
@@ -301,7 +301,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 8,
     right: 8,
-    backgroundColor: '#FFD60A',
+    backgroundColor: "#C9A84C",
     borderRadius: 20,
     padding: 6,
   },
@@ -309,13 +309,13 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   noPhotoFallback: {
-    backgroundColor: '#1E1E1E',
+    backgroundColor: "#141414",
     alignItems: 'center',
     justifyContent: 'center',
   },
   noPhotoIcon: {
     fontSize: 40,
-    color: '#4A4A4A',
+    color: "#9A9A9A",
   },
   // Compact styles
   compactCard: {

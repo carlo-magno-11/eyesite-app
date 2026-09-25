@@ -7,6 +7,7 @@ import {
   StyleSheet,
   Text,
   View,
+  useWindowDimensions,
 } from "react-native";
 import { useRouter } from "expo-router";
 import * as Location from "expo-location";
@@ -55,7 +56,7 @@ const DEFAULT_REGION: Region = {
   longitudeDelta: 0.8,
 };
 
-const RADIUS_OPTIONS = [10, 25, 50, 100] as const;
+
 
 function distanceKm(a: UserCoords, b: UserCoords) {
   const R = 6371;
@@ -164,7 +165,7 @@ function createMapHtml(properties: NearbyProperty[], initialRegion: Region) {
     height: 100%;
     margin: 0;
     padding: 0;
-    background: #0d0d0d;
+    background: #0b0b0b;
   }
 
   body {
@@ -177,9 +178,9 @@ function createMapHtml(properties: NearbyProperty[], initialRegion: Region) {
   }
 
   .leaflet-control-zoom a {
-    background: #151515 !important;
+    background: #141414 !important;
     color: #f5f5f5 !important;
-    border-color: #303030 !important;
+    border-color: #2a2a2a !important;
   }
 
   .leaflet-control-attribution {
@@ -189,7 +190,7 @@ function createMapHtml(properties: NearbyProperty[], initialRegion: Region) {
   }
 
   .leaflet-control-attribution a {
-    color: #c9a84c !important;
+    color: #d8b968 !important;
   }
 
   .property-popup {
@@ -212,7 +213,7 @@ function createMapHtml(properties: NearbyProperty[], initialRegion: Region) {
   .property-price {
     font-size: 13px;
     font-weight: 700;
-    color: #9a7626;
+    color: #c9a84c;
     margin-bottom: 4px;
   }
 
@@ -248,7 +249,7 @@ function createMapHtml(properties: NearbyProperty[], initialRegion: Region) {
     attributionControl: true,
   }).setView(
     [INITIAL_REGION.latitude, INITIAL_REGION.longitude],
-    11
+    8
   );
 
   L.tileLayer(
@@ -370,17 +371,7 @@ function createMapHtml(properties: NearbyProperty[], initialRegion: Region) {
     });
   }
 
-  if (markers.length > 0) {
-    const group = L.featureGroup(markers);
-
-    map.fitBounds(
-      group.getBounds(),
-      {
-        padding: [30, 30],
-        maxZoom: 14,
-      }
-    );
-  }
+  // Keep Yucatán as the initial view. Users choose the area by panning and zooming.
 </script>
 </body>
 </html>
@@ -389,14 +380,11 @@ function createMapHtml(properties: NearbyProperty[], initialRegion: Region) {
 
 export default function MapScreen() {
   const router = useRouter();
+  const { height: windowHeight } = useWindowDimensions();
 
   const { properties, loading } = useProperties();
 
   const [userLocation, setUserLocation] = useState<UserCoords | null>(null);
-
-  const [region, setRegion] = useState<Region>(DEFAULT_REGION);
-
-  const [radius, setRadius] = useState<number>(25);
 
   const [locating, setLocating] = useState(false);
 
@@ -418,12 +406,6 @@ export default function MapScreen() {
               };
 
               setUserLocation(coords);
-              setRegion({
-                latitude: coords.latitude,
-                longitude: coords.longitude,
-                latitudeDelta: 0.25,
-                longitudeDelta: 0.25,
-              });
               resolve();
             },
             reject,
@@ -458,12 +440,6 @@ export default function MapScreen() {
       };
 
       setUserLocation(coords);
-      setRegion({
-        latitude: coords.latitude,
-        longitude: coords.longitude,
-        latitudeDelta: 0.25,
-        longitudeDelta: 0.25,
-      });
     } catch (error) {
       console.error("[EYESITE] map location error", error);
 
@@ -516,14 +492,18 @@ export default function MapScreen() {
           longitude: getLongitude(property),
         }),
       }))
-      .filter((property: any) => Number(property.distance) <= radius)
       .sort((a: any, b: any) => Number(a.distance) - Number(b.distance));
-  }, [geoProperties, radius, userLocation]);
+  }, [geoProperties, userLocation]);
 
   const mapHtml = useMemo(
-    () => createMapHtml(nearby, region),
-    [nearby, region],
+    () => createMapHtml(nearby, DEFAULT_REGION),
+    [nearby],
   );
+
+  // On web, flex: 1 competes with the header, radius controls and results list,
+  // which can leave the WebView visually short. Give the map an explicit,
+  // responsive viewport height on desktop/web while keeping native behavior unchanged.
+  const webMapHeight = Math.max(620, Math.min(windowHeight * 0.78, 820));
 
   const handleMapMessage = useCallback(
     (rawData: string) => {
@@ -552,7 +532,7 @@ export default function MapScreen() {
 
           <Text style={styles.subtitle}>
             {userLocation
-              ? `${nearby.length} oportunidades en ${radius} km`
+              ? `${nearby.length} oportunidades en Yucatán`
               : `${geoProperties.length} propiedades con ubicación`}
           </Text>
         </View>
@@ -572,29 +552,18 @@ export default function MapScreen() {
         )}
       </View>
 
-      <View style={styles.radiusRow}>
-        {RADIUS_OPTIONS.map((value) => (
-          <Pressable
-            key={value}
-            onPress={() => setRadius(value)}
-            style={[
-              styles.radiusChip,
-              radius === value && styles.radiusChipActive,
-            ]}
-          >
-            <Text
-              style={[
-                styles.radiusText,
-                radius === value && styles.radiusTextActive,
-              ]}
-            >
-              {value} km
-            </Text>
-          </Pressable>
-        ))}
+      <View style={styles.mapHintRow}>
+        <Text style={styles.mapHintText}>
+          Explora Yucatán libremente: acerca, aleja y mueve el mapa para buscar.
+        </Text>
       </View>
 
-      <View style={styles.mapWrap}>
+      <View
+        style={[
+          styles.mapWrap,
+          Platform.OS === "web" && { height: webMapHeight },
+        ]}
+      >
         <>
           <LeafletMap
             html={mapHtml}
@@ -625,7 +594,7 @@ export default function MapScreen() {
 
       <View style={styles.footer}>
         <Text style={styles.footerTitle}>
-          {userLocation ? "Más cercanas" : "Propiedades ubicadas"}
+          {userLocation ? "Propiedades más cercanas" : "Propiedades ubicadas"}
         </Text>
 
         <Text style={styles.footerNote}>
@@ -703,44 +672,23 @@ const styles = StyleSheet.create({
   },
 
   locationButtonText: {
-    color: "#0D0D0D",
+    color: "#0B0B0B",
     fontSize: 23,
     fontWeight: "900",
   },
 
-  radiusRow: {
-    flexDirection: "row",
-    gap: 8,
+  mapHintRow: {
     paddingHorizontal: 18,
     paddingBottom: 10,
   },
 
-  radiusChip: {
-    borderWidth: 1,
-    borderColor: "#303030",
-    borderRadius: 18,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    backgroundColor: "#181818",
-  },
-
-  radiusChipActive: {
-    backgroundColor: "#C9A84C",
-    borderColor: "#C9A84C",
-  },
-
-  radiusText: {
-    color: "#B8B8B8",
-    fontSize: 12,
-    fontWeight: "700",
-  },
-
-  radiusTextActive: {
-    color: "#0D0D0D",
+  mapHintText: {
+    color: "#9A9A9A",
+    fontSize: 11,
   },
 
   mapWrap: {
-    flex: 1,
+    flex: Platform.OS === "web" ? 0 : 1,
     minHeight: 360,
     marginHorizontal: 12,
     borderRadius: 16,
@@ -754,7 +702,7 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFill,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "rgba(13,13,13,.45)",
+    backgroundColor: "rgba(11,11,11,.55)",
   },
 
   emptyOverlay: {
@@ -764,7 +712,7 @@ const styles = StyleSheet.create({
     bottom: 24,
     padding: 16,
     borderRadius: 12,
-    backgroundColor: "rgba(13,13,13,.92)",
+    backgroundColor: "rgba(11,11,11,.94)",
     borderWidth: 1,
     borderColor: "#C9A84C",
   },
@@ -795,7 +743,7 @@ const styles = StyleSheet.create({
   },
 
   footerNote: {
-    color: "#777777",
+    color: "#707070",
     fontSize: 10,
     marginBottom: 4,
   },
@@ -811,7 +759,7 @@ const styles = StyleSheet.create({
     width: 30,
     height: 30,
     borderRadius: 15,
-    backgroundColor: "#1D1D1D",
+    backgroundColor: "#1A1A1A",
     alignItems: "center",
     justifyContent: "center",
   },

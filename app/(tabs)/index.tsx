@@ -21,7 +21,7 @@ export default function HomeScreen() {
   const { properties, loading } = useProperties();
   const { user, session } = useAuth();
   const { unread } = useNotifications(user?.id);
-  const { horizontalPadding, contentMaxWidth, isDesktop, isLargeDesktop } = useResponsive();
+  const { horizontalPadding, contentMaxWidth, isDesktop, isLargeDesktop, propertyColumns } = useResponsive();
   const featuredProperties = properties.filter((p) => p.featured || p.destacada);
   // Si todavía no hay propiedades marcadas como destacadas, mostramos las
   // primeras oportunidades reales para evitar una sección vacía en producción.
@@ -36,10 +36,10 @@ export default function HomeScreen() {
 
 
   return (
-    <ScreenContainer edges={['top', 'left', 'right']} containerClassName="bg-[#0D0D0D]">
+    <ScreenContainer edges={['top', 'left', 'right']} containerClassName="bg-[#0B0B0B]">
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 100, backgroundColor: '#0D0D0D' }}
+        contentContainerStyle={{ paddingBottom: 110, backgroundColor: '#0B0B0B' }}
       >
         {/* Header with Tagline */}
         <View style={[styles.taglineContainer, { paddingHorizontal: horizontalPadding }]}>
@@ -123,9 +123,24 @@ export default function HomeScreen() {
               <ActivityIndicator color="#C9A84C" size="large" />
             </View>
           ) : (
-            highlightedProperties.map((property) => (
-              <PropertyCard key={property.id} property={property} />
-            ))
+            <View style={[
+              styles.propertiesGrid,
+              propertyColumns > 1 && styles.propertiesGridRow,
+              propertyColumns === 3 && styles.propertyGridItemThree,
+            ]}>
+              {highlightedProperties.map((property) => (
+                <View
+                  key={property.id}
+                  style={[
+                    styles.propertyGridItem,
+                    propertyColumns > 1 && styles.propertyGridItemMulti,
+                    propertyColumns === 3 && styles.propertyGridItemThree,
+                  ]}
+                >
+                  <PropertyCard property={property} />
+                </View>
+              ))}
+            </View>
           )}
         </View>
       </ScrollView>
@@ -203,7 +218,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    backgroundColor: 'rgba(11, 11, 11, 0.48)',
   },
   heroContent: {
     position: 'absolute',
@@ -267,11 +282,17 @@ const styles = StyleSheet.create({
   },
   categoryCard: {
     alignItems: 'center',
-    marginRight: 16,
-    paddingVertical: 12,
+    width: 92,
+    marginRight: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 8,
+    borderRadius: 14,
+    backgroundColor: '#141414',
+    borderWidth: 1,
+    borderColor: '#2A2A2A',
   },
   categoryIcon: {
-    fontSize: 32,
+    fontSize: 28,
     marginBottom: 8,
   },
   categoryLabel: {
@@ -279,6 +300,26 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontWeight: '500',
     textAlign: 'center',
+  },
+  propertiesGridRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    columnGap: 16,
+    rowGap: 16,
+  },
+  propertiesGrid: {
+    width: '100%',
+  },
+  propertyGridItem: {
+    width: '100%',
+    minWidth: 0,
+  },
+  propertyGridItemMulti: {
+    flex: 1,
+  },
+  propertyGridItemThree: {
+    flexBasis: '31.5%',
+    maxWidth: '31.5%',
   },
   loadingContainer: {
     paddingVertical: 40,

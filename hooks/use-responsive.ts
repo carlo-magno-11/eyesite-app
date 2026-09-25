@@ -8,7 +8,9 @@ export function useResponsive() {
   const isDesktop = width >= 1024;
   const isLargeDesktop = width >= 1440;
 
-  const propertyColumns = isPhone ? 1 : isTablet ? 2 : isLargeDesktop ? 4 : 3;
+  // Catálogo consistente: teléfono 1, tablet 2, escritorio 3.
+  // En Mac/desktop mantenemos tres tarjetas por fila para conservar la jerarquía visual.
+  const propertyColumns = isPhone ? 1 : isTablet ? 2 : 3;
   const horizontalPadding = isPhone ? 16 : isTablet ? 24 : 32;
   const contentMaxWidth = isLargeDesktop ? 1400 : isDesktop ? 1200 : undefined;
 
