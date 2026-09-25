@@ -1,8 +1,10 @@
 # EYESITE — Control de acceso hasta aprobación administrativa
 
 Fecha: 2026-09-25
-Rama: fix/web-map-layout-final
-Commit: b40d99b3107bbc3b9bcffd8a86491020809c6ac5
+Rama: fix/eyesite-platform-security-20260925
+Commit: 19392af433e1fab8ebf9ea02f013e749f2556ba3
+
+Nota: el commit indicado corresponde a la versión auditada de `app/_layout.tsx`; la rama puede recibir nuevos commits posteriores.
 
 ## Regla de negocio confirmada
 
