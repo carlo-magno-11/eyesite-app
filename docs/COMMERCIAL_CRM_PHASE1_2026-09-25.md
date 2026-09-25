@@ -37,6 +37,7 @@ Se construye únicamente la base comercial prioritaria:
 - RPC `registrar_prospecto_desde_interes`.
 - RPC `admin_list_prospectos`.
 - RPC `admin_update_prospecto`.
+- Índice `prospecto_actividades_property_idx(property_id, created_at DESC)` para cubrir la FK de actividad hacia propiedades; quedó aplicado en producción como migración `20260925064310_index_prospect_activity_property.sql`.
 
 La migración fue aplicada al proyecto Supabase de producción después de validación transaccional.
 
@@ -51,6 +52,7 @@ La migración fue aplicada al proyecto Supabase de producción después de valid
 - Nueva pantalla `/saved-searches`.
 - Mi cuenta incluye acceso a Mis búsquedas.
 - Inicio muestra hasta tres coincidencias personalizadas según presupuesto/zona cuando existen datos suficientes.
+- El listener nativo de notificaciones configura presentación de push en primer plano para iOS/Android; la bandeja in-app sigue funcionando mediante Supabase Realtime.
 
 ### Admin
 - Nuevo módulo `public/crm.js`.
@@ -77,6 +79,8 @@ La migración fue aplicada al proyecto Supabase de producción después de valid
 7. Se corrigió el trigger preexistente de `propiedades_cambios` y se verificó que una actualización de propiedad genera un registro `update` correctamente.
 8. Se verificó la presencia de las cinco tablas nuevas.
 9. Security Advisor no reportó un problema nuevo distinto de los avisos esperables por tablas CRM sin acceso directo y funciones SECURITY DEFINER protegidas por `is_admin()`; permanecen los avisos previos de `pg_net` en public y leaked-password protection.
+10. Performance Advisor ya no reporta FK sin índice para `prospecto_actividades.property_id`; el índice nuevo aparece como `unused` informativo hasta que tenga uso real en producción.
+11. GitHub Actions: el commit `e3dd05f3a1fe234c89185c4aa5254ab479b70702` tuvo `EYESITE checks` en estado `success`; el commit posterior de foreground push `79843cde7069c651b9df4d9177febafbf19ceaaa` todavía no tiene un workflow run reportado al momento de documentar.
 
 ## Pruebas todavía pendientes
 
