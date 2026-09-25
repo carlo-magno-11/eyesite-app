@@ -4914,6 +4914,12 @@ async function verPendiente(id) {
     deleteButton.style.display = "inline-block";
   }
 
+  const editButton = document.getElementById("vedit");
+  if (editButton) {
+    editButton.style.display = "inline-block";
+    editButton.onclick = () => editarPendiente(p.id);
+  }
+
   openMod("vmod");
 }
 
