@@ -389,7 +389,7 @@ function createMapHtml(properties: NearbyProperty[], initialRegion: Region) {
 
 export default function MapScreen() {
   const router = useRouter();
-  const { height: windowHeight } = useWindowDimensions();
+  const { width: windowWidth, height: windowHeight } = useWindowDimensions();
 
   const { trackPropertyEvent } = useCommercial();
   const [properties, setProperties] = useState<MapProperty[]>([]);
@@ -563,10 +563,12 @@ export default function MapScreen() {
 
   // Web: keep the map responsive across laptops, tablets and split-screen.
   // The map shares the page with a header and a short result list.
-  const webMapHeight = Math.max(
-    320,
-    Math.min(Math.round(windowHeight * 0.55), 620),
-  );
+  const webMapHeight =
+    windowWidth < 600
+      ? Math.max(300, Math.min(Math.round(windowHeight * 0.42), 420))
+      : windowWidth < 1024
+        ? Math.max(320, Math.min(Math.round(windowHeight * 0.52), 540))
+        : Math.max(380, Math.min(Math.round(windowHeight * 0.60), 680));
 
   const handleMapMessage = useCallback(
     (rawData: string) => {
