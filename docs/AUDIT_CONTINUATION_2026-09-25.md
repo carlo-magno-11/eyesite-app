@@ -61,6 +61,12 @@ La función no queda abierta: exige el encabezado secreto propio `x-eyesite-cron
 7. Probar flujo completo de medios: envío → edición → promoción → aprobación → vista pública → mapa.
 8. Probar anuncios/notificaciones en iOS, Android y Web, incluyendo inmediatos, programados, preferencias, tokens inválidos y reintentos.
 
+## Verificación runtime adicional
+
+- Supabase `send-notification` fue desplegada como versión 7 con JWT obligatorio.
+- El scheduler `process-scheduled-communications` permanece con `verify_jwt=false` porque usa autenticación propia por secreto de cron; el job de `pg_cron` está activo cada minuto.
+- Runtime verificado: 10 propiedades activas, 10 en `propiedades_publicas`, 3 con coordenadas válidas y 1 anuncio publicado/vigente.
+
 ## Gate de salida
 
 No se considera listo para merge a `main` ni para binario final hasta completar:
