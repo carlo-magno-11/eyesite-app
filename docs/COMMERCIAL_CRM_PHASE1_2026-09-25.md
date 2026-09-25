@@ -46,7 +46,8 @@ La migración fue aplicada al proyecto Supabase de producción después de valid
 - Detalle de propiedad registra vista, compartir y contacto por WhatsApp.
 - Contacto por WhatsApp registra/actualiza prospecto.
 - Favoritos alimentan la telemetría.
-- Oportunidades permite guardar una búsqueda.
+- Oportunidades permite guardar una búsqueda con tipo, zona/municipio, rango de precio y rango de superficie activos en pantalla.
+- Mis búsquedas muestra los criterios comerciales guardados; el texto libre de título/ubicación no se trata como criterio de matching porque el esquema comercial no lo define como campo.
 - Nueva pantalla `/saved-searches`.
 - Mi cuenta incluye acceso a Mis búsquedas.
 - Inicio muestra hasta tres coincidencias personalizadas según presupuesto/zona cuando existen datos suficientes.
