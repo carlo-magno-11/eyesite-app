@@ -2563,6 +2563,7 @@
           <div class="ni" data-s="nueva">➕ Nueva propiedad</div>
 
           <div class="ni" data-s="usuarios">👥 Usuarios</div>
+          <div class="ni" data-s="crm">🎯 Prospectos CRM</div>
           <div class="ni" data-s="notificaciones">🔔 Notificaciones</div>
         </nav>
 
@@ -2761,6 +2762,51 @@
           </section>
 
           <!-- =================================================
+           CRM DE PROSPECTOS
+           ================================================= -->
+          <section class="sec" id="sec-crm">
+            <div class="fp">
+              <div class="fpt">PROSPECTOS</div>
+              <div class="fps">Seguimiento comercial de contactos, interés en propiedades y prioridad de atención.</div>
+
+              <div class="stat" style="margin-bottom:18px">
+                <div class="sv" id="crm_summary">Cargando prospectos...</div>
+                <div class="slbl">Resumen CRM</div>
+              </div>
+
+              <div class="tw">
+                <div class="th">
+                  <div>
+                    <div class="tt">Pipeline comercial</div>
+                    <div style="color:var(--mu);font-size:10px;margin-top:4px">
+                      El score es una señal operativa; no sustituye la valoración del asesor.
+                    </div>
+                  </div>
+                  <button class="btn btn-o" onclick="cargarCRM()">↻ Actualizar</button>
+                </div>
+                <div class="table-scroll">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Prospecto</th>
+                        <th>Score</th>
+                        <th>Presupuesto</th>
+                        <th>Zona</th>
+                        <th>Fuente</th>
+                        <th>Propiedades</th>
+                        <th>Actividad</th>
+                        <th>Estado</th>
+                        <th>Acción</th>
+                      </tr>
+                    </thead>
+                    <tbody id="crm_tbody"></tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- =================================================
            NOTIFICACIONES
            ================================================= -->
           <section class="sec" id="sec-notificaciones">
@@ -2900,6 +2946,8 @@
         <div class="mf">
           <button class="btn btn-o" onclick="closeMod('vmod')">Cerrar</button>
 
+          <button class="btn btn-g" id="vedit" style="display:none">✏️ Editar solicitud</button>
+
           <button class="btn btn-r" id="vdel" onclick="delPend()">
             🗑️ Eliminar
           </button>
@@ -2941,6 +2989,7 @@
      JAVASCRIPT PRINCIPAL
      ===================================================== -->
 
+    <script src="./crm.js"></script>
     <script src="./admin.js"></script>
   </body>
 </html>

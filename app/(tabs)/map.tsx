@@ -7,14 +7,16 @@ import {
   StyleSheet,
   Text,
   View,
+  useWindowDimensions,
 } from "react-native";
 import { useRouter } from "expo-router";
 import * as Location from "expo-location";
-import { WebView } from "react-native-webview";
+import { LeafletMap } from "@/components/leaflet-map";
 
 import { useProperties } from "@/hooks/use-properties";
 import { formatPrice } from "@/lib/properties-data";
 import { ScreenContainer } from "@/components/screen-container";
+import { useCommercial } from "@/hooks/use-commercial";
 
 type UserCoords = {
   latitude: number;
@@ -55,7 +57,7 @@ const DEFAULT_REGION: Region = {
   longitudeDelta: 0.8,
 };
 
-const RADIUS_OPTIONS = [10, 25, 50, 100] as const;
+
 
 function distanceKm(a: UserCoords, b: UserCoords) {
   const R = 6371;
@@ -164,7 +166,7 @@ function createMapHtml(properties: NearbyProperty[], initialRegion: Region) {
     height: 100%;
     margin: 0;
     padding: 0;
-    background: #0d0d0d;
+    background: #0b0b0b;
   }
 
   body {
@@ -177,9 +179,9 @@ function createMapHtml(properties: NearbyProperty[], initialRegion: Region) {
   }
 
   .leaflet-control-zoom a {
-    background: #151515 !important;
+    background: #141414 !important;
     color: #f5f5f5 !important;
-    border-color: #303030 !important;
+    border-color: #2a2a2a !important;
   }
 
   .leaflet-control-attribution {
@@ -189,7 +191,7 @@ function createMapHtml(properties: NearbyProperty[], initialRegion: Region) {
   }
 
   .leaflet-control-attribution a {
-    color: #c9a84c !important;
+    color: #d8b968 !important;
   }
 
   .property-popup {
@@ -212,7 +214,7 @@ function createMapHtml(properties: NearbyProperty[], initialRegion: Region) {
   .property-price {
     font-size: 13px;
     font-weight: 700;
-    color: #9a7626;
+    color: #c9a84c;
     margin-bottom: 4px;
   }
 
@@ -248,7 +250,7 @@ function createMapHtml(properties: NearbyProperty[], initialRegion: Region) {
     attributionControl: true,
   }).setView(
     [INITIAL_REGION.latitude, INITIAL_REGION.longitude],
-    11
+    8
   );
 
   L.tileLayer(
@@ -260,13 +262,15 @@ function createMapHtml(properties: NearbyProperty[], initialRegion: Region) {
   ).addTo(map);
 
   function sendToApp(payload) {
+    const message = JSON.stringify(payload);
+
     if (
       window.ReactNativeWebView &&
       window.ReactNativeWebView.postMessage
     ) {
-      window.ReactNativeWebView.postMessage(
-        JSON.stringify(payload)
-      );
+      window.ReactNativeWebView.postMessage(message);
+    } else if (window.parent && window.parent !== window) {
+      window.parent.postMessage(message, "*");
     }
   }
 
@@ -368,17 +372,15 @@ function createMapHtml(properties: NearbyProperty[], initialRegion: Region) {
     });
   }
 
-  if (markers.length > 0) {
-    const group = L.featureGroup(markers);
+  // Leaflet keeps internal pixel dimensions. Recalculate them when the
+  // responsive WebView/iframe changes size (browser resize, orientation,
+  // split-screen, tablet rotation, etc.).
+  const refreshMapSize = () => map.invalidateSize({ pan: false });
+  window.addEventListener('resize', refreshMapSize);
+  setTimeout(refreshMapSize, 0);
+  setTimeout(refreshMapSize, 250);
 
-    map.fitBounds(
-      group.getBounds(),
-      {
-        padding: [30, 30],
-        maxZoom: 14,
-      }
-    );
-  }
+  // Keep Yucatán as the initial view. Users choose the area by panning and zooming.
 </script>
 </body>
 </html>
@@ -387,25 +389,47 @@ function createMapHtml(properties: NearbyProperty[], initialRegion: Region) {
 
 export default function MapScreen() {
   const router = useRouter();
+  const { height: windowHeight } = useWindowDimensions();
 
   const { properties, loading } = useProperties();
+  const { trackPropertyEvent } = useCommercial();
 
   const [userLocation, setUserLocation] = useState<UserCoords | null>(null);
-
-  const [region, setRegion] = useState<Region>(DEFAULT_REGION);
-
-  const [radius, setRadius] = useState<number>(25);
 
   const [locating, setLocating] = useState(false);
 
   const requestLocation = useCallback(async () => {
-    if (Platform.OS === "web") {
-      return;
-    }
-
     setLocating(true);
 
     try {
+      if (Platform.OS === "web") {
+        if (!("geolocation" in navigator)) {
+          throw new Error("El navegador no ofrece geolocalización.");
+        }
+
+        await new Promise<void>((resolve, reject) => {
+          navigator.geolocation.getCurrentPosition(
+            (position) => {
+              const coords = {
+                latitude: position.coords.latitude,
+                longitude: position.coords.longitude,
+              };
+
+              setUserLocation(coords);
+              resolve();
+            },
+            reject,
+            {
+              enableHighAccuracy: false,
+              maximumAge: 60_000,
+              timeout: 10_000,
+            },
+          );
+        });
+
+        return;
+      }
+
       const { status } = await Location.requestForegroundPermissionsAsync();
 
       if (status !== Location.PermissionStatus.GRANTED) {
@@ -426,13 +450,6 @@ export default function MapScreen() {
       };
 
       setUserLocation(coords);
-
-      setRegion({
-        latitude: coords.latitude,
-        longitude: coords.longitude,
-        latitudeDelta: 0.25,
-        longitudeDelta: 0.25,
-      });
     } catch (error) {
       console.error("[EYESITE] map location error", error);
 
@@ -446,9 +463,7 @@ export default function MapScreen() {
   }, []);
 
   useEffect(() => {
-    if (Platform.OS === "web") {
-      return;
-    }
+    if (Platform.OS === "web") return;
 
     const timer = setTimeout(() => {
       requestLocation();
@@ -487,32 +502,41 @@ export default function MapScreen() {
           longitude: getLongitude(property),
         }),
       }))
-      .filter((property: any) => Number(property.distance) <= radius)
       .sort((a: any, b: any) => Number(a.distance) - Number(b.distance));
-  }, [geoProperties, radius, userLocation]);
+  }, [geoProperties, userLocation]);
 
   const mapHtml = useMemo(
-    () => createMapHtml(nearby, region),
-    [nearby, region],
+    () => createMapHtml(nearby, DEFAULT_REGION),
+    [nearby],
   );
 
-  const handleWebViewMessage = useCallback(
-    (event: any) => {
+  // Web needs a real viewport-sized map because the page also contains a
+  // header, hint and a short list below it. The previous 620px minimum made
+  // the map too tall on laptops and smaller browser windows, pushing the
+  // rest of the screen below the fold. Keep native layout untouched and make
+  // the Web map proportional to the available viewport.
+  const webMapHeight = Math.max(
+    420,
+    Math.min(windowHeight * 0.58, 720),
+  );
+
+  const handleMapMessage = useCallback(
+    (rawData: string) => {
       try {
-        const data = JSON.parse(event?.nativeEvent?.data ?? "{}");
+        const data = JSON.parse(rawData || "{}");
 
         if (data?.type === "property" || data?.type === "property_marker") {
-          if (!data.id) {
-            return;
-          }
-
+          if (!data.id) return;
+          void trackPropertyEvent(String(data.id), "map_open", {
+            interaction: data.type === "property_marker" ? "marker" : "popup",
+          }, "map");
           router.push(`/property/${String(data.id)}` as any);
         }
       } catch (error) {
         console.error("[EYESITE] map message error", error);
       }
     },
-    [router],
+    [router, trackPropertyEvent],
   );
 
   return (
@@ -526,12 +550,12 @@ export default function MapScreen() {
 
           <Text style={styles.subtitle}>
             {userLocation
-              ? `${nearby.length} oportunidades en ${radius} km`
+              ? `${nearby.length} oportunidades en Yucatán`
               : `${geoProperties.length} propiedades con ubicación`}
           </Text>
         </View>
 
-        {Platform.OS !== "web" && (
+        {(
           <Pressable
             onPress={requestLocation}
             style={styles.locationButton}
@@ -546,82 +570,49 @@ export default function MapScreen() {
         )}
       </View>
 
-      <View style={styles.radiusRow}>
-        {RADIUS_OPTIONS.map((value) => (
-          <Pressable
-            key={value}
-            onPress={() => setRadius(value)}
-            style={[
-              styles.radiusChip,
-              radius === value && styles.radiusChipActive,
-            ]}
-          >
-            <Text
-              style={[
-                styles.radiusText,
-                radius === value && styles.radiusTextActive,
-              ]}
-            >
-              {value} km
-            </Text>
-          </Pressable>
-        ))}
+      <View style={styles.mapHintRow}>
+        <Text style={styles.mapHintText}>
+          Explora Yucatán libremente: acerca, aleja y mueve el mapa para buscar.
+        </Text>
       </View>
 
-      <View style={styles.mapWrap}>
-        {Platform.OS === "web" ? (
-          <View style={styles.emptyOverlay}>
-            <Text style={styles.emptyTitle}>
-              Mapa disponible en la aplicación móvil
-            </Text>
+      <View
+        style={[
+          styles.mapWrap,
+          Platform.OS === "web" && { height: webMapHeight },
+        ]}
+      >
+        <>
+          <LeafletMap
+            html={mapHtml}
+            onMessage={handleMapMessage}
+            style={StyleSheet.absoluteFill}
+          />
 
-            <Text style={styles.emptyText}>
-              Abre EYESITE en Android o iOS para utilizar el mapa y la
-              ubicación.
-            </Text>
-          </View>
-        ) : (
-          <>
-            <WebView
-              originWhitelist={["*"]}
-              source={{ html: mapHtml }}
-              onMessage={handleWebViewMessage}
-              javaScriptEnabled
-              domStorageEnabled
-              startInLoadingState
-              renderLoading={() => (
-                <View style={styles.loadingOverlay}>
-                  <ActivityIndicator color="#C9A84C" size="large" />
-                </View>
-              )}
-              style={StyleSheet.absoluteFill}
-            />
+          {loading && (
+            <View style={styles.loadingOverlay}>
+              <ActivityIndicator color="#C9A84C" size="large" />
+            </View>
+          )}
 
-            {loading && (
-              <View style={styles.loadingOverlay}>
-                <ActivityIndicator color="#C9A84C" size="large" />
-              </View>
-            )}
+          {!loading && geoProperties.length === 0 && (
+            <View style={styles.emptyOverlay}>
+              <Text style={styles.emptyTitle}>
+                Aún no hay propiedades ubicadas
+              </Text>
 
-            {!loading && geoProperties.length === 0 && (
-              <View style={styles.emptyOverlay}>
-                <Text style={styles.emptyTitle}>
-                  Aún no hay propiedades ubicadas
-                </Text>
-
-                <Text style={styles.emptyText}>
-                  Solo aparecen propiedades EYESITE activas, publicadas por
-                  administración y con coordenadas válidas.
-                </Text>
-              </View>
-            )}
-          </>
-        )}
+              <Text style={styles.emptyText}>
+                Solo aparecen propiedades EYESITE activas, publicadas por
+                administración y con coordenadas válidas.
+              </Text>
+            </View>
+          )}
+        </>
       </View>
 
       <View style={styles.footer}>
         <Text style={styles.footerTitle}>
-          {userLocation ? "Más cercanas" : "Propiedades ubicadas"}
+          {userLocation ? "Propiedades más cercanas" : "Propiedades ubicadas"}
         </Text>
 
         <Text style={styles.footerNote}>
@@ -699,44 +690,23 @@ const styles = StyleSheet.create({
   },
 
   locationButtonText: {
-    color: "#0D0D0D",
+    color: "#0B0B0B",
     fontSize: 23,
     fontWeight: "900",
   },
 
-  radiusRow: {
-    flexDirection: "row",
-    gap: 8,
+  mapHintRow: {
     paddingHorizontal: 18,
     paddingBottom: 10,
   },
 
-  radiusChip: {
-    borderWidth: 1,
-    borderColor: "#303030",
-    borderRadius: 18,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    backgroundColor: "#181818",
-  },
-
-  radiusChipActive: {
-    backgroundColor: "#C9A84C",
-    borderColor: "#C9A84C",
-  },
-
-  radiusText: {
-    color: "#B8B8B8",
-    fontSize: 12,
-    fontWeight: "700",
-  },
-
-  radiusTextActive: {
-    color: "#0D0D0D",
+  mapHintText: {
+    color: "#9A9A9A",
+    fontSize: 11,
   },
 
   mapWrap: {
-    flex: 1,
+    flex: Platform.OS === "web" ? 0 : 1,
     minHeight: 360,
     marginHorizontal: 12,
     borderRadius: 16,
@@ -750,7 +720,7 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFill,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "rgba(13,13,13,.45)",
+    backgroundColor: "rgba(11,11,11,.55)",
   },
 
   emptyOverlay: {
@@ -760,7 +730,7 @@ const styles = StyleSheet.create({
     bottom: 24,
     padding: 16,
     borderRadius: 12,
-    backgroundColor: "rgba(13,13,13,.92)",
+    backgroundColor: "rgba(11,11,11,.94)",
     borderWidth: 1,
     borderColor: "#C9A84C",
   },
@@ -791,7 +761,7 @@ const styles = StyleSheet.create({
   },
 
   footerNote: {
-    color: "#777777",
+    color: "#707070",
     fontSize: 10,
     marginBottom: 4,
   },
@@ -807,7 +777,7 @@ const styles = StyleSheet.create({
     width: 30,
     height: 30,
     borderRadius: 15,
-    backgroundColor: "#1D1D1D",
+    backgroundColor: "#1A1A1A",
     alignItems: "center",
     justifyContent: "center",
   },

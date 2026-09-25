@@ -33,6 +33,12 @@ jobs:
       - name: Lint
         run: pnpm lint
 
+      - name: Tests
+        run: pnpm test
+
+      - name: Web export
+        run: pnpm build:web
+
 
   native-config:
     runs-on: ubuntu-latest

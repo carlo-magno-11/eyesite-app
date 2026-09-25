@@ -6,15 +6,18 @@ import { ThemeProvider } from "@/lib/theme-provider";
 import { useAuth } from "@/hooks/useAuth";
 import { registerPushToken } from "@/hooks/use-notifications";
 import { useEffect } from "react";
-import { View, ActivityIndicator, Text, StatusBar } from "react-native";
+import { View, ActivityIndicator, Text, StatusBar, Platform } from "react-native";
+import Constants from "expo-constants";
 import * as Sentry from "@sentry/react-native";
 import { supabase } from "@/lib/supabase";
+import { addAppBreadcrumb, reportAppError, setAppMonitoringContext } from "@/lib/monitoring";
 
 Sentry.init({
   dsn: "https://2b9f8a4dc404528b87957977fe39da0c@o4512088794333184.ingest.us.sentry.io/4512088804556800",
   sendDefaultPii: false,
   // Diagnóstico de errores sin grabación de sesiones ni formularios de feedback de terceros.
   enableLogs: false,
+  release: `eyesite@${Constants.expoConfig?.version ?? "unknown"}`,
 });
 
 const queryClient = new QueryClient({
@@ -37,25 +40,19 @@ function AuthGate({ children }: { children: React.ReactNode }) {
   const termsOk = !!profile?.terminos_aceptados && profile.terminos_version === "v1.0";
   const router = useRouter();
   const segments = useSegments();
-  const current = segments.join("/");
+  const segmentList = segments as string[];
+  const current = segmentList.join("/");
 
   useEffect(() => {
     if (loading) return;
 
-    const inAuth = segments[0] === "(auth)";
-    const inTerms = segments[0] === "terms";
-    const inPending = segments[0] === "pending";
-    const inDenied = segments[0] === "denied";
-    const inVerifyEmail = segments[0] === "verify-email";
-    const inPublicProperty = segments[0] === "property";
-    const segmentList = segments as string[];
-    const inPublicTabs = segmentList[0] === "(tabs)" &&
-      (segmentList.length === 1 ||
-        segmentList[1] === "index" ||
-        segmentList[1] === "properties" ||
-        segmentList[1] === "map");
-    const isProtected = !inAuth && !inTerms && !inPending && !inDenied && !inVerifyEmail &&
-      !inPublicProperty && !inPublicTabs;
+    const inAuth = segmentList[0] === "(auth)";
+    const inTerms = segmentList[0] === "terms";
+    const inPending = segmentList[0] === "pending";
+    const inDenied = segmentList[0] === "denied";
+    const inVerifyEmail = segmentList[0] === "verify-email";
+    const inCreateProfile = segmentList[0] === "(auth)" && segmentList[1] === "create-profile";
+    const isProtected = !inAuth && !inTerms && !inPending && !inDenied && !inVerifyEmail && !inCreateProfile;
     const emailConfirmed = !!session?.user?.email_confirmed_at;
 
     if (!session && isProtected && current !== "(auth)/login") {
@@ -105,6 +102,8 @@ export default Sentry.wrap(function RootLayout() {
   const router = useRouter();
 
   useEffect(() => {
+    setAppMonitoringContext();
+    addAppBreadcrumb("EYESITE inició el monitoreo de la sesión");
     let mounted = true;
     let responseSubscription: { remove: () => void } | undefined;
 
@@ -122,6 +121,7 @@ export default Sentry.wrap(function RootLayout() {
       }
 
       if (announcementId) {
+        addAppBreadcrumb("Notificación abierta", { hasProperty: false, hasAnnouncement: true }, "notification");
         void supabase.rpc("registrar_anuncio_evento", {
           p_announcement_id: announcementId,
           p_evento: "opened",
@@ -136,8 +136,27 @@ export default Sentry.wrap(function RootLayout() {
       router.push("/notifications" as never);
     };
 
+    // Expo Notifications response listeners are native-only. Web keeps the
+    // same in-app notification center through Supabase Realtime.
+    if (Platform.OS === "web" || Constants.executionEnvironment === "storeClient") {
+      return () => {
+        mounted = false;
+      };
+    }
+
     void import("expo-notifications").then(async (Notifications) => {
       if (!mounted) return;
+
+      // Permite que una notificación push también sea visible cuando la app
+      // está en primer plano. El centro in-app sigue funcionando por separado.
+      await Notifications.setNotificationHandler({
+        handleNotification: async () => ({
+          shouldShowBanner: true,
+          shouldShowList: true,
+          shouldPlaySound: true,
+          shouldSetBadge: false,
+        }),
+      });
 
       responseSubscription = Notifications.addNotificationResponseReceivedListener(openNotification);
 
@@ -146,7 +165,7 @@ export default Sentry.wrap(function RootLayout() {
         openNotification(lastResponse);
       }
     }).catch((error) => {
-      console.warn("[EYESITE] notification response listener error:", error);
+      reportAppError(error, { area: "notifications", action: "register_response_listener" });
     });
 
     return () => {

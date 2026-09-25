@@ -3,17 +3,19 @@ import { ScreenContainer } from '@/components/screen-container';
 import { PropertyCard } from '@/components/property-card';
 import { useFavorites } from '@/hooks/use-favorites';
 import { useProperties } from '@/hooks/use-properties';
+import { useResponsive } from '@/hooks/use-responsive';
 
 export default function FavoritesScreen() {
   const { favs } = useFavorites();
   const { properties, loading: propsLoading, refetch: fetchProperties } = useProperties();
+  const { propertyColumns, horizontalPadding, contentMaxWidth } = useResponsive();
 
   const favoriteProperties = properties.filter((p) => favs.includes(p.id));
   const loading = propsLoading;
 
   return (
     <ScreenContainer edges={['top', 'left', 'right']} containerClassName="bg-background">
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingHorizontal: horizontalPadding, maxWidth: contentMaxWidth, width: '100%', alignSelf: 'center' }]}>
         <Text style={styles.headerTitle}>FAVORITOS</Text>
         <Text style={styles.headerCount}>{favoriteProperties.length} guardadas</Text>
       </View>
@@ -25,13 +27,20 @@ export default function FavoritesScreen() {
         </View>
       ) : (
         <FlatList
+          key={`favorites-grid-${propertyColumns}`}
           data={favoriteProperties}
           keyExtractor={(item) => item.id}
+          numColumns={propertyColumns}
           refreshing={loading}
           onRefresh={fetchProperties}
-          contentContainerStyle={styles.listContainer}
+          columnWrapperStyle={propertyColumns > 1 ? styles.columnWrapper : undefined}
+          contentContainerStyle={[styles.listContainer, { paddingHorizontal: horizontalPadding, maxWidth: contentMaxWidth, width: '100%', alignSelf: 'center' }]}
           showsVerticalScrollIndicator={false}
-          renderItem={({ item }) => <PropertyCard property={item} />}
+          renderItem={({ item }) => (
+            <View style={propertyColumns > 1 ? styles.gridItem : styles.singleItem}>
+              <PropertyCard property={item} />
+            </View>
+          )}
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
               <Text style={styles.emptyIcon}>🏡</Text>
@@ -50,55 +59,21 @@ export default function FavoritesScreen() {
 
 const styles = StyleSheet.create({
   header: {
-    paddingHorizontal: 20,
     paddingTop: 16,
     paddingBottom: 16,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  headerTitle: {
-    color: '#F5F5F5',
-    fontSize: 18,
-    fontWeight: '800',
-    letterSpacing: 2,
-  },
-  headerCount: {
-    color: '#9A9A9A',
-    fontSize: 13,
-  },
-  listContainer: {
-    paddingHorizontal: 20,
-    paddingBottom: 100,
-  },
-  emptyContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 40,
-    paddingBottom: 80,
-  },
-  emptyIcon: {
-    fontSize: 64,
-    marginBottom: 20,
-  },
-  emptyTitle: {
-    color: '#F5F5F5',
-    fontSize: 20,
-    fontWeight: '700',
-    marginBottom: 12,
-  },
-  emptyText: {
-    color: '#9A9A9A',
-    fontSize: 14,
-    textAlign: 'center',
-    lineHeight: 22,
-    marginBottom: 24,
-  },
-  emptyHint: {
-    color: '#C9A84C',
-    fontSize: 12,
-    fontWeight: '700',
-    letterSpacing: 3,
-  },
+  headerTitle: { color: '#F5F5F5', fontSize: 18, fontWeight: '800', letterSpacing: 2 },
+  headerCount: { color: '#9A9A9A', fontSize: 13 },
+  listContainer: { paddingBottom: 100 },
+  columnWrapper: { gap: 16, marginBottom: 16 },
+  gridItem: { flex: 1, minWidth: 0 },
+  singleItem: { width: '100%', marginBottom: 16 },
+  emptyContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 40, paddingBottom: 80 },
+  emptyIcon: { fontSize: 64, marginBottom: 20 },
+  emptyTitle: { color: '#F5F5F5', fontSize: 20, fontWeight: '700', marginBottom: 12 },
+  emptyText: { color: '#9A9A9A', fontSize: 14, textAlign: 'center', lineHeight: 22, marginBottom: 24 },
+  emptyHint: { color: '#C9A84C', fontSize: 12, fontWeight: '700', letterSpacing: 3 },
 });

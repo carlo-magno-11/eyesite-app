@@ -18,13 +18,19 @@ import { Ionicons } from "@expo/vector-icons";
 
 import { supabase } from "@/lib/supabase";
 import AuthBackground from "@/components/AuthBackground";
+import { useResponsive } from "@/hooks/use-responsive";
 
 export default function RegisterScreen() {
   const router = useRouter();
+  const { isDesktop } = useResponsive();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [nombre, setNombre] = useState("");
+  const [telefono, setTelefono] = useState("");
+  const [ciudad, setCiudad] = useState("");
+  const [presupuesto, setPresupuesto] = useState("");
 
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -32,6 +38,7 @@ export default function RegisterScreen() {
   const [loading, setLoading] = useState(false);
   const [legalAccepted, setLegalAccepted] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
+  const [confirmationEmail, setConfirmationEmail] = useState<string | null>(null);
 
   const signup = async () => {
     if (loading) return;
@@ -63,6 +70,21 @@ export default function RegisterScreen() {
       );
     }
 
+    const cleanNombre = nombre.trim();
+    const cleanTelefono = telefono.trim().replace(/\D/g, "");
+    const cleanCiudad = ciudad.trim();
+    const cleanPresupuesto = presupuesto.trim();
+
+    if (!cleanNombre) {
+      return Alert.alert("Nombre requerido", "Ingresa tu nombre completo.");
+    }
+    if (cleanTelefono.length < 10) {
+      return Alert.alert("Teléfono inválido", "Ingresa un teléfono válido de al menos 10 dígitos.");
+    }
+    if (!cleanCiudad) {
+      return Alert.alert("Ciudad requerida", "Ingresa tu ciudad o zona de interés.");
+    }
+
     // Validar contraseña
     if (password.length < 6) {
       return Alert.alert(
@@ -86,7 +108,16 @@ export default function RegisterScreen() {
         email: cleanEmail,
         password,
         options: {
-          emailRedirectTo: "https://auth.eyesite.mx/auth/callback",
+          data: {
+            nombre: cleanNombre,
+            telefono: cleanTelefono,
+            ciudad: cleanCiudad,
+            presupuesto: cleanPresupuesto,
+          },
+          emailRedirectTo:
+            Platform.OS === "web"
+              ? "https://auth.eyesite.mx/auth/callback"
+              : "eyesite://auth/callback",
         },
       });
 
@@ -126,17 +157,7 @@ export default function RegisterScreen() {
 
       // Cuenta creada pero requiere confirmar correo
       if (data.user && !data.session) {
-        Alert.alert(
-          "Verifica tu correo",
-          `Te enviamos un enlace de confirmación a ${cleanEmail}. Revisa también la carpeta de spam.`,
-          [
-            {
-              text: "Ir al inicio de sesión",
-              onPress: () => router.replace("/(auth)/login" as never),
-            },
-          ],
-        );
-
+        setConfirmationEmail(cleanEmail);
         return;
       }
 
@@ -168,6 +189,28 @@ export default function RegisterScreen() {
 
   return (
     <AuthBackground>
+      {confirmationEmail ? (
+        <View style={styles.confirmationScreen}>
+          <View style={styles.confirmationCard}>
+            <Ionicons name="mail-outline" size={56} color="#C9A84C" />
+            <Text style={styles.confirmationTitle}>CONFIRMA TU CORREO</Text>
+            <Text style={styles.confirmationText}>Tu cuenta fue creada correctamente.</Text>
+            <Text style={styles.confirmationText}>Te enviamos un enlace de confirmación a:</Text>
+            <Text style={styles.confirmationEmail}>{confirmationEmail}</Text>
+            <Text style={styles.confirmationHint}>
+              Revisa tu bandeja de entrada y también Spam o Correo no deseado.
+              Debes confirmar tu correo antes de continuar.
+            </Text>
+            <TouchableOpacity
+              onPress={() => router.replace("/(auth)/login" as never)}
+              style={styles.button}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.buttonText}>IR A INICIAR SESIÓN</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      ) : (
       <KeyboardAvoidingView
         style={styles.keyboard}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
@@ -177,7 +220,7 @@ export default function RegisterScreen() {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          <View style={styles.container}>
+          <View style={[styles.container, isDesktop && styles.desktopContainer]}>
             {/* ENCABEZADO */}
             <View style={styles.header}>
               <Text style={styles.brand}>CREAR CUENTA</Text>
@@ -211,6 +254,39 @@ export default function RegisterScreen() {
                   returnKeyType="next"
                   style={styles.input}
                 />
+              </View>
+            </View>
+
+            {/* DATOS DEL PERFIL */}
+            <View style={styles.field}>
+              <Text style={styles.label}>NOMBRE COMPLETO</Text>
+              <View style={styles.inputWrap}>
+                <Ionicons name="person-outline" size={20} color="#888" style={styles.inputIcon} />
+                <TextInput value={nombre} onChangeText={setNombre} placeholder="Tu nombre completo" placeholderTextColor="#666" autoCapitalize="words" autoCorrect={false} style={styles.input} />
+              </View>
+            </View>
+
+            <View style={styles.field}>
+              <Text style={styles.label}>TELÉFONO / WHATSAPP</Text>
+              <View style={styles.inputWrap}>
+                <Ionicons name="call-outline" size={20} color="#888" style={styles.inputIcon} />
+                <TextInput value={telefono} onChangeText={setTelefono} placeholder="10 dígitos" placeholderTextColor="#666" keyboardType="phone-pad" style={styles.input} />
+              </View>
+            </View>
+
+            <View style={styles.field}>
+              <Text style={styles.label}>CIUDAD / ZONA</Text>
+              <View style={styles.inputWrap}>
+                <Ionicons name="location-outline" size={20} color="#888" style={styles.inputIcon} />
+                <TextInput value={ciudad} onChangeText={setCiudad} placeholder="Ciudad o zona de interés" placeholderTextColor="#666" autoCapitalize="words" autoCorrect={false} style={styles.input} />
+              </View>
+            </View>
+
+            <View style={styles.field}>
+              <Text style={styles.label}>PRESUPUESTO <Text style={styles.optional}>(OPCIONAL)</Text></Text>
+              <View style={styles.inputWrap}>
+                <Ionicons name="cash-outline" size={20} color="#888" style={styles.inputIcon} />
+                <TextInput value={presupuesto} onChangeText={setPresupuesto} placeholder="Ej. $2,500,000" placeholderTextColor="#666" keyboardType="default" style={styles.input} />
               </View>
             </View>
 
@@ -321,12 +397,12 @@ export default function RegisterScreen() {
                   </Text>
                   <ScrollView style={styles.modalScroll}>
                     <Text style={styles.modalText}>
-                      TÉRMINOS Y CONDICIONES EYESI+E\n\nLa información
+                      TÉRMINOS Y CONDICIONES EYESITE\n\nLa información
                       inmobiliaria es referencial y debe verificarse con un
                       asesor. Te comprometes a proporcionar datos
                       veraces.\n\nAVISO DE PRIVACIDAD\n\nTus datos se utilizarán
                       para gestionar tu cuenta y contactarte sobre propiedades y
-                      servicios de EYESI+E.\n\nTRATAMIENTO DE DATOS\n\nAutorizas
+                      servicios de EYESITE.\n\nTRATAMIENTO DE DATOS\n\nAutorizas
                       el contacto por WhatsApp, llamada o correo para atención
                       inmobiliaria.
                     </Text>
@@ -383,11 +459,59 @@ export default function RegisterScreen() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+      )}
     </AuthBackground>
   );
 }
 
 const styles = StyleSheet.create({
+  confirmationScreen: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 24,
+  },
+  confirmationCard: {
+    width: "100%",
+    maxWidth: 560,
+    backgroundColor: "#171717",
+    borderWidth: 1,
+    borderColor: "#C9A84C",
+    borderRadius: 16,
+    padding: 28,
+    alignItems: "center",
+  },
+  confirmationTitle: {
+    color: "#C9A84C",
+    fontSize: 24,
+    fontWeight: "900",
+    letterSpacing: 1,
+    marginTop: 16,
+    marginBottom: 12,
+    textAlign: "center",
+  },
+  confirmationText: {
+    color: "#E5E5E5",
+    fontSize: 15,
+    lineHeight: 22,
+    textAlign: "center",
+  },
+  confirmationEmail: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontWeight: "800",
+    marginTop: 8,
+    marginBottom: 16,
+    textAlign: "center",
+  },
+  confirmationHint: {
+    color: "#AFAFAF",
+    fontSize: 13,
+    lineHeight: 20,
+    textAlign: "center",
+    marginBottom: 22,
+  },
+
   keyboard: {
     flex: 1,
   },
@@ -401,6 +525,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingVertical: 32,
     justifyContent: "center",
+  },
+
+  desktopContainer: {
+    width: '100%',
+    maxWidth: 560,
+    alignSelf: 'center',
   },
 
   header: {
@@ -460,6 +590,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 12,
   },
+
+  optional: { color: "#777", fontWeight: "400" },
 
   legalBox: {
     backgroundColor: "#171717",

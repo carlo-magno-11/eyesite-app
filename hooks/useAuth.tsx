@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import type { Session, User } from '@supabase/supabase-js';
 
@@ -7,6 +7,8 @@ export interface AuthProfile {
   email?: string | null;
   nombre?: string | null;
   telefono?: string | null;
+  ciudad?: string | null;
+  presupuesto?: string | null;
   estado?: string | null;
   status?: string | null;
   role?: string | null;
@@ -15,74 +17,183 @@ export interface AuthProfile {
   [key: string]: any;
 }
 
-/**
- * Hook ÚNICO de autenticación (Supabase onAuthStateChange).
- * Centraliza getSession + suscripción para NO repetir getSession en cada pantalla.
- * Expone: user, session, profile, estado (del perfil), loading.
- *
- * Nota over FS: coexiste con hooks/use-auth.ts (template legacy); este es el de Supabase.
- */
-export function useAuth() {
-  const [user, setUser] = useState<User | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
-  const [profile, setProfile] = useState<AuthProfile | null>(null);
-  const [estado, setEstado] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+type AuthState = {
+  user: User | null;
+  session: Session | null;
+  profile: AuthProfile | null;
+  estado: string | null;
+  loading: boolean;
+};
 
-  const loadProfile = useCallback(async (uid: string) => {
-    try {
-      // Solo columnas REALES de profiles (sondeo /tmp/schema_real.txt):
-      // id, email, role, nombre, telefono, estado, terminos_aceptados, terminos_fecha
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('id, email, role, nombre, telefono, estado, terminos_aceptados, terminos_version')
-        .eq('id', uid)
-        .maybeSingle();
-      if (error) {
-        console.error('[useAuth] loadProfile error:', {
-          code: error.code, message: error.message, details: error.details,
-        });
-        return;
-      }
-      setProfile((data as AuthProfile) ?? null);
-      setEstado((data?.estado ?? null) as string | null);
-    } catch (e) {
-      console.warn('[useAuth] loadProfile excepción:', e);
+const initialState: AuthState = {
+  user: null,
+  session: null,
+  profile: null,
+  estado: null,
+  loading: true,
+};
+
+// useAuth() is consumed by several screens at the same time. Keep one
+// Supabase auth lifecycle and one profile Realtime channel for the whole app.
+// Multiple hook instances subscribe to this shared state instead of creating
+// duplicate auth listeners/channels during navigation and startup.
+let authState = initialState;
+const authListeners = new Set<() => void>();
+let authRuntimeStarted = false;
+let authSubscription: { unsubscribe: () => void } | null = null;
+let profileChannel: ReturnType<typeof supabase.channel> | null = null;
+let subscribedUid: string | null = null;
+let profileChannelGeneration = 0;
+
+function emitAuthState() {
+  for (const listener of authListeners) listener();
+}
+
+function setAuthState(patch: Partial<AuthState>) {
+  authState = { ...authState, ...patch };
+  emitAuthState();
+}
+
+async function closeProfileChannel() {
+  if (!profileChannel) return;
+  const channel = profileChannel;
+  profileChannel = null;
+  subscribedUid = null;
+  await supabase.removeChannel(channel);
+}
+
+async function loadProfile(uid: string) {
+  try {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('id, email, role, nombre, telefono, ciudad, presupuesto, estado, terminos_aceptados, terminos_version')
+      .eq('id', uid)
+      .maybeSingle();
+
+    if (error) {
+      console.error('[useAuth] loadProfile error:', {
+        code: error.code,
+        message: error.message,
+        details: error.details,
+      });
+      return;
     }
-  }, []);
+
+    setAuthState({
+      profile: (data as AuthProfile) ?? null,
+      estado: (data?.estado ?? null) as string | null,
+    });
+  } catch (error) {
+    console.warn('[useAuth] loadProfile excepción:', error);
+  }
+}
+
+function ensureProfileChannel(uid: string) {
+  if (subscribedUid === uid && profileChannel) return;
+
+  if (profileChannel) {
+    void closeProfileChannel();
+  }
+
+  subscribedUid = uid;
+  const channelId = ++profileChannelGeneration;
+
+  // Register postgres_changes BEFORE subscribe(). There must be no second
+  // .on() call after the channel has joined.
+  profileChannel = supabase
+    .channel(`profile-${uid}-${channelId}`)
+    .on(
+      'postgres_changes',
+      {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'profiles',
+        filter: `id=eq.${uid}`,
+      },
+      () => {
+        void loadProfile(uid);
+      },
+    )
+    .subscribe((status) => {
+      if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+        if (subscribedUid === uid) void loadProfile(uid);
+      }
+    });
+}
+
+function applySession(nextSession: Session | null) {
+  const nextUser = nextSession?.user ?? null;
+
+  if (!nextUser?.id) {
+    void closeProfileChannel();
+    setAuthState({
+      session: nextSession,
+      user: null,
+      profile: null,
+      estado: null,
+      loading: false,
+    });
+    return;
+  }
+
+  setAuthState({
+    session: nextSession,
+    user: nextUser,
+    loading: true,
+  });
+
+  ensureProfileChannel(nextUser.id);
+  void loadProfile(nextUser.id).finally(() => {
+    setAuthState({ loading: false });
+  });
+}
+
+function startAuthRuntime() {
+  if (authRuntimeStarted) return;
+  authRuntimeStarted = true;
+
+  // Register the auth listener once for the whole JS runtime.
+  const { data } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+    applySession(nextSession);
+  });
+  authSubscription = data.subscription;
+
+  void supabase.auth.getSession().then(({ data: { session }, error }) => {
+    if (error) {
+      console.error('[useAuth] getSession error:', error);
+      setAuthState({ loading: false });
+      return;
+    }
+    applySession(session);
+  });
+}
+
+export function useAuth() {
+  const [state, setState] = useState<AuthState>(authState);
 
   useEffect(() => {
-    let mounted = true;
+    startAuthRuntime();
 
-    supabase.auth.getSession().then(async ({ data: { session: s } }) => {
-      if (!mounted) return;
-      setSession(s);
-      setUser(s?.user ?? null);
-      if (s?.user?.id) {
-        // Esperar al perfil para que AuthGate no redirija con datos incompletos (anti-flash).
-        await loadProfile(s.user.id);
-      }
-      if (mounted) setLoading(false);
-    });
-
-    const { data: sub } = supabase.auth.onAuthStateChange(async (_event, s) => {
-      if (!mounted) return;
-      setSession(s);
-      setUser(s?.user ?? null);
-      if (s?.user?.id) {
-        await loadProfile(s.user.id);
-      } else {
-        setProfile(null);
-        setEstado(null);
-      }
-      if (mounted) setLoading(false);
-    });
+    const listener = () => setState(authState);
+    authListeners.add(listener);
+    setState(authState);
 
     return () => {
-      mounted = false;
-      sub.subscription.unsubscribe();
+      authListeners.delete(listener);
     };
-  }, [loadProfile]);
+  }, []);
 
-  return { user, session, profile, estado, loading };
+  return state;
+}
+
+// Kept for module lifecycle diagnostics and future hot-reload cleanup.
+// Normal app unmounts must not tear down the shared auth runtime because
+// another mounted screen may still be consuming useAuth().
+export function __resetAuthRuntimeForTests() {
+  authSubscription?.unsubscribe();
+  authSubscription = null;
+  void closeProfileChannel();
+  authRuntimeStarted = false;
+  authState = initialState;
+  authListeners.clear();
 }

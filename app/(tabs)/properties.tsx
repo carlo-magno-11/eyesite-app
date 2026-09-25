@@ -1,18 +1,29 @@
 import { useState, useMemo } from 'react';
-import { View, Text, TextInput, FlatList, Pressable, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, Text, TextInput, FlatList, Pressable, StyleSheet, ActivityIndicator, Alert } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
 import { PROPERTY_TYPES_OPTIONS } from '@/lib/properties-data';
 import { PropertyCard } from '@/components/property-card';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { useProperties } from '@/hooks/use-properties';
+import { useResponsive } from '@/hooks/use-responsive';
+import { useAuth } from '@/hooks/useAuth';
+import { useSavedSearches } from '@/hooks/use-commercial';
 
 export default function PropertiesScreen() {
   const params = useLocalSearchParams<{ filter?: string }>();
   const [search, setSearch] = useState('');
+  const [municipio, setMunicipio] = useState('');
+  const [minPrice, setMinPrice] = useState('');
+  const [maxPrice, setMaxPrice] = useState('');
+  const [minSurface, setMinSurface] = useState('');
+  const [maxSurface, setMaxSurface] = useState('');
   const initialFilter = typeof params.filter === 'string' && params.filter ? params.filter : 'all';
   const [activeFilter, setActiveFilter] = useState<string>(initialFilter);
   const { properties, loading, error, refetch: fetchProperties } = useProperties();
+  const { propertyColumns, horizontalPadding, contentMaxWidth, isDesktop } = useResponsive();
+  const { user } = useAuth();
+  const { save } = useSavedSearches(user?.id);
 
   const filtered = useMemo(() => {
     return properties.filter((p) => {
@@ -22,20 +33,32 @@ export default function PropertiesScreen() {
         (p.title || p.titulo || '').toLowerCase().includes(search.toLowerCase()) ||
         (p.location || p.municipio || '').toLowerCase().includes(search.toLowerCase()) ||
         (p.municipality || p.municipio || '').toLowerCase().includes(search.toLowerCase());
-      return matchesType && matchesSearch;
+      const price = Number(p.currentPrice ?? p.precio_actual ?? p.precio ?? 0) || 0;
+      const surface = Number(p.surfaceM2 ?? p.superficie ?? 0) || 0;
+      const wantedMunicipio = municipio.trim().toLowerCase();
+      const actualMunicipio = String(p.municipality ?? p.municipio ?? p.location ?? '').toLowerCase();
+      const matchesMunicipio = !wantedMunicipio || actualMunicipio.includes(wantedMunicipio);
+      const matchesMinPrice = !minPrice || price >= Number(minPrice);
+      const matchesMaxPrice = !maxPrice || price <= Number(maxPrice);
+      const matchesMinSurface = !minSurface || surface >= Number(minSurface);
+      const matchesMaxSurface = !maxSurface || surface <= Number(maxSurface);
+      return matchesType && matchesSearch && matchesMunicipio && matchesMinPrice && matchesMaxPrice && matchesMinSurface && matchesMaxSurface;
     });
-  }, [search, activeFilter, properties]);
+  }, [search, municipio, minPrice, maxPrice, minSurface, maxSurface, activeFilter, properties]);
 
   return (
     <ScreenContainer edges={['top', 'left', 'right']} containerClassName="bg-background">
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.content, { paddingHorizontal: horizontalPadding, maxWidth: contentMaxWidth }, isDesktop && styles.contentCentered]}>
+        <View style={styles.header}>
         <Text style={styles.headerTitle}>OPORTUNIDADES</Text>
         <Text style={styles.headerCount}>{filtered.length} propiedades</Text>
       </View>
 
+        </View>
+
       {/* Barra de búsqueda */}
-      <View style={styles.searchContainer}>
+      <View style={[styles.searchContainer, { paddingHorizontal: horizontalPadding, maxWidth: contentMaxWidth }, isDesktop && styles.contentCentered]}>
         <View style={styles.searchBar}>
           <IconSymbol name="magnifyingglass" size={16} color="#9A9A9A" />
           <TextInput
@@ -54,8 +77,16 @@ export default function PropertiesScreen() {
         </View>
       </View>
 
+      <View style={[styles.advancedFilters, { paddingHorizontal: horizontalPadding, maxWidth: contentMaxWidth }, isDesktop && styles.contentCentered]}>
+        <TextInput style={styles.filterInput} placeholder="Zona / municipio" placeholderTextColor="#777" value={municipio} onChangeText={setMunicipio} />
+        <TextInput style={styles.filterInput} placeholder="Precio mínimo" placeholderTextColor="#777" value={minPrice} onChangeText={setMinPrice} keyboardType="numeric" />
+        <TextInput style={styles.filterInput} placeholder="Precio máximo" placeholderTextColor="#777" value={maxPrice} onChangeText={setMaxPrice} keyboardType="numeric" />
+        <TextInput style={styles.filterInput} placeholder="Superficie mínima m²" placeholderTextColor="#777" value={minSurface} onChangeText={setMinSurface} keyboardType="numeric" />
+        <TextInput style={styles.filterInput} placeholder="Superficie máxima m²" placeholderTextColor="#777" value={maxSurface} onChangeText={setMaxSurface} keyboardType="numeric" />
+      </View>
+
       {/* Filtros */}
-      <View style={styles.filtersWrapper}>
+      <View style={[styles.filtersWrapper, { maxWidth: contentMaxWidth }, isDesktop && styles.contentCentered]}>
         <FlatList
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -84,6 +115,51 @@ export default function PropertiesScreen() {
         />
       </View>
 
+      <View style={[styles.savedSearchRow, { paddingHorizontal: horizontalPadding, maxWidth: contentMaxWidth }, isDesktop && styles.contentCentered]}>
+        <Pressable
+          onPress={async () => {
+            if (!user) {
+              Alert.alert('Inicia sesión', 'Necesitas una sesión activa para guardar una búsqueda.');
+              return;
+            }
+
+            try {
+              const criteriaParts = [
+                activeFilter !== 'all' ? `tipo ${activeFilter}` : '',
+                municipio.trim() ? municipio.trim() : '',
+                minPrice ? `desde ${Number(minPrice).toLocaleString('es-MX')}` : '',
+                maxPrice ? `hasta ${Number(maxPrice).toLocaleString('es-MX')}` : '',
+                minSurface ? `desde ${Number(minSurface).toLocaleString('es-MX')} m²` : '',
+                maxSurface ? `hasta ${Number(maxSurface).toLocaleString('es-MX')} m²` : '',
+              ].filter(Boolean);
+              await save({
+                nombre: criteriaParts.length ? `Búsqueda: ${criteriaParts.join(' · ')}` : 'Todas las propiedades',
+                min_price: minPrice ? Number(minPrice) : null,
+                max_price: maxPrice ? Number(maxPrice) : null,
+                min_surface: minSurface ? Number(minSurface) : null,
+                max_surface: maxSurface ? Number(maxSurface) : null,
+                municipio: municipio.trim() || null,
+                tipo: activeFilter === 'all' ? null : activeFilter,
+                objetivo: null,
+                plazo_compra: null,
+                financiamiento: null,
+                activa: true,
+              });
+              Alert.alert('Búsqueda guardada', 'EYESITE te avisará cuando podamos encontrar nuevas coincidencias.');
+            } catch (error: any) {
+              Alert.alert('No se pudo guardar', error?.message || 'Inténtalo nuevamente.');
+            }
+          }}
+          style={({ pressed }) => [styles.savedSearchButton, pressed && { opacity: 0.78 }]}
+        >
+          <Text style={styles.savedSearchIcon}>🔔</Text>
+          <View style={styles.savedSearchCopy}>
+            <Text style={styles.savedSearchTitle}>GUARDAR ESTA BÚSQUEDA</Text>
+            <Text style={styles.savedSearchText}>Recibe alertas de nuevas propiedades compatibles.</Text>
+          </View>
+        </Pressable>
+      </View>
+
       {/* Lista de propiedades */}
       {loading ? (
         <View style={styles.loadingContainer}>
@@ -96,9 +172,21 @@ export default function PropertiesScreen() {
           keyExtractor={(item) => item.id}
           refreshing={loading}
           onRefresh={fetchProperties}
-          contentContainerStyle={styles.listContainer}
+          key={`properties-grid-${propertyColumns}`}
+          numColumns={propertyColumns}
+          columnWrapperStyle={propertyColumns > 1 ? styles.columnWrapper : undefined}
+          contentContainerStyle={[styles.listContainer, { paddingHorizontal: horizontalPadding, maxWidth: contentMaxWidth }, isDesktop && styles.contentCentered]}
           showsVerticalScrollIndicator={false}
-          renderItem={({ item }) => <PropertyCard property={item} />}
+          renderItem={({ item }) => <View
+              style={[
+                propertyColumns > 1 ? styles.gridItem : styles.singleItem,
+                propertyColumns === 2 && styles.gridItemTwo,
+                propertyColumns === 3 && styles.gridItemThree,
+                propertyColumns === 4 && styles.gridItemFour,
+              ]}
+            >
+              <PropertyCard property={item} />
+            </View>}
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
               <Text style={styles.emptyIcon}>🔍</Text>
@@ -117,6 +205,13 @@ export default function PropertiesScreen() {
 }
 
 const styles = StyleSheet.create({
+  content: {
+    width: '100%',
+    alignSelf: 'center',
+  },
+  contentCentered: {
+    alignSelf: 'center',
+  },
   header: {
     paddingHorizontal: 20,
     paddingTop: 16,
@@ -126,13 +221,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   headerTitle: {
-    color: '#F5F5F5',
+    color: "#F5F5F5",
     fontSize: 18,
     fontWeight: '800',
     letterSpacing: 2,
   },
   headerCount: {
-    color: '#9A9A9A',
+    color: "#9A9A9A",
     fontSize: 13,
   },
   searchContainer: {
@@ -142,18 +237,38 @@ const styles = StyleSheet.create({
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#1A1A1A',
+    backgroundColor: "#141414",
     borderRadius: 10,
     paddingHorizontal: 14,
     paddingVertical: 12,
     borderWidth: 1,
-    borderColor: '#2A2A2A',
+    borderColor: "#2A2A2A",
     gap: 10,
   },
   searchInput: {
     flex: 1,
     color: '#F5F5F5',
     fontSize: 14,
+  },
+  advancedFilters: {
+    width: '100%',
+    alignSelf: 'center',
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    paddingBottom: 8,
+  },
+  filterInput: {
+    flexGrow: 1,
+    minWidth: 150,
+    backgroundColor: '#141414',
+    borderRadius: 9,
+    borderWidth: 1,
+    borderColor: '#2A2A2A',
+    color: '#F5F5F5',
+    paddingHorizontal: 11,
+    paddingVertical: 10,
+    fontSize: 12,
   },
   filtersWrapper: {
     marginBottom: 8,
@@ -184,8 +299,59 @@ const styles = StyleSheet.create({
     color: '#0D0D0D',
   },
   listContainer: {
-    paddingHorizontal: 20,
+    width: '100%',
+    alignSelf: 'center',
     paddingBottom: 100,
+  },
+  columnWrapper: {
+    justifyContent: 'space-between',
+  },
+  gridItem: {
+    minWidth: 0,
+  },
+  gridItemTwo: {
+    width: '48.5%',
+  },
+  gridItemThree: {
+    width: '31.5%',
+  },
+  gridItemFour: {
+    width: '23.5%',
+  },
+  singleItem: {
+    width: '100%',
+  },
+  savedSearchRow: {
+    width: '100%',
+    alignSelf: 'center',
+    paddingBottom: 10,
+  },
+  savedSearchButton: {
+    backgroundColor: '#171717',
+    borderWidth: 1,
+    borderColor: '#C9A84C',
+    borderRadius: 10,
+    padding: 13,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  savedSearchIcon: {
+    fontSize: 18,
+  },
+  savedSearchCopy: {
+    flex: 1,
+  },
+  savedSearchTitle: {
+    color: '#C9A84C',
+    fontSize: 11,
+    fontWeight: '900',
+    letterSpacing: 0.8,
+  },
+  savedSearchText: {
+    color: '#888',
+    fontSize: 11,
+    marginTop: 3,
   },
   loadingContainer: {
     flex: 1,

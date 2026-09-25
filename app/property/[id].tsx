@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
-import { View, Text, Image, ScrollView, Pressable, Linking, StyleSheet, Dimensions, Share, ActivityIndicator, Modal, FlatList, Alert } from 'react-native';
+import { View, Text, ScrollView, Pressable, Linking, StyleSheet, Share, ActivityIndicator, Modal, FlatList, Alert, useWindowDimensions } from 'react-native';
+import { Image } from 'expo-image';
 import { useLocalSearchParams, router } from 'expo-router';
 import { VideoView, useVideoPlayer } from 'expo-video';
 import { formatPrice, formatSurface, getReturnColor } from '@/lib/properties-data';
@@ -9,19 +10,27 @@ import { ScreenContainer } from '@/components/screen-container';
 import { useProperty } from '@/hooks/use-properties';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
-
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
+import { useCommercial } from '@/hooks/use-commercial';
 
 const WHATSAPP = '+52 9813674060';
 const PHONE = '+52 9813674060';
 
 export default function PropertyDetailScreen() {
   const { id, play } = useLocalSearchParams<{ id: string; play?: string }>();
+  const { width: windowWidth } = useWindowDimensions();
+  const contentWidth = Math.min(windowWidth, 1200);
   const { property, loading } = useProperty(id);
   const { session } = useAuth();
+  const { trackPropertyEvent, registerProspectInterest } = useCommercial();
   const { isFav, toggleFav } = useFavorites();
   const [activeImage, setActiveImage] = useState(0);
+  const [imageLoading, setImageLoading] = useState(true);
   const [signedDocuments, setSignedDocuments] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    if (!property?.id || !session?.user?.id) return;
+    void trackPropertyEvent(property.id, 'view');
+  }, [property?.id, session?.user?.id, trackPropertyEvent]);
 
   useEffect(() => {
     let cancelled = false;
@@ -137,6 +146,18 @@ export default function PropertyDetailScreen() {
 
     return list;
   }, [property, videoUrl]);
+
+  // Precalentamos la galería en la caché nativa/Web para evitar el
+  // primer render negro mientras cada imagen se descarga.
+  useEffect(() => {
+    const imageUrls = mediaList
+      .filter((item) => item.type === 'image')
+      .map((item) => item.url)
+      .filter(Boolean);
+    if (imageUrls.length) {
+      void Image.prefetch(imageUrls, 'memory-disk').catch(() => {});
+    }
+  }, [mediaList]);
 
   if (loading) {
     return (
@@ -268,6 +289,16 @@ export default function PropertyDetailScreen() {
  };
 
   const handleWhatsApp = () => {
+    if (property?.id) {
+      void trackPropertyEvent(property.id, 'whatsapp_click', {
+        property_title: title,
+      });
+      void registerProspectInterest(property.id, 'whatsapp', {
+        property_title: title,
+        channel: 'whatsapp',
+      });
+    }
+
     const msg = encodeURIComponent(
       `Hola, me interesa la propiedad: ${property.title || property.titulo} en ${property.location || property.municipio}. ¿Podría darme más información?`
     );
@@ -281,6 +312,9 @@ export default function PropertyDetailScreen() {
   const handleShareProperty =
   async () => {
     try {
+      if (property?.id) {
+        void trackPropertyEvent(property.id, 'share');
+      }
       const appLink =
         `https://www.eyesite.mx/property/${property.id}`;
 
@@ -318,7 +352,7 @@ export default function PropertyDetailScreen() {
     <View style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 120 }}>
         {/* Galería V6.3: orden fijo — portada (foto) → video (con poster) → resto. Sin negro. */}
-        <View style={styles.galleryContainer}>
+        <View style={[styles.galleryContainer, { width: contentWidth, alignSelf: 'center' }]}>
           <FlatList
             horizontal
             pagingEnabled
@@ -326,8 +360,9 @@ export default function PropertyDetailScreen() {
             keyExtractor={(item) => item.id}
             showsHorizontalScrollIndicator={false}
             onMomentumScrollEnd={(e) => {
-              const index = Math.round(e.nativeEvent.contentOffset.x / SCREEN_WIDTH);
+              const index = Math.round(e.nativeEvent.contentOffset.x / contentWidth);
               setActiveImage(index);
+              setImageLoading(true);
             }}
             renderItem={({ item }) =>
               item.type === 'video' ? (
@@ -336,18 +371,20 @@ export default function PropertyDetailScreen() {
                     player={carouselPlayer}
                     nativeControls
                     contentFit="contain"
-                    style={{ width: SCREEN_WIDTH, height: 300, backgroundColor: '#000' }}
+                    style={{ width: contentWidth, height: 300, backgroundColor: '#000' }}
                   />
                 ) : (
                   <Pressable
                     onPress={handleCarouselPlay}
-                    style={{ width: SCREEN_WIDTH, height: 300, backgroundColor: '#000' }}
+                    style={{ width: contentWidth, height: 300, backgroundColor: '#000' }}
                   >
                     {item.poster ? (
                       <Image
                         source={{ uri: item.poster }}
                         style={StyleSheet.absoluteFill}
-                        resizeMode="contain"
+                        contentFit="contain"
+                        cachePolicy="memory-disk"
+                        transition={150}
                       />
                     ) : null}
                     <View style={styles.carouselPlayBtn}>
@@ -356,11 +393,27 @@ export default function PropertyDetailScreen() {
                   </Pressable>
                 )
               ) : (
-                <Image
-                  source={{ uri: item.url }}
-                  style={{ width: SCREEN_WIDTH, height: 300 }}
-                  resizeMode="cover"
-                />
+                <View style={{ width: contentWidth, height: 300, backgroundColor: '#151515' }}>
+                  <Image
+                    source={{ uri: item.url }}
+                    placeholder={item.url !== property.portada_url && property.portada_url ? { uri: property.portada_url } : undefined}
+                    style={{ width: contentWidth, height: 300 }}
+                    contentFit="cover"
+                    cachePolicy="memory-disk"
+                    transition={150}
+                    onLoadStart={() => {
+                      if (mediaList[activeImage]?.url === item.url) setImageLoading(true);
+                    }}
+                    onLoad={() => {
+                      if (mediaList[activeImage]?.url === item.url) setImageLoading(false);
+                    }}
+                  />
+                  {mediaList[activeImage]?.url === item.url && imageLoading ? (
+                    <View pointerEvents="none" style={styles.imageLoadingOverlay}>
+                      <ActivityIndicator color="#C9A84C" size="large" />
+                    </View>
+                  ) : null}
+                </View>
               )
             }
           />
@@ -414,7 +467,7 @@ export default function PropertyDetailScreen() {
         </View>
 
         {/* Contenido */}
-        <View style={styles.content}>
+        <View style={[styles.content, { width: contentWidth, alignSelf: 'center' }]}>
           {/* Tipo */}
           <View style={styles.typeTag}>
             <Text style={styles.typeTagText}>{(property.type || property.tipo || 'PROPIEDAD').toUpperCase()}</Text>
@@ -657,11 +710,11 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   galleryImage: {
-    width: SCREEN_WIDTH,
+    width: '100%',
     height: 320,
   },
   galleryVideoContainer: {
-    width: SCREEN_WIDTH,
+    width: '100%',
     height: 320,
     backgroundColor: '#000',
   },
@@ -683,6 +736,12 @@ const styles = StyleSheet.create({
     borderColor: '#FFD60A',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  imageLoadingOverlay: {
+    ...StyleSheet.absoluteFill,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0,0,0,0.18)',
   },
   carouselPlayIcon: {
     fontSize: 22,
@@ -753,6 +812,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   content: {
+    maxWidth: 1200,
     padding: 20,
   },
   typeTag: {
@@ -795,8 +855,9 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   metricCard: {
-    flex: 1,
-    minWidth: '45%',
+    flexGrow: 1,
+    flexBasis: '45%',
+    minWidth: 140,
     backgroundColor: '#1A1A1A',
     borderRadius: 8,
     padding: 14,
@@ -880,7 +941,9 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   dataCard: {
-    width: '48%',
+    flexGrow: 1,
+    flexBasis: '45%',
+    minWidth: 140,
     backgroundColor: '#1A1A1A',
     borderRadius: 8,
     padding: 12,
@@ -1041,7 +1104,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   videoModalContent: {
-    width: SCREEN_WIDTH - 32,
+    width: '94%',
+    maxWidth: 1000,
     aspectRatio: 16 / 9,
     backgroundColor: '#000',
     borderRadius: 12,

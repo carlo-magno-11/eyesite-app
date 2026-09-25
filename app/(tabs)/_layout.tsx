@@ -14,16 +14,16 @@ export default function TabLayout() {
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: '#C9A84C',
-        tabBarInactiveTintColor: '#9A9A9A',
+        tabBarActiveTintColor: "#C9A84C",
+        tabBarInactiveTintColor: "#9A9A9A",
         headerShown: false,
         tabBarButton: (props: any) => <HapticTab {...props} />,
         tabBarStyle: {
           paddingTop: 8,
           paddingBottom: bottomPadding,
           height: tabBarHeight,
-          backgroundColor: '#0D0D0D',
-          borderTopColor: '#2A2A2A',
+          backgroundColor: "#0B0B0B",
+          borderTopColor: "#2A2A2A",
           borderTopWidth: 0.5,
         },
         tabBarLabelStyle: {
@@ -43,8 +43,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="properties"
         options={{
-          // La pantalla sigue existiendo y se abre desde Inicio,
-          // pero ya no ocupa un lugar en la barra inferior.
+          // Las propiedades se abren desde Inicio mediante "Ver oportunidades".
           href: null,
         }}
       />
@@ -82,7 +81,6 @@ export default function TabLayout() {
         name="contact"
         options={{
           title: "Nosotros",
-          href: session ? undefined : null,
           tabBarIcon: ({ color }) => <IconSymbol size={24} name="person.fill" color={color} />,
         }}
       />

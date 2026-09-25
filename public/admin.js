@@ -29,6 +29,7 @@ let usuarios = [];
 
 let propiedadEditando = null;
 let pendienteViendo = null;
+let pendienteEditando = null;
 
 let nuevasImagenes = [];
 let nuevosArchivos = [];
@@ -871,6 +872,11 @@ const sectionInfo = {
     title: "Usuarios",
     subtitle: "Gestiona los usuarios de la plataforma",
   },
+
+  crm: {
+    title: "Prospectos CRM",
+    subtitle: "Captación, prioridad y seguimiento comercial",
+  },
 };
 
 function goTo(section) {
@@ -916,6 +922,12 @@ function goTo(section) {
 
   if (section === "usuarios") {
     cargarUsuarios();
+  }
+
+  if (section === "crm") {
+    if (typeof window.initCRM === "function") {
+      window.initCRM();
+    }
   }
 
   if (section === "nueva") {
@@ -1119,18 +1131,22 @@ async function cerrarSesion() {
 
 async function cargarPropiedades() {
   try {
-    const { data, error } = await s
-      .from(TABLE_PROPERTIES_VIEW)
-      .select("*")
-      .order("created_at", {
-        ascending: false,
-      });
+    const { data: sessionData, error: sessionError } = await s.auth.getSession();
+
+    if (sessionError || !sessionData?.session?.user) {
+      location.replace("./admin_seguro.html");
+      return [];
+    }
+
+    const { data, error } = await s.rpc("admin_list_properties");
 
     if (error) {
       throw error;
     }
 
-    propiedades = Array.isArray(data) ? data : [];
+    propiedades = Array.isArray(data)
+      ? [...data].sort((a, b) => String(b?.created_at || "").localeCompare(String(a?.created_at || "")))
+      : [];
 
     return propiedades;
   } catch (error) {
@@ -1566,6 +1582,13 @@ async function renderPendientes() {
               </button>
 
               <button
+                class="bs be2"
+                onclick="editarPendiente('${esc(p.id)}')"
+              >
+                ✏️ Editar
+              </button>
+
+              <button
                 class="bs bap2"
                 onclick="aprobarDirecto('${esc(p.id)}')"
               >
@@ -1618,6 +1641,9 @@ async function verPropiedad(id) {
   if (deleteButton) {
     deleteButton.style.display = "inline-block";
   }
+
+  const editButton = document.getElementById("vedit");
+  if (editButton) editButton.style.display = "none";
 
   if (approveButton) {
     approveButton.style.display = "none";
@@ -1895,22 +1921,11 @@ async function editarPropiedad(id) {
     };
   });
 
-  editArchivos = normalizeArray([...(p.archivos || p.files || p.documentos || []), ...(p.pdfs || []), ...(p.kmz_kml || [])]).map(
-    (item) => {
-      if (typeof item === "string") {
-        return {
-          url: item,
-          name: item,
-          existing: true,
-        };
-      }
-
-      return {
-        ...item,
-        existing: true,
-      };
-    },
-  );
+  editArchivos = preserveExistingFileItems([
+    ...(Array.isArray(p.archivos) ? p.archivos : []),
+    ...(Array.isArray(p.pdfs) ? p.pdfs : []),
+    ...(Array.isArray(p.kmz_kml) ? p.kmz_kml : []),
+  ]);
 
   editEnlaces = normalizeArray(p.enlaces || p.links);
   editPdfs = normalizeArray(p.pdfs || []);
@@ -3618,9 +3633,21 @@ async function uploadFile(bucket, file, folder) {
     txt: "text/plain",
   };
 
-  const mime = String(file.type || mimeByExtension[extension] || "")
-    .toLowerCase()
-    .trim();
+  const browserMime = String(file.type || "").toLowerCase().trim();
+  const extensionMime = String(mimeByExtension[extension] || "").toLowerCase().trim();
+
+  // Safari/iOS y algunos selectores de archivos pueden entregar un MIME
+  // genérico (por ejemplo application/octet-stream) aunque la extensión sea
+  // válida. Solo hacemos fallback a la extensión para tipos genéricos; nunca
+  // sustituimos un MIME específico que pueda revelar una discrepancia real.
+  const genericBrowserMimes = new Set([
+    "",
+    "application/octet-stream",
+    "binary/octet-stream",
+  ]);
+  const mime = genericBrowserMimes.has(browserMime)
+    ? extensionMime
+    : browserMime;
   const isMediaBucket = bucket === BUCKET_IMAGES;
   const isPrivateBucket = bucket === BUCKET_FILES;
 
@@ -3713,17 +3740,13 @@ async function uploadFile(bucket, file, folder) {
     );
   }
 
-  const privateUpload = bucket === BUCKET_FILES;
-
   return {
-    url: privateUpload
-      ? path
-      : s.storage.from(bucket).getPublicUrl(path).data?.publicUrl || "",
-    path,
-    name: originalName,
-    size: file.size || 0,
-    type: mime,
-  };
+  url: isPrivateBucket ? path : s.storage.from(bucket).getPublicUrl(path).data?.publicUrl || "",
+  path,
+  name: originalName,
+  size: file.size || 0,
+  type: mime,
+};
 }
 
 async function uploadCollection(list, bucket, folder, progressCallback) {
@@ -3768,6 +3791,27 @@ async function uploadCollection(list, bucket, folder, progressCallback) {
   }
 
   return output;
+}
+
+function preserveExistingFileItems(value) {
+  const list = Array.isArray(value) ? value : value ? [value] : [];
+  return list
+    .map((item) => {
+      if (typeof item === "string") {
+        const url = item.trim();
+        return url ? { url, name: url.split("/").pop() || url, existing: true } : null;
+      }
+      if (item && typeof item === "object") {
+        const copy = { ...item };
+        const valueRef = copy.url || copy.path || copy.filePath || copy.storagePath || copy.publicUrl || copy.public_url;
+        if (!valueRef) return null;
+        if (!copy.url) copy.url = valueRef;
+        copy.existing = true;
+        return copy;
+      }
+      return null;
+    })
+    .filter(Boolean);
 }
 
 function classifyPrivateFileItems(items) {
@@ -3823,19 +3867,24 @@ function collectPropertyForm(mode, statusOverride = null) {
 
   estado = String(estado).toLowerCase().trim();
 
-  if (estado !== "activa" && estado !== "inactiva") {
+  if (mode === "pending") {
+    estado = "pendiente";
+  } else if (estado !== "activa" && estado !== "inactiva") {
     estado = "activa";
   }
 
   const tipo = valueOf(`${mode}_tipo`) || "terreno";
 
+  const sourceDetalles =
+    mode === "edit"
+      ? propiedadEditando?.detalles
+      : mode === "pending"
+        ? pendienteEditando?.detalles
+        : null;
+
   const detalles =
-    mode === "edit" &&
-    propiedadEditando?.detalles &&
-    typeof propiedadEditando.detalles === "object"
-      ? {
-          ...propiedadEditando.detalles,
-        }
+    sourceDetalles && typeof sourceDetalles === "object"
+      ? { ...sourceDetalles }
       : {};
 
   for (const k of [
@@ -3954,10 +4003,16 @@ function collectPropertyForm(mode, statusOverride = null) {
 
   data.construccion_m2 = readNumberField(`${mode}_construccion_m2`);
 
+  if (mode === "pending") {
+    delete data.estado;
+    delete data.activa;
+    delete data.status;
+  }
+
   return data;
 }
 
-function validateProperty(data) {
+function validateProperty(data, options = {}) {
   const estado = String(data.estado || "activa")
     .trim()
     .toLowerCase();
@@ -3968,6 +4023,14 @@ function validateProperty(data) {
    *
    * La validación completa solamente bloquea PUBLICAR / ACTIVAR.
    */
+  if (options.allowPending && options.mode === "pending") {
+    if (!data.titulo?.trim() || !data.tipo?.trim() || !data.municipio?.trim()) {
+      toast("Título, tipo y municipio son obligatorios.");
+      return false;
+    }
+    return true;
+  }
+
   if (estado !== "activa") {
     return true;
   }
@@ -4543,6 +4606,79 @@ async function saveEdit() {
 }
 
 /* ============================================================
+   EDITAR SOLICITUD PENDIENTE — MISMO EDITOR QUE PROPIEDADES
+   ============================================================ */
+
+function editarPendiente(id) {
+  const p = pendientes.find((item) => String(item.id) === String(id));
+  if (!p) { toast("No se encontró la solicitud."); return; }
+  if (String(p.estado || "").toLowerCase() !== "pendiente") { toast("La solicitud ya no está pendiente."); return; }
+  pendienteEditando = p;
+  editImagenes = preserveExistingFileItems(p.imagenes || p.fotos || []);
+  editFotosPro = preserveExistingFileItems(p.fotos_pro || p.imagenes_pro || []);
+  editVideos = preserveExistingFileItems(p.videos || []);
+  editArchivos = preserveExistingFileItems(p.archivos || []);
+  editEnlaces = Array.isArray(p.enlaces) ? [...p.enlaces] : [];
+  editPdfs = Array.isArray(p.pdfs) ? [...p.pdfs] : [];
+  editKmzKml = Array.isArray(p.kmz_kml) ? [...p.kmz_kml] : [];
+  editPortadaVideo = p.portada_url || null;
+  const form = document.getElementById("ef");
+  if (!form) return;
+  form.innerHTML = propertyFormHTML(p, "pending");
+  bindPropertyForm("pending", p);
+  const title = document.querySelector("#emod .mt");
+  const subtitle = document.getElementById("emsub");
+  if (title) title.textContent = "EDITAR SOLICITUD PENDIENTE";
+  if (subtitle) subtitle.textContent = getPropTitle(p) + " · Los cambios seguirán PENDIENTES";
+  const button = document.getElementById("esb");
+  if (button) { button.textContent = "Guardar cambios sin publicar"; button.onclick = savePendingEdit; }
+  openMod("emod");
+}
+
+async function savePendingEdit() {
+  if (!pendienteEditando) { toast("No hay una solicitud seleccionada."); return; }
+  const btn = document.getElementById("esb");
+  if (btn?.disabled) return;
+  const data = collectPropertyForm("pending");
+  if (!validateProperty(data, { allowPending: true, mode: "pending" })) return;
+  confirmar("Guardar cambios de solicitud", "La solicitud seguirá PENDIENTE y no se publicará todavía.", async () => {
+    if (btn) btn.disabled = true;
+    try {
+      const requestId = pendienteEditando.id;
+      const base = "submissions/" + requestId + "/assets";
+      const images = await uploadCollection(editImagenes, BUCKET_IMAGES, base);
+      const fotosPro = await uploadCollection(editFotosPro, BUCKET_IMAGES, base + "/pro");
+      const videos = await uploadCollection(editVideos, BUCKET_IMAGES, base + "/videos");
+      const videoCover = editPortadaVideo instanceof File ? await uploadFile(BUCKET_IMAGES, editPortadaVideo, base + "/video-covers") : null;
+      const files = await uploadCollection(editArchivos, BUCKET_FILES, "submissions/" + requestId + "/files");
+      const payload = {
+        ...data,
+        fotos: images.map(x => typeof x === "string" ? x : x?.url).filter(Boolean),
+        imagenes: images,
+        fotos_pro: fotosPro.map(x => typeof x === "string" ? x : x?.url).filter(Boolean),
+        videos: videos.map(x => typeof x === "string" ? x : x?.url).filter(Boolean),
+        video_url: videos[0]?.url || videos[0] || pendienteEditando.video_url || null,
+        portada_url: videoCover?.url || (typeof editPortadaVideo === "string" ? editPortadaVideo : (pendienteEditando.portada_url || images[0]?.url || images[0] || null)),
+        tipo_portada: videoCover ? "video" : (pendienteEditando.tipo_portada || (videos.length ? "video" : (images.length ? "foto" : null))),
+        portada_tipo: videoCover ? "video" : (pendienteEditando.portada_tipo || (videos.length ? "video" : (images.length ? "foto" : null))),
+        archivos: files,
+        pdfs: [...new Set([...editPdfs, ...classifyPrivateFileItems(files).pdfs])],
+        kmz_kml: [...new Set([...editKmzKml, ...classifyPrivateFileItems(files).kmzKml])],
+        enlaces: editEnlaces,
+      };
+      const { error } = await s.rpc("admin_update_property_request", { p_request_id: requestId, p_payload: payload });
+      if (error) throw error;
+      toast("Solicitud actualizada. Sigue PENDIENTE.");
+      closeMod("emod");
+      pendienteEditando = null;
+      editImagenes=[]; editArchivos=[]; editEnlaces=[]; editFotosPro=[]; editVideos=[]; editPortadaVideo=null; editPdfs=[]; editKmzKml=[];
+      await cargarPendientes(); await cargarDashboard(); renderPendientes();
+    } catch (error) { console.error("[savePendingEdit]", error); toast(error?.message || "No se pudieron guardar los cambios de la solicitud."); }
+    finally { if (btn) btn.disabled = false; }
+  });
+}
+
+/* ============================================================
    ACTIVAR / DESACTIVAR PROPIEDAD
    ============================================================ */
 
@@ -4812,6 +4948,12 @@ async function verPendiente(id) {
 
   if (deleteButton) {
     deleteButton.style.display = "inline-block";
+  }
+
+  const editButton = document.getElementById("vedit");
+  if (editButton) {
+    editButton.style.display = "inline-block";
+    editButton.onclick = () => editarPendiente(p.id);
   }
 
   openMod("vmod");

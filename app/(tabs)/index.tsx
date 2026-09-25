@@ -1,11 +1,14 @@
-import { View, Text, ScrollView, Image, Pressable, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, Pressable, StyleSheet, ActivityIndicator } from 'react-native';
+import { Image } from 'expo-image';
 import { ScreenContainer } from '@/components/screen-container';
 import { PropertyCard } from '@/components/property-card';
 import { router } from 'expo-router';
 import { useProperties } from '@/hooks/use-properties';
 import { useAuth } from '@/hooks/useAuth';
 import { useNotifications } from '@/hooks/use-notifications';
+import { useResponsive } from '@/hooks/use-responsive';
 import { Ionicons } from '@expo/vector-icons';
+import { rankPropertyMatches } from '@/lib/commercial';
 
 const CATEGORIES = [
   { key: 'terreno', label: 'Terrenos', icon: '🌿' },
@@ -17,8 +20,9 @@ const CATEGORIES = [
 
 export default function HomeScreen() {
   const { properties, loading } = useProperties();
-  const { user, session } = useAuth();
+  const { user, session, profile } = useAuth();
   const { unread } = useNotifications(user?.id);
+  const { horizontalPadding, contentMaxWidth, isDesktop, isLargeDesktop, propertyColumns } = useResponsive();
   const featuredProperties = properties.filter((p) => p.featured || p.destacada);
   // Si todavía no hay propiedades marcadas como destacadas, mostramos las
   // primeras oportunidades reales para evitar una sección vacía en producción.
@@ -27,23 +31,36 @@ export default function HomeScreen() {
       ? featuredProperties
       : properties.slice(0, 6);
 
+  const budgetNumber = Number(String(profile?.presupuesto ?? '').replace(/[^0-9.]/g, '')) || 0;
+  const recommendedProperties = budgetNumber > 0 || profile?.ciudad
+    ? rankPropertyMatches(
+        properties,
+        {
+          minPrice: budgetNumber > 0 ? budgetNumber * 0.8 : null,
+          maxPrice: budgetNumber > 0 ? budgetNumber * 1.2 : null,
+          municipio: profile?.ciudad ?? null,
+        },
+        profile?.ciudad || budgetNumber > 0 ? 50 : 101,
+      ).slice(0, 3)
+    : [];
+
   const handleCategoryPress = (key: string) => {
     router.push({ pathname: '/(tabs)/properties', params: { filter: key } } as any);
   };
 
 
   return (
-    <ScreenContainer edges={['top', 'left', 'right']} containerClassName="bg-[#0D0D0D]">
+    <ScreenContainer edges={['top', 'left', 'right']} containerClassName="bg-[#0B0B0B]">
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 100, backgroundColor: '#0D0D0D' }}
+        contentContainerStyle={{ paddingBottom: 110, backgroundColor: '#0B0B0B' }}
       >
         {/* Header with Tagline */}
-        <View style={styles.taglineContainer}>
+        <View style={[styles.taglineContainer, { paddingHorizontal: horizontalPadding }]}>
           <Text style={styles.tagline}>Estamos contigo en cualquier parte del mundo</Text>
         </View>
         {/* Header */}
-        <View style={styles.header}>
+        <View style={[styles.header, { paddingHorizontal: horizontalPadding, maxWidth: contentMaxWidth }, isDesktop && styles.centeredContent]}>
           <Text style={styles.logo}>EYESI<Text style={styles.logoPlus}>+</Text>E</Text>
           <View style={styles.headerButtons}>
             <Pressable
@@ -69,15 +86,18 @@ export default function HomeScreen() {
         </View>
 
         {/* Hero Banner */}
-        <View style={styles.heroBanner}>
+        <View style={[styles.heroBanner, { height: isLargeDesktop ? 380 : isDesktop ? 340 : 300, marginHorizontal: isDesktop ? horizontalPadding : 16, maxWidth: contentMaxWidth }, isDesktop && styles.centeredContent]}>
           <Image
             source={{ uri: 'https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=1200&q=80' }}
             style={styles.heroImage}
+            contentFit="cover"
+            cachePolicy="memory-disk"
+            transition={150}
           />
           <View style={styles.heroOverlay} />
           <View style={styles.heroContent}>
             <Text style={styles.heroTagline}>FIND YOUR LAND</Text>
-            <Text style={styles.heroTitle}>TODO BUEN PROYECTO INICIA CON UN BUEN TERRENO</Text>
+            <Text style={[styles.heroTitle, { fontSize: isLargeDesktop ? 30 : isDesktop ? 26 : 22 }]}>TODO BUEN PROYECTO INICIA CON UN BUEN TERRENO</Text>
             <Pressable
               onPress={() => router.push('/(tabs)/properties' as any)}
               style={({ pressed }) => [styles.heroButton, pressed && { opacity: 0.85 }]}
@@ -88,7 +108,7 @@ export default function HomeScreen() {
         </View>
 
         {/* Categorías */}
-        <View style={styles.section}>
+        <View style={[styles.section, { paddingHorizontal: horizontalPadding, maxWidth: contentMaxWidth }, isDesktop && styles.centeredContent]}>
           <Text style={styles.sectionTitle}>CATEGORÍAS</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoriesScroll}>
             {CATEGORIES.map((cat) => (
@@ -104,8 +124,42 @@ export default function HomeScreen() {
           </ScrollView>
         </View>
 
+        {/* Recomendaciones comerciales */}
+        {session && recommendedProperties.length > 0 ? (
+          <View style={[styles.section, { paddingHorizontal: horizontalPadding, maxWidth: contentMaxWidth }, isDesktop && styles.centeredContent]}>
+            <View style={styles.sectionHeader}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.sectionTitle}>PARA TI</Text>
+                <Text style={styles.recommendationHint}>Basado en tu presupuesto y zona.</Text>
+              </View>
+              <Pressable onPress={() => router.push('/saved-searches' as never)}>
+                <Text style={styles.viewAllLink}>Mis búsquedas →</Text>
+              </Pressable>
+            </View>
+            <View style={[styles.propertiesGrid, propertyColumns > 1 && styles.propertiesGridRow]}>
+              {recommendedProperties.map((property) => (
+                <View
+                  key={property.id}
+                  style={[
+                    styles.propertyGridItem,
+                    propertyColumns > 1 && styles.propertyGridItemMulti,
+                    propertyColumns === 2 && styles.propertyGridItemTwo,
+                    propertyColumns === 3 && styles.propertyGridItemThree,
+                    propertyColumns === 4 && styles.propertyGridItemFour,
+                  ]}
+                >
+                  <View style={styles.matchBadge}>
+                    <Text style={styles.matchBadgeText}>{property.matchScore}% COMPATIBLE</Text>
+                  </View>
+                  <PropertyCard property={property} />
+                </View>
+              ))}
+            </View>
+          </View>
+        ) : null}
+
         {/* Oportunidades Destacadas */}
-        <View style={styles.section}>
+        <View style={[styles.section, { paddingHorizontal: horizontalPadding, maxWidth: contentMaxWidth }, isDesktop && styles.centeredContent]}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>OPORTUNIDADES DESTACADAS</Text>
             <Pressable onPress={() => router.push('/(tabs)/properties' as any)}>
@@ -117,9 +171,25 @@ export default function HomeScreen() {
               <ActivityIndicator color="#C9A84C" size="large" />
             </View>
           ) : (
-            highlightedProperties.map((property) => (
-              <PropertyCard key={property.id} property={property} />
-            ))
+            <View style={[
+              styles.propertiesGrid,
+              propertyColumns > 1 && styles.propertiesGridRow,
+            ]}>
+              {highlightedProperties.map((property) => (
+                <View
+                  key={property.id}
+                  style={[
+                    styles.propertyGridItem,
+                    propertyColumns > 1 && styles.propertyGridItemMulti,
+                    propertyColumns === 2 && styles.propertyGridItemTwo,
+                    propertyColumns === 3 && styles.propertyGridItemThree,
+                    propertyColumns === 4 && styles.propertyGridItemFour,
+                  ]}
+                >
+                  <PropertyCard property={property} />
+                </View>
+              ))}
+            </View>
           )}
         </View>
       </ScrollView>
@@ -128,6 +198,10 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
+  centeredContent: {
+    width: '100%',
+    alignSelf: 'center',
+  },
   taglineContainer: {
     backgroundColor: '#1C1C1C',
     paddingVertical: 12,
@@ -193,7 +267,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    backgroundColor: 'rgba(11, 11, 11, 0.48)',
   },
   heroContent: {
     position: 'absolute',
@@ -240,6 +314,27 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 16,
   },
+  recommendationHint: {
+    color: '#777',
+    fontSize: 11,
+    marginTop: 4,
+  },
+  matchBadge: {
+    position: 'absolute',
+    zIndex: 2,
+    top: 8,
+    left: 8,
+    backgroundColor: '#C9A84C',
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  matchBadgeText: {
+    color: '#0D0D0D',
+    fontSize: 9,
+    fontWeight: '900',
+    letterSpacing: 0.4,
+  },
   sectionTitle: {
     fontSize: 16,
     fontWeight: '700',
@@ -257,11 +352,17 @@ const styles = StyleSheet.create({
   },
   categoryCard: {
     alignItems: 'center',
-    marginRight: 16,
-    paddingVertical: 12,
+    width: 92,
+    marginRight: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 8,
+    borderRadius: 14,
+    backgroundColor: '#141414',
+    borderWidth: 1,
+    borderColor: '#2A2A2A',
   },
   categoryIcon: {
-    fontSize: 32,
+    fontSize: 28,
     marginBottom: 8,
   },
   categoryLabel: {
@@ -269,6 +370,31 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontWeight: '500',
     textAlign: 'center',
+  },
+  propertiesGridRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    rowGap: 16,
+  },
+  propertiesGrid: {
+    width: '100%',
+  },
+  propertyGridItem: {
+    width: '100%',
+    minWidth: 0,
+  },
+  propertyGridItemMulti: {
+    minWidth: 0,
+  },
+  propertyGridItemTwo: {
+    width: '48.5%',
+  },
+  propertyGridItemThree: {
+    width: '31.5%',
+  },
+  propertyGridItemFour: {
+    width: '23.5%',
   },
   loadingContainer: {
     paddingVertical: 40,
