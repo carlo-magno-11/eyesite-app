@@ -27,38 +27,54 @@ export default function PropertyDetailScreen() {
   const [activeImage, setActiveImage] = useState(0);
   const [imageLoading, setImageLoading] = useState(true);
   const [signedDocuments, setSignedDocuments] = useState<Record<string, string>>({});
+  const [loadingDocument, setLoadingDocument] = useState<string | null>(null);
 
   useEffect(() => {
     if (!property?.id || !session?.user?.id) return;
     void trackPropertyEvent(property.id, 'view');
   }, [property?.id, session?.user?.id, trackPropertyEvent]);
 
-  useEffect(() => {
-    let cancelled = false;
-    const loadPrivateDocuments = async () => {
-      if (!property?.id || !session?.user?.id) { if (!cancelled) setSignedDocuments({}); return; }
-      const items: string[] = [];
-      const add = (value: any) => {
-        if (typeof value === 'string' && value.trim()) items.push(value.trim());
-        else if (value && typeof value === 'object') add(value.path || value.url || value.publicUrl);
-      };
-      (property.pdfs || []).forEach(add);
-      (property.kmz_kml || []).forEach(add);
-      (property.archivos || []).forEach(add);
-      const unique = [...new Set(items)];
-      if (!unique.length) { if (!cancelled) setSignedDocuments({}); return; }
-      const result: Record<string, string> = {};
-      await Promise.all(unique.map(async (path) => {
-        const { data, error } = await supabase.functions.invoke('get-property-document', {
-          body: { property_id: property.id, path },
-        });
-        if (!error && data?.signedUrl) result[path] = data.signedUrl;
-      }));
-      if (!cancelled) setSignedDocuments(result);
+  const privateDocumentPaths = useMemo(() => {
+    if (!property) return [];
+    const items: string[] = [];
+    const add = (value: any) => {
+      if (typeof value === 'string' && value.trim()) items.push(value.trim());
+      else if (value && typeof value === 'object') add(value.path || value.url || value.publicUrl);
     };
-    loadPrivateDocuments();
-    return () => { cancelled = true; };
-  }, [property?.id, property?.pdfs, property?.kmz_kml, property?.archivos, session?.user?.id]);
+    (property.pdfs || []).forEach(add);
+    (property.kmz_kml || []).forEach(add);
+    (property.archivos || []).forEach(add);
+    return [...new Set(items)];
+  }, [property?.pdfs, property?.kmz_kml, property?.archivos]);
+
+  useEffect(() => {
+    setSignedDocuments({});
+    setLoadingDocument(null);
+  }, [property?.id, session?.user?.id]);
+
+  const openPrivateDocument = async (path: string) => {
+    if (!property?.id || !session?.user?.id) return;
+    const cachedUrl = signedDocuments[path];
+    if (cachedUrl) {
+      await Linking.openURL(cachedUrl);
+      return;
+    }
+
+    setLoadingDocument(path);
+    try {
+      const { data, error } = await supabase.functions.invoke('get-property-document', {
+        body: { property_id: property.id, path },
+      });
+      if (error || !data?.signedUrl) {
+        console.warn('[property] document access:', error?.message ?? 'No se recibió una URL firmada');
+        return;
+      }
+      setSignedDocuments((current) => ({ ...current, [path]: data.signedUrl }));
+      await Linking.openURL(data.signedUrl);
+    } finally {
+      setLoadingDocument(null);
+    }
+  };
 
   // Portada intercambiable video/foto (anti-trabe: sin player ni autoplay en la
   // vista normal; el video solo se reproduce dentro del Modal al tocar Play)
@@ -603,7 +619,7 @@ export default function PropertyDetailScreen() {
             </View>
           ) : null}
 
-          {Object.keys(signedDocuments).length > 0 ? (
+          {privateDocumentPaths.length > 0 ? (
             <View style={styles.dataSection}>
               <Text style={styles.sectionTitle}>DOCUMENTOS</Text>
               {Object.entries(signedDocuments).map(([path, url]) => {
@@ -611,9 +627,9 @@ export default function PropertyDetailScreen() {
                 const lower = name.toLowerCase();
                 const type = lower.endsWith('.pdf') ? 'PDF' : (lower.endsWith('.kmz') || lower.endsWith('.kml')) ? 'MAPA' : 'ARCHIVO';
                 return (
-                  <Pressable key={path} onPress={() => Linking.openURL(url)} style={styles.linkCard}>
+                  <Pressable key={path} onPress={() => void openPrivateDocument(path)} style={styles.linkCard} disabled={loadingDocument === path}>
                     <Text style={styles.linkLabel}>{type} · {name}</Text>
-                    <Text style={styles.linkUrl}>Abrir documento</Text>
+                    <Text style={styles.linkUrl}>{loadingDocument === path ? "Preparando documento..." : "Abrir documento"}</Text>
                   </Pressable>
                 );
               })}
