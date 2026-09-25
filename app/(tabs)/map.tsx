@@ -389,7 +389,7 @@ function createMapHtml(properties: NearbyProperty[], initialRegion: Region) {
 
 export default function MapScreen() {
   const router = useRouter();
-  const { width: windowWidth, height: windowHeight } = useWindowDimensions();
+  const { height: windowHeight } = useWindowDimensions();
 
   const { trackPropertyEvent } = useCommercial();
   const [properties, setProperties] = useState<MapProperty[]>([]);
