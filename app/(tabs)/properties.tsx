@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { View, Text, TextInput, FlatList, Pressable, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, Text, TextInput, FlatList, Pressable, StyleSheet, ActivityIndicator, Alert } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
 import { PROPERTY_TYPES_OPTIONS } from '@/lib/properties-data';
@@ -7,6 +7,8 @@ import { PropertyCard } from '@/components/property-card';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { useProperties } from '@/hooks/use-properties';
 import { useResponsive } from '@/hooks/use-responsive';
+import { useAuth } from '@/hooks/useAuth';
+import { useSavedSearches } from '@/hooks/use-commercial';
 
 export default function PropertiesScreen() {
   const params = useLocalSearchParams<{ filter?: string }>();
@@ -15,6 +17,8 @@ export default function PropertiesScreen() {
   const [activeFilter, setActiveFilter] = useState<string>(initialFilter);
   const { properties, loading, error, refetch: fetchProperties } = useProperties();
   const { propertyColumns, horizontalPadding, contentMaxWidth, isDesktop } = useResponsive();
+  const { user } = useAuth();
+  const { save } = useSavedSearches(user?.id);
 
   const filtered = useMemo(() => {
     return properties.filter((p) => {
@@ -87,6 +91,47 @@ export default function PropertiesScreen() {
             </Pressable>
           )}
         />
+      </View>
+
+      <View style={[styles.savedSearchRow, { paddingHorizontal: horizontalPadding, maxWidth: contentMaxWidth }, isDesktop && styles.contentCentered]}>
+        <Pressable
+          onPress={async () => {
+            if (!user) {
+              Alert.alert('Inicia sesión', 'Necesitas una sesión activa para guardar una búsqueda.');
+              return;
+            }
+
+            try {
+              await save({
+                nombre: search.trim()
+                  ? `Búsqueda: ${search.trim()}`
+                  : activeFilter === 'all'
+                    ? 'Todas las propiedades'
+                    : `Propiedades: ${activeFilter}`,
+                min_price: null,
+                max_price: null,
+                min_surface: null,
+                max_surface: null,
+                municipio: search.trim() || null,
+                tipo: activeFilter === 'all' ? null : activeFilter,
+                objetivo: null,
+                plazo_compra: null,
+                financiamiento: null,
+                activa: true,
+              });
+              Alert.alert('Búsqueda guardada', 'EYESITE te avisará cuando podamos encontrar nuevas coincidencias.');
+            } catch (error: any) {
+              Alert.alert('No se pudo guardar', error?.message || 'Inténtalo nuevamente.');
+            }
+          }}
+          style={({ pressed }) => [styles.savedSearchButton, pressed && { opacity: 0.78 }]}
+        >
+          <Text style={styles.savedSearchIcon}>🔔</Text>
+          <View style={styles.savedSearchCopy}>
+            <Text style={styles.savedSearchTitle}>GUARDAR ESTA BÚSQUEDA</Text>
+            <Text style={styles.savedSearchText}>Recibe alertas de nuevas propiedades compatibles.</Text>
+          </View>
+        </Pressable>
       </View>
 
       {/* Lista de propiedades */}
@@ -229,6 +274,38 @@ const styles = StyleSheet.create({
   },
   singleItem: {
     width: '100%',
+  },
+  savedSearchRow: {
+    width: '100%',
+    alignSelf: 'center',
+    paddingBottom: 10,
+  },
+  savedSearchButton: {
+    backgroundColor: '#171717',
+    borderWidth: 1,
+    borderColor: '#C9A84C',
+    borderRadius: 10,
+    padding: 13,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  savedSearchIcon: {
+    fontSize: 18,
+  },
+  savedSearchCopy: {
+    flex: 1,
+  },
+  savedSearchTitle: {
+    color: '#C9A84C',
+    fontSize: 11,
+    fontWeight: '900',
+    letterSpacing: 0.8,
+  },
+  savedSearchText: {
+    color: '#888',
+    fontSize: 11,
+    marginTop: 3,
   },
   loadingContainer: {
     flex: 1,
