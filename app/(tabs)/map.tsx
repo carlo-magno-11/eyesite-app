@@ -516,8 +516,8 @@ export default function MapScreen() {
   // rest of the screen below the fold. Keep native layout untouched and make
   // the Web map proportional to the available viewport.
   const webMapHeight = Math.max(
-    420,
-    Math.min(windowHeight * 0.58, 720),
+    520,
+    Math.min(windowHeight * 0.68, 760),
   );
 
   const handleMapMessage = useCallback(
