@@ -1,17 +1,44 @@
+import { useCallback, useEffect, useState } from 'react';
 import { View, Text, FlatList, StyleSheet, ActivityIndicator } from 'react-native';
 import { ScreenContainer } from '@/components/screen-container';
 import { PropertyCard } from '@/components/property-card';
 import { useFavorites } from '@/hooks/use-favorites';
-import { useProperties } from '@/hooks/use-properties';
+import { mapProperty } from '@/hooks/use-properties';
+import { supabase } from '@/lib/supabase';
 import { useResponsive } from '@/hooks/use-responsive';
 
 export default function FavoritesScreen() {
   const { favs } = useFavorites();
-  const { properties, loading: propsLoading, refetch: fetchProperties } = useProperties();
+  const [favoriteProperties, setFavoriteProperties] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   const { propertyColumns, horizontalPadding, contentMaxWidth } = useResponsive();
 
-  const favoriteProperties = properties.filter((p) => favs.includes(p.id));
-  const loading = propsLoading;
+  const fetchFavoriteProperties = useCallback(async () => {
+    if (!favs.length) {
+      setFavoriteProperties([]);
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    const { data, error } = await supabase
+      .from('propiedades_publicas')
+      .select('*')
+      .eq('estado', 'activa')
+      .in('id', favs);
+    if (error) {
+      console.warn('[favorites] properties load:', error.message);
+      setFavoriteProperties([]);
+    } else {
+      const byId = new Map(favs.map((id, index) => [id, index]));
+      const mapped = (data ?? []).map(mapProperty).sort((a, b) => (byId.get(a.id) ?? 0) - (byId.get(b.id) ?? 0));
+      setFavoriteProperties(mapped);
+    }
+    setLoading(false);
+  }, [favs]);
+
+  useEffect(() => {
+    void fetchFavoriteProperties();
+  }, [fetchFavoriteProperties]);
 
   return (
     <ScreenContainer edges={['top', 'left', 'right']} containerClassName="bg-background">
@@ -32,7 +59,7 @@ export default function FavoritesScreen() {
           keyExtractor={(item) => item.id}
           numColumns={propertyColumns}
           refreshing={loading}
-          onRefresh={fetchProperties}
+          onRefresh={fetchFavoriteProperties}
           columnWrapperStyle={propertyColumns > 1 ? styles.columnWrapper : undefined}
           contentContainerStyle={[styles.listContainer, { paddingHorizontal: horizontalPadding, maxWidth: contentMaxWidth, width: '100%', alignSelf: 'center' }]}
           showsVerticalScrollIndicator={false}
