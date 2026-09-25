@@ -14,7 +14,7 @@
 
 ### 2. Mapa Web responsive
 
-`app/(tabs)/map.tsx` usa una altura Web calculada con el viewport: mínimo 420px, máximo 680px y 62% de la altura disponible. Esto evita que el mapa domine pantallas de escritorio y mantiene una superficie útil en tablets.
+`app/(tabs)/map.tsx` usa una altura Web calculada con el viewport: mínimo 320px, máximo 620px y 55% de la altura disponible. Esto evita que el mapa domine pantallas de escritorio y mantiene una superficie útil en tablets.
 
 No se introduce Google Maps ni Google Cloud.
 
