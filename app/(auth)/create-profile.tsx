@@ -14,9 +14,11 @@ import { useRouter } from 'expo-router';
 
 import { supabase } from '@/lib/supabase';
 import AuthBackground from '@/components/AuthBackground';
+import { useResponsive } from '@/hooks/use-responsive';
 
 export default function CreateProfileScreen() {
   const router = useRouter();
+  const { isDesktop, horizontalPadding, contentMaxWidth } = useResponsive();
 
   const [nombre, setNombre] = useState('');
   const [telefono, setTelefono] = useState('');
@@ -159,10 +161,11 @@ export default function CreateProfileScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <ScrollView
-          contentContainerStyle={styles.container}
+          contentContainerStyle={[styles.container, { paddingHorizontal: horizontalPadding }]}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
+          <View style={[styles.content, isDesktop && { maxWidth: contentMaxWidth ?? 620 }]}>
           <View style={styles.header}>
             <Text style={styles.step}>PASO 1 DE 2</Text>
 
@@ -274,6 +277,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingTop: 40,
     paddingBottom: 40,
+  },
+
+  content: {
+    width: '100%',
+    alignSelf: 'center',
   },
 
   header: {
