@@ -289,3 +289,14 @@ Validación de producción:
 - No se añadió Google Maps ni Google Cloud; el mapa continúa con Leaflet/OpenStreetMap.
 
 - Runtime: se verificó que `propiedades_publicas` es una tabla-cache pública y se añadieron índices parciales para catálogo por `created_at`, `tipo`, `precio_actual` y `superficie`, limitados a propiedades activas. La migración quedó registrada en Supabase con versión `20260925202402` y el archivo del repositorio fue alineado a esa versión.
+
+
+## 2026-09-25 — Escalado del catálogo público y corrección de búsqueda web
+
+- Se verificó que `hooks/use-properties.ts` ya usa paginación server-side sobre `propiedades_publicas` en modo catálogo: páginas de 24 (máximo 48), filtros de búsqueda/municipio/tipo/precio/superficie aplicados en Supabase y `loadMore` para carga incremental.
+- Se verificó que `app/(tabs)/properties.tsx` ya consume `hasMore`/`loadMore` y conserva la interfaz responsive de 1–4 columnas.
+- Se corrigió un literal de template mal escapado en el contador del catálogo que podía producir JSX/TS inválido.
+- Se añadió debounce de 300 ms a la búsqueda de texto para evitar una consulta de Supabase por cada pulsación del usuario.
+- No se modificó el contrato de detalle, favoritos, búsquedas guardadas ni el feed Realtime.
+- El cambio queda aislado en `fix/eyesite-platform-security-20260925`; no se tocó `main`.
+- CI del commit de esta corrección queda pendiente de ejecución/confirmación; no se marca como aprobado hasta recibir el resultado real de GitHub Actions.
