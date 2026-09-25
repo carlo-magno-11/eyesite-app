@@ -1,5 +1,7 @@
 import { useRef, useState } from 'react';
-import { View, Text, TextInput, ScrollView, Pressable, StyleSheet, Alert, ActivityIndicator, Image, FlatList } from 'react-native';
+import { useResponsive } from '@/hooks/use-responsive';
+import { Platform, View, Text, TextInput, ScrollView, Pressable, StyleSheet, Alert, ActivityIndicator, FlatList } from 'react-native';
+import { Image } from 'expo-image';
 import { ScreenContainer } from '@/components/screen-container';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { useSubmitProperty } from '@/hooks/use-submit-property';
@@ -8,7 +10,7 @@ import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as VideoThumbnails from 'expo-video-thumbnails';
 import * as Location from 'expo-location';
-import { WebView } from 'react-native-webview';
+import { LeafletMap, LeafletMapHandle } from '@/components/leaflet-map';
 
 const PROPERTY_TYPES_OPTIONS = [
   { key: 'terreno', label: 'Terreno' },
@@ -130,19 +132,19 @@ L.tileLayer(
 
 function sendCoordinates(lat, lng) {
 
+  const message = JSON.stringify({
+    type: 'property_location',
+    latitude: Number(lat),
+    longitude: Number(lng),
+  });
+
   if (
     window.ReactNativeWebView &&
     window.ReactNativeWebView.postMessage
   ) {
-
-    window.ReactNativeWebView.postMessage(
-      JSON.stringify({
-        type: 'property_location',
-        latitude: Number(lat),
-        longitude: Number(lng),
-      })
-    );
-
+    window.ReactNativeWebView.postMessage(message);
+  } else {
+    window.parent.postMessage(message, '*');
   }
 }
 
@@ -218,6 +220,19 @@ map.on(
   }
 );
 
+window.addEventListener('message', function(event) {
+  if (typeof event.data !== 'string') return;
+
+  try {
+    const command = JSON.parse(event.data);
+    if (command?.type === 'set_location') {
+      placeMarker(command.latitude, command.longitude, true);
+    }
+  } catch (_) {
+    // Ignore messages that are not map commands.
+  }
+});
+
 </script>
 
 </body>
@@ -249,6 +264,7 @@ export default function PublishScreen() {
   const [videoType, setVideoType] = useState<string | null>(null);
   const [processingVideo, setProcessingVideo] = useState(false);
   const { user, profile } = useAuth();
+  const { horizontalPadding, contentMaxWidth } = useResponsive();
 
   const updateField = (key: keyof FormData, value: string) => {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -257,35 +273,49 @@ export default function PublishScreen() {
   const { submitProperty, loading: submitting } = useSubmitProperty();
   const [uploading, setUploading] = useState(false);
   const [locating, setLocating] = useState(false);
-  const propertyMapRef = useRef<WebView>(null);
+  const propertyMapRef = useRef<LeafletMapHandle>(null);
 
   const useCurrentPropertyLocation = async () => {
   setLocating(true);
 
   try {
-    const { status } =
-      await Location.requestForegroundPermissionsAsync();
+    let latitude: number;
+    let longitude: number;
 
-    if (
-      status !== Location.PermissionStatus.GRANTED
-    ) {
-      Alert.alert(
-        'Permiso de ubicación',
-        'Necesitamos tu ubicación solo para colocar el punto de la propiedad en el mapa.'
-      );
-      return;
-    }
+    if (Platform.OS === 'web') {
+      if (!navigator.geolocation) {
+        Alert.alert('Ubicación', 'Tu navegador no permite obtener la ubicación.');
+        return;
+      }
 
-    const current =
-      await Location.getCurrentPositionAsync({
+      const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, {
+          enableHighAccuracy: false,
+          maximumAge: 60000,
+          timeout: 10000,
+        });
+      });
+
+      latitude = position.coords.latitude;
+      longitude = position.coords.longitude;
+    } else {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+
+      if (status !== Location.PermissionStatus.GRANTED) {
+        Alert.alert(
+          'Permiso de ubicación',
+          'Necesitamos tu ubicación solo para colocar el punto de la propiedad en el mapa.'
+        );
+        return;
+      }
+
+      const current = await Location.getCurrentPositionAsync({
         accuracy: Location.Accuracy.Balanced,
       });
 
-    const latitude =
-      current.coords.latitude;
-
-    const longitude =
-      current.coords.longitude;
+      latitude = current.coords.latitude;
+      longitude = current.coords.longitude;
+    }
 
     setForm((prev) => ({
       ...prev,
@@ -293,14 +323,7 @@ export default function PublishScreen() {
       longitud: longitude,
     }));
 
-    propertyMapRef.current?.injectJavaScript(`
-      placeMarker(
-        ${latitude},
-        ${longitude},
-        true
-      );
-      true;
-    `);
+    propertyMapRef.current?.runScript(JSON.stringify({ type: 'set_location', latitude, longitude }));
 
   } catch (error) {
     console.error(
@@ -379,6 +402,35 @@ const handlePropertyMapMessage = (
     }
   };
 
+  const createWebVideoThumbnail = async (uri: string): Promise<string | undefined> => {
+    if (Platform.OS !== 'web') return undefined;
+    return new Promise((resolve) => {
+      const video = document.createElement('video');
+      const canvas = document.createElement('canvas');
+      let done = false;
+      const finish = (value?: string) => { if (done) return; done = true; video.remove(); canvas.remove(); resolve(value); };
+      video.muted = true;
+      video.playsInline = true;
+      video.preload = 'metadata';
+      video.onloadeddata = () => {
+        video.currentTime = Math.min(1, Number.isFinite(video.duration) ? video.duration : 1);
+      };
+      video.onseeked = () => {
+        const width = Math.min(1280, video.videoWidth || 1280);
+        const height = Math.max(1, Math.round(width * ((video.videoHeight || 720) / (video.videoWidth || 1280))));
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return finish();
+        ctx.drawImage(video, 0, 0, width, height);
+        finish(canvas.toDataURL('image/jpeg', 0.8));
+      };
+      video.onerror = () => finish();
+      video.src = uri;
+      video.load();
+    });
+  };
+
   const pickVideo = async () => {
     try {
       setProcessingVideo(true);
@@ -395,8 +447,14 @@ const handlePropertyMapMessage = (
 
         // Verificar peso del video (máx 50MB)
         try {
-          const info = await FileSystem.getInfoAsync(uri);
-          if (info.exists && typeof info.size === 'number' && info.size > MAX_VIDEO_BYTES) {
+          let size = 0;
+          if (Platform.OS === 'web') {
+            size = (await fetch(uri).then((response) => response.blob())).size;
+          } else {
+            const info = await FileSystem.getInfoAsync(uri);
+            size = info.exists && 'size' in info ? info.size ?? 0 : 0;
+          }
+          if (size > MAX_VIDEO_BYTES) {
             Alert.alert(
               'Video muy pesado',
               'El video debe pesar máximo 50MB. Selecciona uno más corto o comprímelo.'
@@ -407,13 +465,18 @@ const handlePropertyMapMessage = (
           console.log('No se pudo verificar el tamaño del video:', sizeError);
         }
 
-        // Generar thumbnail (preview) en el segundo 1
+        // Generar thumbnail (preview) en el segundo 1.
+        // Web usa <video> + canvas porque expo-video-thumbnails es nativo.
         let thumbnail: string | undefined;
         try {
-          const { uri: thumbUri } = await VideoThumbnails.getThumbnailAsync(uri, {
-            time: 1000,
-          });
-          thumbnail = thumbUri;
+          if (Platform.OS === 'web') {
+            thumbnail = await createWebVideoThumbnail(uri);
+          } else {
+            const { uri: thumbUri } = await VideoThumbnails.getThumbnailAsync(uri, {
+              time: 1000,
+            });
+            thumbnail = thumbUri;
+          }
         } catch (thumbError) {
           console.log('No se pudo generar thumbnail:', thumbError);
         }
@@ -457,11 +520,11 @@ const handlePropertyMapMessage = (
           titulo: form.title,
           tipo: form.type,
           municipio: form.municipality,
-          precio_actual: parseInt(form.currentPrice),
-          precio_mercado: form.marketPrice ? parseInt(form.marketPrice) : null,
+          precio_actual: Number(form.currentPrice.replace(/[^0-9]/g, '')) || 0,
+          precio_mercado: form.marketPrice ? Number(form.marketPrice.replace(/[^0-9]/g, '')) || null : null,
           unidad_precio: form.priceUnit,
-          superficie: form.surfaceM2 ? parseInt(form.surfaceM2) : null,
-          unidad_superficie: form.priceUnit === 'ml' ? 'ml' : 'm2',
+          superficie: form.surfaceM2 ? Number(form.surfaceM2.replace(/[^0-9]/g, '')) || null : null,
+          unidad_superficie: 'm2',
           descripcion: form.description,
           contacto_nombre: profile?.nombre?.trim() || 'Usuario de EYESITE',
           contacto_telefono: profile?.telefono?.trim() || null,
@@ -534,7 +597,13 @@ const handlePropertyMapMessage = (
     <ScreenContainer edges={['top', 'left', 'right']} containerClassName="bg-background">
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 120 }}
+        contentContainerStyle={{
+          paddingBottom: 120,
+          paddingHorizontal: horizontalPadding,
+          width: '100%',
+          maxWidth: contentMaxWidth,
+          alignSelf: 'center',
+        }}
         keyboardShouldPersistTaps="handled"
       >
         {/* Header */}
@@ -705,17 +774,12 @@ const handlePropertyMapMessage = (
 
            <View style={styles.propertyMapContainer}>
 
-           <WebView
+           <LeafletMap
               ref={propertyMapRef}
-               originWhitelist={['*']}
-               source={{
-               html: PROPERTY_LOCATION_MAP_HTML,
-                }}
-               javaScriptEnabled
-              domStorageEnabled
-           onMessage={handlePropertyMapMessage}
-       style={styles.propertyMap}
-       />
+              html={PROPERTY_LOCATION_MAP_HTML}
+              onMessage={(data) => handlePropertyMapMessage({ nativeEvent: { data } })}
+              style={styles.propertyMap}
+           />
 
        </View>
 
@@ -795,7 +859,9 @@ const handlePropertyMapMessage = (
                     keyExtractor={(_, i) => i.toString()}
                     renderItem={({ item, index }) => (
                       <View style={styles.photoItem}>
-                        <Image source={{ uri: item.uri }} style={styles.photoThumbnail} resizeMode="cover" />
+                        <Image source={{ uri: item.uri }} style={styles.photoThumbnail}
+                    contentFit="cover"
+                    cachePolicy="memory-disk" resizeMode="cover" />
                         <Pressable
                           onPress={() => removeImage(index)}
                           style={styles.photoRemove}
@@ -834,7 +900,9 @@ const handlePropertyMapMessage = (
                 <View style={styles.videoPreviewWrap}>
                   <View style={styles.videoPreview}>
                     {videoThumb ? (
-                      <Image source={{ uri: videoThumb }} style={styles.videoThumb} resizeMode="cover" />
+                      <Image source={{ uri: videoThumb }} style={styles.videoThumb}
+          contentFit="cover"
+          cachePolicy="memory-disk" resizeMode="cover" />
                     ) : (
                       <View style={[styles.videoThumb, styles.videoThumbPlaceholder]}>
                         <Text style={styles.videoThumbPlaceholderText}>🎬</Text>
@@ -904,6 +972,9 @@ mapInstruction: {
 },
   
   header: {
+    width: '100%',
+    maxWidth: 900,
+    alignSelf: 'center',
     paddingHorizontal: 16,
     paddingVertical: 20,
     borderBottomWidth: 1,
@@ -920,6 +991,9 @@ mapInstruction: {
     color: '#9A9A9A',
   },
   form: {
+    width: '100%',
+    maxWidth: 900,
+    alignSelf: 'center',
     padding: 16,
     gap: 20,
   },

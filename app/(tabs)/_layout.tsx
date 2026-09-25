@@ -43,8 +43,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="properties"
         options={{
-          // La pantalla sigue existiendo y se abre desde Inicio,
-          // pero ya no ocupa un lugar en la barra inferior.
+          // Las propiedades se abren desde Inicio mediante "Ver oportunidades".
           href: null,
         }}
       />
@@ -82,7 +81,6 @@ export default function TabLayout() {
         name="contact"
         options={{
           title: "Nosotros",
-          href: session ? undefined : null,
           tabBarIcon: ({ color }) => <IconSymbol size={24} name="person.fill" color={color} />,
         }}
       />

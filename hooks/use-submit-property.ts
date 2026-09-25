@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { manipulateAsync } from 'expo-image-manipulator';
+import { Platform } from 'react-native';
 
 export interface SubmitVideoPayload {
   videoUri: string;
@@ -30,7 +31,13 @@ export function useSubmitProperty() {
       );
       return result.uri;
     } catch (e) {
-      console.warn('[compress] no se pudo comprimir, se usa original:', e);
+      // El navegador puede trabajar con Blob/File aunque el URI no sea compatible
+      // con el manipulador nativo. La subida continuará usando el archivo original.
+      if (Platform.OS === 'web') {
+        console.warn('[compress:web] no se pudo comprimir, se usa original:', e);
+      } else {
+        console.warn('[compress] no se pudo comprimir, se usa original:', e);
+      }
       return uri;
     }
   };

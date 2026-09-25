@@ -1,8 +1,10 @@
+import { AppState, type AppStateStatus } from "react-native";
 import { useCallback, useEffect, useState } from "react";
 import { Platform } from "react-native";
 import Constants from "expo-constants";
 
 import { supabase } from "@/lib/supabase";
+import { addAppBreadcrumb, reportAppError } from "@/lib/monitoring";
 
 type NotificationItem = {
   id: string;
@@ -17,6 +19,7 @@ const isExpoGo = Constants.executionEnvironment === "storeClient";
 export function useNotifications(userId?: string) {
   const [items, setItems] = useState<NotificationItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (!userId) {
@@ -26,18 +29,23 @@ export function useNotifications(userId?: string) {
     }
 
     setLoading(true);
+    setErrorMessage(null);
 
     const { data, error } = await supabase
       .from("notificaciones")
       .select("*")
       .eq("user_id", userId)
       .eq("estado_envio", "sent")
-      .lte("programada_para", new Date().toISOString())
       .order("created_at", { ascending: false })
       .limit(100);
 
-    if (!error) setItems(data ?? []);
-    else console.error("[EYESITE] notifications load error:", error);
+    if (!error) {
+      setItems(data ?? []);
+      addAppBreadcrumb("Notificaciones cargadas", { count: data?.length ?? 0 }, "notification");
+    } else {
+      reportAppError(error, { area: "notifications", action: "load", extra: { code: error.code } });
+      setErrorMessage(error.message || "No se pudieron cargar las notificaciones.");
+    }
 
     setLoading(false);
   }, [userId]);
@@ -55,10 +63,20 @@ export function useNotifications(userId?: string) {
         table: "notificaciones",
         filter: `user_id=eq.${userId}`,
       }, () => void load())
-      .subscribe();
+      .subscribe((status) => {
+        if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
+          void load();
+        }
+      });
+
+    const handleAppState = (nextState: AppStateStatus) => {
+      if (nextState === "active") void load();
+    };
+    const appStateSubscription = AppState.addEventListener("change", handleAppState);
 
     return () => {
       clearTimeout(timer);
+      appStateSubscription.remove();
       void supabase.removeChannel(channel);
     };
   }, [userId, load]);
@@ -71,7 +89,7 @@ export function useNotifications(userId?: string) {
     });
 
     if (error) {
-      console.error("[EYESITE] mark notification read error:", error);
+      reportAppError(error, { area: "notifications", action: "mark_read", extra: { notification_id_present: Boolean(id) } });
       return;
     }
 
@@ -90,6 +108,7 @@ export function useNotifications(userId?: string) {
     unread: items.filter(notification => !notification.leida).length,
     markRead,
     refetch: load,
+    error: errorMessage,
   };
 }
 
@@ -133,12 +152,13 @@ export async function registerPushToken(userId?: string) {
         .update({ expo_push_token: result.data })
         .eq("id", userId);
 
-      if (error) console.error("[EYESITE] push token save error:", error);
+      if (error) reportAppError(error, { area: "push", action: "save_token" });
+      else addAppBreadcrumb("Token push registrado", undefined, "push");
     }
 
     return result.data ?? null;
   } catch (error) {
-    console.warn("[EYESITE] push registration error:", error);
+    reportAppError(error, { area: "push", action: "register", severity: "warning" });
     return null;
   }
 }

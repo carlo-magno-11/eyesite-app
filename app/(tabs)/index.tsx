@@ -1,10 +1,12 @@
-import { View, Text, ScrollView, Image, Pressable, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, Pressable, StyleSheet, ActivityIndicator } from 'react-native';
+import { Image } from 'expo-image';
 import { ScreenContainer } from '@/components/screen-container';
 import { PropertyCard } from '@/components/property-card';
 import { router } from 'expo-router';
 import { useProperties } from '@/hooks/use-properties';
 import { useAuth } from '@/hooks/useAuth';
 import { useNotifications } from '@/hooks/use-notifications';
+import { useResponsive } from '@/hooks/use-responsive';
 import { Ionicons } from '@expo/vector-icons';
 
 const CATEGORIES = [
@@ -19,6 +21,7 @@ export default function HomeScreen() {
   const { properties, loading } = useProperties();
   const { user, session } = useAuth();
   const { unread } = useNotifications(user?.id);
+  const { horizontalPadding, contentMaxWidth, isDesktop, isLargeDesktop } = useResponsive();
   const featuredProperties = properties.filter((p) => p.featured || p.destacada);
   // Si todavía no hay propiedades marcadas como destacadas, mostramos las
   // primeras oportunidades reales para evitar una sección vacía en producción.
@@ -39,11 +42,11 @@ export default function HomeScreen() {
         contentContainerStyle={{ paddingBottom: 100, backgroundColor: '#0D0D0D' }}
       >
         {/* Header with Tagline */}
-        <View style={styles.taglineContainer}>
+        <View style={[styles.taglineContainer, { paddingHorizontal: horizontalPadding }]}>
           <Text style={styles.tagline}>Estamos contigo en cualquier parte del mundo</Text>
         </View>
         {/* Header */}
-        <View style={styles.header}>
+        <View style={[styles.header, { paddingHorizontal: horizontalPadding, maxWidth: contentMaxWidth }, isDesktop && styles.centeredContent]}>
           <Text style={styles.logo}>EYESI<Text style={styles.logoPlus}>+</Text>E</Text>
           <View style={styles.headerButtons}>
             <Pressable
@@ -69,15 +72,18 @@ export default function HomeScreen() {
         </View>
 
         {/* Hero Banner */}
-        <View style={styles.heroBanner}>
+        <View style={[styles.heroBanner, { height: isLargeDesktop ? 380 : isDesktop ? 340 : 300, marginHorizontal: isDesktop ? horizontalPadding : 16, maxWidth: contentMaxWidth }, isDesktop && styles.centeredContent]}>
           <Image
             source={{ uri: 'https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=1200&q=80' }}
             style={styles.heroImage}
+            contentFit="cover"
+            cachePolicy="memory-disk"
+            transition={150}
           />
           <View style={styles.heroOverlay} />
           <View style={styles.heroContent}>
             <Text style={styles.heroTagline}>FIND YOUR LAND</Text>
-            <Text style={styles.heroTitle}>TODO BUEN PROYECTO INICIA CON UN BUEN TERRENO</Text>
+            <Text style={[styles.heroTitle, { fontSize: isLargeDesktop ? 30 : isDesktop ? 26 : 22 }]}>TODO BUEN PROYECTO INICIA CON UN BUEN TERRENO</Text>
             <Pressable
               onPress={() => router.push('/(tabs)/properties' as any)}
               style={({ pressed }) => [styles.heroButton, pressed && { opacity: 0.85 }]}
@@ -88,7 +94,7 @@ export default function HomeScreen() {
         </View>
 
         {/* Categorías */}
-        <View style={styles.section}>
+        <View style={[styles.section, { paddingHorizontal: horizontalPadding, maxWidth: contentMaxWidth }, isDesktop && styles.centeredContent]}>
           <Text style={styles.sectionTitle}>CATEGORÍAS</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoriesScroll}>
             {CATEGORIES.map((cat) => (
@@ -105,7 +111,7 @@ export default function HomeScreen() {
         </View>
 
         {/* Oportunidades Destacadas */}
-        <View style={styles.section}>
+        <View style={[styles.section, { paddingHorizontal: horizontalPadding, maxWidth: contentMaxWidth }, isDesktop && styles.centeredContent]}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>OPORTUNIDADES DESTACADAS</Text>
             <Pressable onPress={() => router.push('/(tabs)/properties' as any)}>
@@ -128,6 +134,10 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
+  centeredContent: {
+    width: '100%',
+    alignSelf: 'center',
+  },
   taglineContainer: {
     backgroundColor: '#1C1C1C',
     paddingVertical: 12,

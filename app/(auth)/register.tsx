@@ -18,13 +18,19 @@ import { Ionicons } from "@expo/vector-icons";
 
 import { supabase } from "@/lib/supabase";
 import AuthBackground from "@/components/AuthBackground";
+import { useResponsive } from "@/hooks/use-responsive";
 
 export default function RegisterScreen() {
   const router = useRouter();
+  const { isDesktop } = useResponsive();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [nombre, setNombre] = useState("");
+  const [telefono, setTelefono] = useState("");
+  const [ciudad, setCiudad] = useState("");
+  const [presupuesto, setPresupuesto] = useState("");
 
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -63,6 +69,21 @@ export default function RegisterScreen() {
       );
     }
 
+    const cleanNombre = nombre.trim();
+    const cleanTelefono = telefono.trim().replace(/\D/g, "");
+    const cleanCiudad = ciudad.trim();
+    const cleanPresupuesto = presupuesto.trim();
+
+    if (!cleanNombre) {
+      return Alert.alert("Nombre requerido", "Ingresa tu nombre completo.");
+    }
+    if (cleanTelefono.length < 10) {
+      return Alert.alert("Teléfono inválido", "Ingresa un teléfono válido de al menos 10 dígitos.");
+    }
+    if (!cleanCiudad) {
+      return Alert.alert("Ciudad requerida", "Ingresa tu ciudad o zona de interés.");
+    }
+
     // Validar contraseña
     if (password.length < 6) {
       return Alert.alert(
@@ -86,7 +107,16 @@ export default function RegisterScreen() {
         email: cleanEmail,
         password,
         options: {
-          emailRedirectTo: "https://auth.eyesite.mx/auth/callback",
+          data: {
+            nombre: cleanNombre,
+            telefono: cleanTelefono,
+            ciudad: cleanCiudad,
+            presupuesto: cleanPresupuesto,
+          },
+          emailRedirectTo:
+            Platform.OS === "web"
+              ? "https://auth.eyesite.mx/auth/callback"
+              : "eyesite://auth/callback",
         },
       });
 
@@ -177,7 +207,7 @@ export default function RegisterScreen() {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          <View style={styles.container}>
+          <View style={[styles.container, isDesktop && styles.desktopContainer]}>
             {/* ENCABEZADO */}
             <View style={styles.header}>
               <Text style={styles.brand}>CREAR CUENTA</Text>
@@ -211,6 +241,39 @@ export default function RegisterScreen() {
                   returnKeyType="next"
                   style={styles.input}
                 />
+              </View>
+            </View>
+
+            {/* DATOS DEL PERFIL */}
+            <View style={styles.field}>
+              <Text style={styles.label}>NOMBRE COMPLETO</Text>
+              <View style={styles.inputWrap}>
+                <Ionicons name="person-outline" size={20} color="#888" style={styles.inputIcon} />
+                <TextInput value={nombre} onChangeText={setNombre} placeholder="Tu nombre completo" placeholderTextColor="#666" autoCapitalize="words" autoCorrect={false} style={styles.input} />
+              </View>
+            </View>
+
+            <View style={styles.field}>
+              <Text style={styles.label}>TELÉFONO / WHATSAPP</Text>
+              <View style={styles.inputWrap}>
+                <Ionicons name="call-outline" size={20} color="#888" style={styles.inputIcon} />
+                <TextInput value={telefono} onChangeText={setTelefono} placeholder="10 dígitos" placeholderTextColor="#666" keyboardType="phone-pad" style={styles.input} />
+              </View>
+            </View>
+
+            <View style={styles.field}>
+              <Text style={styles.label}>CIUDAD / ZONA</Text>
+              <View style={styles.inputWrap}>
+                <Ionicons name="location-outline" size={20} color="#888" style={styles.inputIcon} />
+                <TextInput value={ciudad} onChangeText={setCiudad} placeholder="Ciudad o zona de interés" placeholderTextColor="#666" autoCapitalize="words" autoCorrect={false} style={styles.input} />
+              </View>
+            </View>
+
+            <View style={styles.field}>
+              <Text style={styles.label}>PRESUPUESTO <Text style={styles.optional}>(OPCIONAL)</Text></Text>
+              <View style={styles.inputWrap}>
+                <Ionicons name="cash-outline" size={20} color="#888" style={styles.inputIcon} />
+                <TextInput value={presupuesto} onChangeText={setPresupuesto} placeholder="Ej. $2,500,000" placeholderTextColor="#666" keyboardType="default" style={styles.input} />
               </View>
             </View>
 
@@ -321,12 +384,12 @@ export default function RegisterScreen() {
                   </Text>
                   <ScrollView style={styles.modalScroll}>
                     <Text style={styles.modalText}>
-                      TÉRMINOS Y CONDICIONES EYESI+E\n\nLa información
+                      TÉRMINOS Y CONDICIONES EYESITE\n\nLa información
                       inmobiliaria es referencial y debe verificarse con un
                       asesor. Te comprometes a proporcionar datos
                       veraces.\n\nAVISO DE PRIVACIDAD\n\nTus datos se utilizarán
                       para gestionar tu cuenta y contactarte sobre propiedades y
-                      servicios de EYESI+E.\n\nTRATAMIENTO DE DATOS\n\nAutorizas
+                      servicios de EYESITE.\n\nTRATAMIENTO DE DATOS\n\nAutorizas
                       el contacto por WhatsApp, llamada o correo para atención
                       inmobiliaria.
                     </Text>
@@ -403,6 +466,12 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
 
+  desktopContainer: {
+    width: '100%',
+    maxWidth: 560,
+    alignSelf: 'center',
+  },
+
   header: {
     marginBottom: 28,
   },
@@ -460,6 +529,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 12,
   },
+
+  optional: { color: "#777", fontWeight: "400" },
 
   legalBox: {
     backgroundColor: "#171717",
