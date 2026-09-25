@@ -134,7 +134,9 @@ export default function HomeScreen() {
                   style={[
                     styles.propertyGridItem,
                     propertyColumns > 1 && styles.propertyGridItemMulti,
+                    propertyColumns === 2 && styles.propertyGridItemTwo,
                     propertyColumns === 3 && styles.propertyGridItemThree,
+                    propertyColumns === 4 && styles.propertyGridItemFour,
                   ]}
                 >
                   <PropertyCard property={property} />
@@ -304,7 +306,7 @@ const styles = StyleSheet.create({
   propertiesGridRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    columnGap: 16,
+    justifyContent: 'space-between',
     rowGap: 16,
   },
   propertiesGrid: {
@@ -315,11 +317,16 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   propertyGridItemMulti: {
-    flex: 1,
+    minWidth: 0,
+  },
+  propertyGridItemTwo: {
+    width: '48.5%',
   },
   propertyGridItemThree: {
-    flexBasis: '31.5%',
-    maxWidth: '31.5%',
+    width: '31.5%',
+  },
+  propertyGridItemFour: {
+    width: '23.5%',
   },
   loadingContainer: {
     paddingVertical: 40,
