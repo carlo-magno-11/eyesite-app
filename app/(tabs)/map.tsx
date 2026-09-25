@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -395,12 +395,14 @@ export default function MapScreen() {
   const [properties, setProperties] = useState<MapProperty[]>([]);
   const [loading, setLoading] = useState(true);
   const [mapError, setMapError] = useState<string | null>(null);
+  const mapRequestGeneration = useRef(0);
 
   const [userLocation, setUserLocation] = useState<UserCoords | null>(null);
 
   const [locating, setLocating] = useState(false);
 
   const fetchMapProperties = useCallback(async (center: UserCoords, radiusKm: number) => {
+    const requestId = ++mapRequestGeneration.current;
     try {
       setLoading(true);
       const { data, error } = await supabase.rpc("get_public_map_properties", {
@@ -411,14 +413,16 @@ export default function MapScreen() {
       });
 
       if (error) throw error;
+      if (requestId !== mapRequestGeneration.current) return;
       setProperties((data ?? []) as MapProperty[]);
       setMapError(null);
     } catch (error) {
+      if (requestId !== mapRequestGeneration.current) return;
       console.error("[EYESITE] map properties error", error);
       setProperties([]);
       setMapError(error instanceof Error ? error.message : "No se pudieron cargar las propiedades del mapa.");
     } finally {
-      setLoading(false);
+      if (requestId === mapRequestGeneration.current) setLoading(false);
     }
   }, []);
 
@@ -428,6 +432,8 @@ export default function MapScreen() {
       longitude: DEFAULT_REGION.longitude,
     };
     void fetchMapProperties(center, userLocation ? 100 : 250);
+
+    let refreshTimer: ReturnType<typeof setTimeout> | null = null;
 
     const channel = supabase
       .channel("eyesite-map-property-feed")
@@ -439,12 +445,17 @@ export default function MapScreen() {
           table: "propiedades_cambios",
         },
         () => {
-          void fetchMapProperties(center, userLocation ? 100 : 250);
+          if (refreshTimer) clearTimeout(refreshTimer);
+          refreshTimer = setTimeout(() => {
+            refreshTimer = null;
+            void fetchMapProperties(center, userLocation ? 100 : 250);
+          }, 500);
         },
       )
       .subscribe();
 
     return () => {
+      if (refreshTimer) clearTimeout(refreshTimer);
       void supabase.removeChannel(channel);
     };
   }, [fetchMapProperties, userLocation]);
@@ -563,12 +574,10 @@ export default function MapScreen() {
 
   // Web: keep the map responsive across laptops, tablets and split-screen.
   // The map shares the page with a header and a short result list.
-  const webMapHeight =
-    windowWidth < 600
-      ? Math.max(300, Math.min(Math.round(windowHeight * 0.42), 420))
-      : windowWidth < 1024
-        ? Math.max(320, Math.min(Math.round(windowHeight * 0.52), 540))
-        : Math.max(380, Math.min(Math.round(windowHeight * 0.60), 680));
+  const webMapHeight = Math.max(
+    320,
+    Math.min(Math.round(windowHeight * 0.55), 620),
+  );
 
   const handleMapMessage = useCallback(
     (rawData: string) => {
