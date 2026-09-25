@@ -372,12 +372,12 @@ export default function PropertyDetailScreen() {
                     player={carouselPlayer}
                     nativeControls
                     contentFit="contain"
-                    style={{ width: contentWidth, height: 300, backgroundColor: '#000' }}
+                    style={{ width: contentWidth, height: galleryHeight, backgroundColor: '#000' }}
                   />
                 ) : (
                   <Pressable
                     onPress={handleCarouselPlay}
-                    style={{ width: contentWidth, height: 300, backgroundColor: '#000' }}
+                    style={{ width: contentWidth, height: galleryHeight, backgroundColor: '#000' }}
                   >
                     {item.poster ? (
                       <Image
@@ -394,11 +394,11 @@ export default function PropertyDetailScreen() {
                   </Pressable>
                 )
               ) : (
-                <View style={{ width: contentWidth, height: 300, backgroundColor: '#151515' }}>
+                <View style={{ width: contentWidth, height: galleryHeight, backgroundColor: '#151515' }}>
                   <Image
                     source={{ uri: item.url }}
                     placeholder={item.url !== property.portada_url && property.portada_url ? { uri: property.portada_url } : undefined}
-                    style={{ width: contentWidth, height: 300 }}
+                    style={{ width: contentWidth, height: galleryHeight }}
                     contentFit="cover"
                     cachePolicy="memory-disk"
                     transition={150}
