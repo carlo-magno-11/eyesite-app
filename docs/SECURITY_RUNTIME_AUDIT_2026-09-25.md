@@ -54,3 +54,24 @@ Los avisos que permanecen son:
 2. `pg_net` sigue en `public` porque el scheduler depende de él; no se moverá sin verificar primero dependencias, permisos y ejecución del cron.
 3. El Advisor seguirá mostrando las 4 tablas CRM sin políticas directas mientras permanezcan deliberadamente cerradas por grants y operadas por RPC.
 4. Faltan pruebas físicas completas en iPhone/iPad/Android y navegadores Web con distintos tamaños; CI no puede validar interacción visual real, permisos de ubicación, WebView/iframe ni App Store behavior.
+
+
+## Corrección de privilegios de cliente — nueva ronda
+
+Se detectó y corrigió un riesgo real que RLS por sí solo no cubre: el rol `authenticated` tenía privilegios `TRUNCATE`, `TRIGGER` y `REFERENCES` sobre `anuncios`, `anuncio_entregas`, `propiedades_mias` y `propiedades_publicas`. Fueron revocados en runtime y se dejó la migración `20260925090000_harden_client_table_privileges.sql` para que la corrección persista en futuras instalaciones.
+
+La verificación posterior devuelve cero grants de esos tres privilegios para `authenticated` en esas tablas.
+
+## AuthGate — corrección funcional/de seguridad
+
+Se encontró un caso de prioridad de estados: una cuenta `rechazado` o `suspendida` que todavía no tuviera los términos aceptados podía entrar temporalmente al flujo de términos antes de llegar a `denied`. Se corrigió `app/_layout.tsx` para que `rechazado/suspendida` tenga prioridad absoluta, `pendiente` permanezca en `pending`, y solo una cuenta `activa` pueda pasar al flujo de términos/catálogo.
+
+## Storage legacy — riesgo identificado, cambio deliberadamente no destructivo
+
+Producción todavía contiene buckets públicos legacy (`fotos`, `fotos-propiedades`, `kmz_kml`, `pdfs`, `propiedades`, `solicitudes`, `videos`, `documentos`). Existen políticas de lectura pública para varios de ellos. No se privatizaron ni eliminaron todavía porque primero hay que mapear cada URL/consumer y migrar los objetos que aún sean necesarios. Privatizarlos a ciegas podría romper propiedades históricas o documentos enlazados.
+
+La ruta nueva de EYESITE ya separa `eyesite-media` público para media publicada, `eyesite-private` para documentos privados y `eyesite-staging` para cargas pendientes. El siguiente paso seguro es inventariar consumidores y objetos legacy y después retirar exposición bucket por bucket.
+
+## Password security
+
+Supabase documenta la protección contra contraseñas filtradas como una función de Auth/Attack Protection; actualmente no está disponible en el plan Free y sí aparece en planes de pago. No se simulará con SQL ni se añadirá lógica propia que pueda crear una falsa sensación de protección. citeturn0search1turn0search3
