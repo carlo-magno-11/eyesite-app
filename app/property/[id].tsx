@@ -45,7 +45,7 @@ export default function PropertyDetailScreen() {
     (property.kmz_kml || []).forEach(add);
     (property.archivos || []).forEach(add);
     return [...new Set(items)];
-  }, [property?.pdfs, property?.kmz_kml, property?.archivos]);
+  }, [property]);
 
   const openPrivateDocument = async (path: string) => {
     if (!property?.id || !session?.user?.id) return;
