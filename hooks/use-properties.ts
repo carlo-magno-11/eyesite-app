@@ -450,7 +450,7 @@ export function useProperties(options?: PropertyCatalogOptions) {
           }
 
           if (municipio) query = query.ilike('municipio', `%${municipio}%`);
-          if (tipo) query = query.eq('tipo', tipo);
+          if (tipo) query = query.ilike('tipo', tipo);
 
           if (minPrice !== null) query = query.gte('precio_actual', minPrice);
           if (maxPrice !== null) query = query.lte('precio_actual', maxPrice);
