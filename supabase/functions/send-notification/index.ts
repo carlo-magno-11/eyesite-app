@@ -269,68 +269,158 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ ok: true, sent: 0, invalid_tokens: 0 }), { headers: H });
     }
 
-    const expoMessages = messages.map(({ userId: _userId, ...message }) => message);
+    const EXPO_BATCH_SIZE = 100;
+    const EXPO_CONCURRENCY = 3;
+    const DB_CONCURRENCY = 10;
 
-    const expoResponse = await fetch("https://exp.host/--/api/v2/push/send", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(expoMessages),
-    });
+    const chunks = <T>(items: T[], size: number) => {
+      const out: T[][] = [];
+      for (let index = 0; index < items.length; index += size) {
+        out.push(items.slice(index, index + size));
+      }
+      return out;
+    };
 
-    const expoResult = await expoResponse.json();
-    const tickets = Array.isArray(expoResult?.data) ? expoResult.data : [];
+    const mapWithConcurrency = async <T>(
+      items: T[],
+      concurrency: number,
+      worker: (item: T) => Promise<void>,
+    ) => {
+      let cursor = 0;
+      const workers = Array.from(
+        { length: Math.min(concurrency, items.length) },
+        async () => {
+          while (true) {
+            const index = cursor++;
+            if (index >= items.length) return;
+            await worker(items[index]);
+          }
+        },
+      );
+      await Promise.all(workers);
+    };
 
     let sent = 0;
     const invalidTokens: string[] = [];
     const deliveryNow = new Date().toISOString();
 
-    for (let index = 0; index < tickets.length; index += 1) {
-      const ticket = tickets[index];
-      const message = messages[index];
-      if (ticket?.status === "ok") {
-        sent += 1;
-        if (announcementId && message?.userId) {
-          await adminClient
-            .from("anuncio_entregas")
-            .update({
-              push_status: "sent",
-              push_attempts: 1,
-              sent_at: deliveryNow,
-              push_next_retry_at: null,
-              push_error: null,
-              updated_at: deliveryNow,
-            })
-            .eq("anuncio_id", announcementId)
-            .eq("user_id", message.userId);
+    for (const batch of chunks(messages, EXPO_BATCH_SIZE)) {
+      try {
+        const expoMessages = batch.map(({ userId: _userId, ...message }) => message);
+        const expoResponse = await fetch("https://exp.host/--/api/v2/push/send", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(expoMessages),
+        });
+        const expoResult = await expoResponse.json();
+        const tickets = Array.isArray(expoResult?.data) ? expoResult.data : [];
+
+        await mapWithConcurrency(batch, DB_CONCURRENCY, async (message, index) => {
+          const ticket = tickets[index];
+
+          if (ticket?.status === "ok") {
+            sent += 1;
+            if (announcementId && message.userId) {
+              const { error } = await adminClient
+                .from("anuncio_entregas")
+                .update({
+                  push_status: "sent",
+                  push_attempts: 1,
+                  sent_at: deliveryNow,
+                  push_next_retry_at: null,
+                  push_error: null,
+                  updated_at: deliveryNow,
+                })
+                .eq("anuncio_id", announcementId)
+                .eq("user_id", message.userId);
+              if (error) throw error;
+            }
+            return;
+          }
+
+          if (ticket?.details?.error === "DeviceNotRegistered") {
+            if (message.to) invalidTokens.push(message.to);
+            if (announcementId && message.userId) {
+              const { error } = await adminClient
+                .from("anuncio_entregas")
+                .update({
+                  push_status: "not_configured",
+                  push_attempts: 1,
+                  push_next_retry_at: null,
+                  push_error: "DeviceNotRegistered",
+                  updated_at: deliveryNow,
+                })
+                .eq("anuncio_id", announcementId)
+                .eq("user_id", message.userId);
+              if (error) throw error;
+            }
+            return;
+          }
+
+          if (announcementId && message.userId) {
+            const errorMessage = String(
+              ticket?.details?.error ||
+                ticket?.message ||
+                (!expoResponse.ok ? "Expo request failed" : "Push rechazado"),
+            );
+            const { error } = await adminClient
+              .from("anuncio_entregas")
+              .update({
+                push_status: "error",
+                push_attempts: 1,
+                push_next_retry_at: deliveryNow,
+                push_error: errorMessage,
+                updated_at: deliveryNow,
+              })
+              .eq("anuncio_id", announcementId)
+              .eq("user_id", message.userId);
+            if (error) throw error;
+          }
+        });
+
+        if (!expoResponse.ok) {
+          return new Response(
+            JSON.stringify({
+              ok: false,
+              attempted: messages.length,
+              sent,
+              invalid_tokens: invalidTokens.length,
+              error: expoResult?.errors?.[0]?.message || "Expo request failed",
+            }),
+            { status: 502, headers: H },
+          );
         }
-      } else if (ticket?.details?.error === "DeviceNotRegistered") {
-        const token = message?.to;
-        if (token) invalidTokens.push(token);
-        if (announcementId && message?.userId) {
-          await adminClient
-            .from("anuncio_entregas")
-            .update({
-              push_status: "not_configured",
-              push_attempts: 1,
-              push_next_retry_at: null,
-              push_error: "DeviceNotRegistered",
-              updated_at: deliveryNow,
-            })
-            .eq("anuncio_id", announcementId)
-            .eq("user_id", message.userId);
+      } catch (batchError) {
+        const errorMessage =
+          batchError instanceof Error ? batchError.message : String(batchError);
+
+        if (announcementId) {
+          await mapWithConcurrency(batch, DB_CONCURRENCY, async (message) => {
+            if (!message.userId) return;
+            await adminClient
+              .from("anuncio_entregas")
+              .update({
+                push_status: "error",
+                push_attempts: 1,
+                push_next_retry_at: deliveryNow,
+                push_error: errorMessage,
+                updated_at: deliveryNow,
+              })
+              .eq("anuncio_id", announcementId)
+              .eq("user_id", message.userId);
+          });
         }
-      } else if (announcementId && message?.userId) {
-        await adminClient
-          .from("anuncio_entregas")
-          .update({
-            push_status: "error",
-            push_attempts: 1,
-            push_next_retry_at: deliveryNow,
-            push_error: String(ticket?.details?.error || ticket?.message || "Push rechazado"),
-            updated_at: deliveryNow,
-          })
-          .eq("anuncio_id", announcementId)
-          .eq("user_id", message.userId);
+
+        return new Response(
+          JSON.stringify({
+            ok: false,
+            attempted: messages.length,
+            sent,
+            invalid_tokens: invalidTokens.length,
+            error: errorMessage,
+          }),
+          { status: 502, headers: H },
+        );
       }
     }
 
@@ -338,7 +428,7 @@ Deno.serve(async (req) => {
       await adminClient
         .from("profiles")
         .update({ expo_push_token: null })
-        .in("expo_push_token", invalidTokens);
+        .in("expo_push_token", [...new Set(invalidTokens)]);
     }
 
     return new Response(
