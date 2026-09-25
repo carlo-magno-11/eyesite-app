@@ -75,3 +75,10 @@ La ruta nueva de EYESITE ya separa `eyesite-media` público para media publicada
 ## Password security
 
 Supabase documenta la protección contra contraseñas filtradas como una función de Auth/Attack Protection; actualmente no está disponible en el plan Free y sí aparece en planes de pago. No se simulará con SQL ni se añadirá lógica propia que pueda crear una falsa sensación de protección.
+
+
+## SECURITY DEFINER / RPC boundary recheck
+
+- No public `SECURITY DEFINER` function is executable by `anon`.
+- The public `SECURITY DEFINER` functions audited all contain an explicit `search_path` configuration; no missing `search_path` case was found in the runtime query.
+- This preserves the current model in which privileged database operations are reachable only through authenticated sessions and their internal authorization checks.
