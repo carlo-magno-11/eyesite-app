@@ -35,6 +35,14 @@ export function useFavorites() {
         const { error } = await supabase.from('favoritos').insert({ user_id: user.id, property_id: id });
         if (error && error.code !== '23505') throw error;
       }
+
+      void supabase.rpc('track_property_event', {
+        p_property_id: id,
+        p_event_type: 'favorite',
+        p_source: 'app',
+        p_metadata: { active: !wasFavorite },
+      }).catch(() => {});
+
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     } catch (e: any) {
       console.warn('[favorites] toggle:', e?.message || e);
