@@ -38,7 +38,7 @@ Se construye únicamente la base comercial prioritaria:
 - RPC `admin_list_prospectos`.
 - RPC `admin_update_prospecto`.
 
-La migración todavía no se ejecuta en la base de producción.
+La migración fue aplicada al proyecto Supabase de producción después de validación transaccional.
 
 ### App
 - `lib/commercial.ts`: scoring y matching deterministas.
