@@ -1,10 +1,10 @@
 import { ActivityIndicator, Platform, Pressable, StyleSheet, Switch, Text, View } from "react-native";
 import { ScreenContainer } from "@/components/screen-container";
 import { useAuth } from "@/hooks/useAuth";
+import { registerPushToken } from "@/hooks/use-notifications";
 import { supabase } from "@/lib/supabase";
 import { router } from "expo-router";
 import { useState } from "react";
-import Constants from "expo-constants";
 
 export default function NotificationSettingsScreen() {
   const { user, profile } = useAuth();
@@ -24,37 +24,15 @@ export default function NotificationSettingsScreen() {
 
     if (field === "notificaciones_push") {
       if (value && Platform.OS !== "web") {
-        if (Constants.executionEnvironment === "storeClient") {
+        const token = await registerPushToken(user.id);
+        if (!token) {
           setSaving(false);
           setPush(false);
           return;
         }
-        const Notifications = await import("expo-notifications");
-        const current = await Notifications.getPermissionsAsync();
-        let status = current.status;
-        if (status !== "granted") {
-          const requested = await Notifications.requestPermissionsAsync();
-          status = requested.status;
-        }
-
-        if (status !== "granted") {
-          setSaving(false);
-          setPush(false);
-          return;
-        }
-
-        try {
-          const projectId =
-            Constants.expoConfig?.extra?.eas?.projectId ||
-            "53f27292-7aee-4a95-a597-0f3d062495bd";
-          const token = await Notifications.getExpoPushTokenAsync({ projectId });
-          extraUpdate.expo_push_token = token.data;
-        } catch (error) {
-          console.error("[EYESITE] push token error:", error);
-          setSaving(false);
-          setPush(false);
-          return;
-        }
+        extraUpdate.expo_push_token = token;
+      } else if (!value) {
+        extraUpdate.expo_push_token = null;
       } else if (!value) {
         extraUpdate.expo_push_token = null;
       }
