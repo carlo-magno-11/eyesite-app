@@ -348,7 +348,7 @@ const styles = StyleSheet.create({
     flex: 1,
     color: '#F5F5F5',
     fontSize: 16,
-    fontWeight: '750',
+    fontWeight: '700',
     lineHeight: 21,
     letterSpacing: 0.05,
     paddingRight: 10,
@@ -536,11 +536,5 @@ const styles = StyleSheet.create({
     color: '#C9A84C',
     fontSize: 14,
     fontWeight: '800',
-  },
-  compactImagePlaceholder: {
-    backgroundColor: '#0E0E0E',
-  },
-  noPhotoIcon: {
-    color: '#C9A84C',
   },
 });
