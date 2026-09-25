@@ -23,7 +23,7 @@ Se construye únicamente la base comercial prioritaria:
 ## Cambios realizados
 
 ### Supabase
-- Migración `20260925230000_commercial_crm_foundation.sql` aplicada al proyecto Supabase de producción después de validación transaccional.
+- Migración `20260925060751_commercial_crm_foundation.sql` aplicada al proyecto Supabase de producción después de validación transaccional.
 - Es un cambio aditivo: no modifica ni elimina datos existentes.
 - `property_events`
 - `saved_searches`
