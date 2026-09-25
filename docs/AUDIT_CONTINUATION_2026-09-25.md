@@ -92,3 +92,22 @@ No se considera listo para merge a `main` ni para binario final hasta completar:
 ## Nota de trazabilidad
 
 Los documentos históricos pueden mencionar `propiedad_id` o alturas anteriores del mapa. El contrato vigente es `propiedades_cambios.property_id` y la altura Web actual 420–680px / 62% del viewport.
+
+
+## 2026-09-25 — Limpieza responsive del catálogo Web
+
+Se revisó la pantalla `app/(tabs)/properties.tsx` contra `useResponsive()`. El contenedor ya calcula padding y ancho máximo según teléfono/tablet/escritorio, pero algunos estilos internos conservaban `paddingHorizontal: 20`, provocando doble margen en Web y reduciendo innecesariamente el área útil en anchos intermedios.
+
+Se ajustó el catálogo para que:
+- encabezado y buscador hereden el padding responsive del contenedor;
+- los chips de categorías usen el mismo padding responsive;
+- la cuadrícula conserve 1/2/3/4 columnas según el ancho;
+- no cambie la fuente de datos ni la seguridad del catálogo.
+
+Commit: `4c321384badce2a49bb22f4117767975cd5ceabf`.
+
+La revisión del `PropertyCard` confirmó que la tarjeta principal usa `width: '100%'` y una relación de aspecto para la imagen, sin un ancho fijo que rompa la cuadrícula. El modo compacto mantiene dimensiones fijas porque se usa como tarjeta horizontal, no como elemento de la cuadrícula principal.
+
+## Estado de verificación
+
+Esta corrección requiere nueva ejecución de CI y prueba visual física en Web, especialmente en 768, 1024, 1280, 1440 y 1920 px. No se considera validada físicamente hasta comprobar esos anchos y al menos un iPhone y un Android.
