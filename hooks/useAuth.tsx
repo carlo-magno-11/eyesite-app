@@ -63,8 +63,8 @@ async function closeProfileChannel() {
   await supabase.removeChannel(channel);
 }
 
-async function loadProfile(uid: string) {
-  const loadGeneration = ++profileLoadGeneration;
+async function loadProfile(uid: string, expectedGeneration?: number) {
+  const loadGeneration = expectedGeneration ?? ++profileLoadGeneration;
   try {
     const { data, error } = await supabase
       .from('profiles')
@@ -143,7 +143,7 @@ function applySession(nextSession: Session | null) {
     return;
   }
 
-  ++profileLoadGeneration;
+  const transitionGeneration = ++profileLoadGeneration;
   setAuthState({
     session: nextSession,
     user: nextUser,
@@ -153,8 +153,10 @@ function applySession(nextSession: Session | null) {
   });
 
   ensureProfileChannel(nextUser.id);
-  void loadProfile(nextUser.id).finally(() => {
-    setAuthState({ loading: false });
+  void loadProfile(nextUser.id, transitionGeneration).finally(() => {
+    if (profileLoadGeneration === transitionGeneration && authState.user?.id === nextUser.id) {
+      setAuthState({ loading: false });
+    }
   });
 }
 
