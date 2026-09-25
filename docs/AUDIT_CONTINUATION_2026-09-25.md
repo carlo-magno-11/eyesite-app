@@ -91,7 +91,7 @@ No se considera listo para merge a `main` ni para binario final hasta completar:
 
 ## Nota de trazabilidad
 
-Los documentos históricos pueden mencionar `propiedad_id` o alturas anteriores del mapa. El contrato vigente es `propiedades_cambios.property_id` y la altura Web actual 420–680px / 62% del viewport.
+Los documentos históricos pueden mencionar `propiedad_id` o alturas anteriores del mapa. El contrato vigente es `propiedades_cambios.property_id` y la altura Web actual 320–620px / 55% del viewport.
 
 
 ## 2026-09-25 — Limpieza responsive del catálogo Web
@@ -203,4 +203,14 @@ Siguiendo la documentación actual de Supabase, el circuito de notificaciones/pu
 
 ## CI — corrección de lanzamiento EYESITE — 2026-09-25
 
-El run 396 confirmó native-config exitoso (generación iOS + Privacy Manifest), mientras quality falló exclusivamente en ESLint por el nuevo componente EyesiteLaunchSplash: React Hooks detectó lecturas de ref durante render. Se verificó el log exacto antes de modificarlo. Se sustituyeron los Animated.Value almacenados como useRef(...).current por estado inicializado de forma perezosa, manteniendo referencias estables sin leer ref.current durante render. Commit: 81e3ee895529075ae1c3787f0f04b9947f846f67. El run 397 está en ejecución; no se declara CI aprobado hasta finalizar.
+El run 396 confirmó native-config exitoso (generación iOS + Privacy Manifest), mientras quality falló exclusivamente en ESLint por el nuevo componente EyesiteLaunchSplash: React Hooks detectó lecturas de ref durante render. Se verificó el log exacto antes de modificarlo. Se sustituyeron los Animated.Value almacenados como useRef(...).current por estado inicializado de forma perezosa, manteniendo referencias estables sin leer ref.current durante render. Commit: 81e3ee895529075ae1c3787f0f04b9947f846f67. Los runs posteriores confirmaron el cierre de esta corrección: el SHA `abe96bfc7b4e91df77550b2e40795c75ed662637` obtuvo `quality=success` y `native-config=success`.
+
+## Recuperación de contraseña — cierre de código 2026-09-25
+
+Se completó el endurecimiento del circuito de recuperación en la rama aislada `fix/eyesite-platform-security-20260925`:
+- `app/_layout.tsx` excluye explícitamente `reset-password` del conjunto protegido y evita redirecciones automáticas mientras se procesa `(auth)/callback`.
+- `app/(auth)/callback.tsx` escucha `PASSWORD_RECOVERY`, admite `code`/PKCE y `token_hash`, y dirige la recuperación a `reset-password`.
+- `app/reset-password.tsx` cierra la sesión después de actualizar correctamente la contraseña, obligando al siguiente acceso a pasar por el flujo normal de autenticación y aprobación.
+- Verificación CI del SHA `abe96bfc7b4e91df77550b2e40795c75ed662637`: `quality=success`, `native-config=success`.
+
+El código queda cerrado a nivel estático. Siguen pendientes las pruebas físicas de enlaces válidos, expirados/reutilizados y recuperación real en iOS, Android y Web.
