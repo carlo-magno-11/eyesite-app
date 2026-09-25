@@ -43,3 +43,12 @@ El cambio debe pasar TypeScript, lint, tests, export Web y native-config antes d
 8. Ejecutar build EAS de producción y probar el binario antes de enviar.
 
 No se modifica `main` ni se hace merge a `release/eyesite-definitive` todavía.
+
+
+## Validación adicional — 2026-09-25
+
+- CI #482 y #481: SUCCESS sobre commit `5a06c758d0f6ab98880841e744b7004d991d3b85`.
+- CI #480 y #479: SUCCESS sobre `d455c41461937c4ccbf3ace66e4d96bf6e6ced04`.
+- La búsqueda pública no confirmó una página indexada para `eyesite.mx` ni `auth.eyesite.mx`; esto NO demuestra que estén caídos, por lo que deben verificarse directamente desde navegador/dispositivo.
+- `app.config.ts` mantiene iOS `supportsTablet=true`, bundle ID `com.eyesite.app`, scheme `eyesite`, permiso de ubicación When In Use y configuración de notificaciones.
+- El binario de producción y los deep links reales siguen pendientes de prueba física.
