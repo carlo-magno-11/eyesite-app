@@ -126,7 +126,7 @@ export default function HomeScreen() {
             <View style={[
               styles.propertiesGrid,
               propertyColumns > 1 && styles.propertiesGridRow,
-              propertyColumns === 3 && styles.propertiesGridThree,
+              propertyColumns === 3 && styles.propertyGridItemThree,
             ]}>
               {highlightedProperties.map((property) => (
                 <View
