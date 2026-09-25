@@ -43,10 +43,14 @@ Verificación realizada en Supabase:
 La primera migración escrita como documento no coincidía exactamente con la función que se había aplicado directamente en Supabase y además usaba un mecanismo genérico de actualización. No se dejó así: se inspeccionó el esquema real y se reemplazó la migración por una definición explícita y tipada. Esto evita depender de columnas inventadas/no existentes y hace que el registro Git sea reproducible.
 
 ## Lo que todavía no se declara como probado
-- Guardado real desde una sesión de administrador en el navegador.
-- Edición de una solicitud real y confirmación visual de todos los campos.
+- Guardado real desde una sesión de administrador en el navegador; actualmente no se ejecutó porque Supabase no tiene solicitudes en estado `pendiente` disponibles para una prueba real.
+- Prueba negativa ejecutada sin sesión: el RPC rechazó correctamente la llamada con `42501` antes de buscar la solicitud.
+- Edición de una solicitud real y confirmación visual de todos los campos; requiere disponer de una solicitud de prueba pendiente.
 - Flujo completo editar → aprobar → verificar publicación en `propiedades`/`propiedades_publicas`.
 - Subidas reales de foto/video/PDF/KMZ/KML desde navegador, iPhone y Android.
 - Lint/build/tests y pruebas físicas de responsive.
+
+## Hallazgo de código corregido en esta etapa
+`collectPropertyForm()` tenía una expresión de precedencia que podía intentar leer `propiedadEditando.detalles` mientras se editaba una solicitud pendiente. Se reemplazó por una selección explícita de la fuente (`edit` vs `pending`) para evitar un fallo de JavaScript durante la edición pendiente.
 
 No se presenta ninguno de esos puntos como completado hasta ejecutarlos.
