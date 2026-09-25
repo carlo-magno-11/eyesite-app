@@ -835,8 +835,9 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   metricCard: {
-    flex: 1,
-    minWidth: '45%',
+    flexGrow: 1,
+    flexBasis: '45%',
+    minWidth: 140,
     backgroundColor: '#1A1A1A',
     borderRadius: 8,
     padding: 14,
@@ -920,7 +921,9 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   dataCard: {
-    width: '48%',
+    flexGrow: 1,
+    flexBasis: '45%',
+    minWidth: 140,
     backgroundColor: '#1A1A1A',
     borderRadius: 8,
     padding: 12,
