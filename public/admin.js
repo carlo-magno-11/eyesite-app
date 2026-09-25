@@ -5893,7 +5893,13 @@ async function enviarComunicacionAdmin() {
       if (!isScheduled) {
         try {
           const { error: pushError } = await s.functions.invoke("send-notification", {
-            body: { titulo, mensaje, tipo, user_id: null },
+            body: {
+              titulo,
+              mensaje,
+              tipo,
+              user_id: null,
+              announcement_id: announcementId,
+            },
           });
           if (pushError) console.warn("[push anuncio]", pushError);
         } catch (e) {
