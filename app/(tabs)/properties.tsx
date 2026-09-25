@@ -44,7 +44,7 @@ export default function PropertiesScreen() {
       const matchesMaxSurface = !maxSurface || surface <= Number(maxSurface);
       return matchesType && matchesSearch && matchesMunicipio && matchesMinPrice && matchesMaxPrice && matchesMinSurface && matchesMaxSurface;
     });
-  }, [search, activeFilter, properties]);
+  }, [search, municipio, minPrice, maxPrice, minSurface, maxSurface, activeFilter, properties]);
 
   return (
     <ScreenContainer edges={['top', 'left', 'right']} containerClassName="bg-background">
