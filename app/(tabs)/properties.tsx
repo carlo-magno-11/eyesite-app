@@ -92,7 +92,7 @@ export default function PropertiesScreen() {
           showsHorizontalScrollIndicator={false}
           data={PROPERTY_TYPES_OPTIONS}
           keyExtractor={(item) => item.key}
-          contentContainerStyle={styles.filtersContainer}
+          contentContainerStyle={[styles.filtersContainer, { paddingHorizontal: horizontalPadding }]}
           renderItem={({ item }) => (
             <Pressable
               onPress={() => setActiveFilter(item.key)}
@@ -213,7 +213,7 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
   },
   header: {
-    paddingHorizontal: 20,
+    paddingHorizontal: 0,
     paddingTop: 16,
     paddingBottom: 12,
     flexDirection: 'row',
@@ -231,7 +231,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
   searchContainer: {
-    paddingHorizontal: 20,
+    paddingHorizontal: 0,
     paddingBottom: 12,
   },
   searchBar: {
@@ -274,7 +274,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   filtersContainer: {
-    paddingHorizontal: 20,
+    paddingHorizontal: 0,
     gap: 8,
     paddingBottom: 4,
   },
