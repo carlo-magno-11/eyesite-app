@@ -40,17 +40,18 @@ function AuthGate({ children }: { children: React.ReactNode }) {
   const termsOk = !!profile?.terminos_aceptados && profile.terminos_version === "v1.0";
   const router = useRouter();
   const segments = useSegments();
-  const current = segments.join("/");
+  const segmentList = segments as string[];
+  const current = segmentList.join("/");
 
   useEffect(() => {
     if (loading) return;
 
-    const inAuth = segments[0] === "(auth)";
-    const inTerms = segments[0] === "terms";
-    const inPending = segments[0] === "pending";
-    const inDenied = segments[0] === "denied";
-    const inVerifyEmail = segments[0] === "verify-email";
-    const inCreateProfile = segments[0] === "(auth)" && segments[1] === "create-profile";
+    const inAuth = segmentList[0] === "(auth)";
+    const inTerms = segmentList[0] === "terms";
+    const inPending = segmentList[0] === "pending";
+    const inDenied = segmentList[0] === "denied";
+    const inVerifyEmail = segmentList[0] === "verify-email";
+    const inCreateProfile = segmentList[0] === "(auth)" && segmentList[1] === "create-profile";
     const isProtected = !inAuth && !inTerms && !inPending && !inDenied && !inVerifyEmail && !inCreateProfile;
     const emailConfirmed = !!session?.user?.email_confirmed_at;
 
