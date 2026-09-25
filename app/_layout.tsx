@@ -104,7 +104,7 @@ function AuthGate({ children }: { children: React.ReactNode }) {
         return;
       }
     }
-  }, [session, profile, loading, termsOk, current, router, segments]);
+  }, [session, profile, loading, termsOk, current, router, segmentList]);
 
   useEffect(() => {
     if (session?.user?.id && profile?.estado === "activa" && session.user.email_confirmed_at) {
