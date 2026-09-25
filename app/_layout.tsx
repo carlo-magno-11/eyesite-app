@@ -112,6 +112,7 @@ function AuthGate({ children }: { children: React.ReactNode }) {
 
 export default Sentry.wrap(function RootLayout() {
   const router = useRouter();
+  const { session, profile, loading: authLoading } = useAuth();
 
   useEffect(() => {
     setAppMonitoringContext();
@@ -120,6 +121,22 @@ export default Sentry.wrap(function RootLayout() {
     let responseSubscription: { remove: () => void } | undefined;
 
     const openNotification = (response: any) => {
+      // Push/deep-link navigation must never outrun AuthGate. A stale push
+      // response can exist after logout, account suspension, or before profile
+      // loading completes, so require the same active-account conditions used
+      // by protected navigation.
+      const termsOk = !!profile?.terminos_aceptados && profile.terminos_version === "v1.0";
+      const emailConfirmed = !!session?.user?.email_confirmed_at;
+      if (
+        authLoading ||
+        !session?.user?.id ||
+        !emailConfirmed ||
+        profile?.estado !== "activa" ||
+        !termsOk
+      ) {
+        return;
+      }
+
       const data = (response?.notification?.request?.content?.data ?? {}) as Record<string, unknown>;
       const propertyId = typeof data.property_id === "string" ? data.property_id : null;
       const announcementId = typeof data.announcement_id === "string" ? data.announcement_id : null;
@@ -184,7 +201,7 @@ export default Sentry.wrap(function RootLayout() {
       mounted = false;
       responseSubscription?.remove();
     };
-  }, [router]);
+  }, [router, authLoading, profile?.estado, profile?.terminos_aceptados, profile?.terminos_version, session?.user?.id, session?.user?.email_confirmed_at]);
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
