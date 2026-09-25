@@ -103,3 +103,12 @@ La ejecución de CI asociada al nuevo commit aún no aparece en el conector de G
 Runtime inventory confirms que `fotos-propiedades` is the only legacy bucket in the reviewed set with objects: 42 objects (~3.69 MB). The other reviewed legacy buckets currently have zero objects. One active property still references a legacy `fotos-propiedades` video URL, so that bucket cannot be privatized safely until the object is migrated and the property reference is updated.
 
 The bucket `public` flag is owned by Supabase Storage and cannot be changed from the project SQL role used here (`must be owner of table buckets`). No partial storage-policy change was left behind by the failed attempt. The safe next operation is through Supabase Storage/Dashboard/API after confirming consumers; no legacy bucket was made inaccessible blindly.
+
+
+## Storage policy cleanup — 25/09/2026
+
+Se confirmó mediante la documentación actual de Supabase que un bucket marcado como `public` permite descargas sin pasar por RLS de objetos. Por eso no se debe considerar suficiente eliminar una policy `SELECT` mientras el bucket siga público.
+
+Se eliminó una policy duplicada (`allow_public_read`) de `storage.objects`; `fotos-propiedades` conserva su lectura pública porque todavía existe una referencia activa a un video legacy. Los buckets legacy vacíos siguen pendientes de privatización desde Storage/Dashboard porque el rol SQL disponible no es propietario de `storage.buckets`. No se realizó una modificación incompleta que pudiera aparentar protección mientras el bucket continuara público.
+
+La fuente actual de catálogo público sigue siendo `propiedades_publicas` con `SELECT` únicamente para `anon` y `authenticated`.
