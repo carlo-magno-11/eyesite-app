@@ -513,8 +513,8 @@ export default function MapScreen() {
   // Web: keep the map responsive across laptops, tablets and split-screen.
   // The map shares the page with a header and a short result list.
   const webMapHeight = Math.max(
-    420,
-    Math.min(windowHeight * 0.62, 680),
+    320,
+    Math.min(Math.round(windowHeight * 0.55), 620),
   );
 
   const handleMapMessage = useCallback(
