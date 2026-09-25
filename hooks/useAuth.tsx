@@ -44,6 +44,7 @@ let authSubscription: { unsubscribe: () => void } | null = null;
 let profileChannel: ReturnType<typeof supabase.channel> | null = null;
 let subscribedUid: string | null = null;
 let profileChannelGeneration = 0;
+let profileLoadGeneration = 0;
 
 function emitAuthState() {
   for (const listener of authListeners) listener();
@@ -63,6 +64,7 @@ async function closeProfileChannel() {
 }
 
 async function loadProfile(uid: string) {
+  const loadGeneration = ++profileLoadGeneration;
   try {
     const { data, error } = await supabase
       .from('profiles')
@@ -70,12 +72,15 @@ async function loadProfile(uid: string) {
       .eq('id', uid)
       .maybeSingle();
 
+    if (loadGeneration !== profileLoadGeneration || authState.user?.id !== uid) return;
+
     if (error) {
       console.error('[useAuth] loadProfile error:', {
         code: error.code,
         message: error.message,
         details: error.details,
       });
+      setAuthState({ profile: null, estado: null });
       return;
     }
 
@@ -84,7 +89,9 @@ async function loadProfile(uid: string) {
       estado: (data?.estado ?? null) as string | null,
     });
   } catch (error) {
+    if (loadGeneration !== profileLoadGeneration || authState.user?.id !== uid) return;
     console.warn('[useAuth] loadProfile excepción:', error);
+    setAuthState({ profile: null, estado: null });
   }
 }
 
@@ -136,9 +143,12 @@ function applySession(nextSession: Session | null) {
     return;
   }
 
+  ++profileLoadGeneration;
   setAuthState({
     session: nextSession,
     user: nextUser,
+    profile: null,
+    estado: null,
     loading: true,
   });
 
