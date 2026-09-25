@@ -240,3 +240,15 @@ Se realizó una revisión específica para crecimiento a muchos usuarios y propi
 ### Riesgo todavía abierto
 
 El siguiente escalón de escala es el catálogo/mapa: `useProperties()` actualmente descarga todas las filas públicas activas y el mapa calcula distancias en el cliente. Con cientos o miles de propiedades esto aumenta memoria, transferencia y tiempo de render. La siguiente mejora debe ser consulta por páginas para catálogo y consulta geográfica por región/viewport para mapa, manteniendo siempre `propiedades_publicas` como frontera de lectura y sin introducir Google Cloud.
+
+
+### Push inmediato — corrección adicional 2026-09-25
+
+Se encontró un segundo límite real en `send-notification`: el endpoint permitía hasta 500 destinatarios, pero enviaba todos en una sola petición a Expo. La documentación actual de Expo limita cada petición a 100 mensajes y recomienda limitar la concurrencia. Se corrigió sin cambiar el límite funcional de destinatarios:
+- se divide el envío en lotes de máximo 100;
+- las actualizaciones de entregas usan concurrencia acotada a 10;
+- no se permite una ráfaga ilimitada de conexiones;
+- los tokens `DeviceNotRegistered` se limpian del perfil;
+- la Edge Function quedó desplegada como versión 8, con JWT obligatorio.
+
+Esto evita que un envío administrativo de 101–500 usuarios falle por exceder el límite de Expo y mantiene compatibilidad iOS/Android mediante el mismo Expo Push Service.
