@@ -872,6 +872,11 @@ const sectionInfo = {
     title: "Usuarios",
     subtitle: "Gestiona los usuarios de la plataforma",
   },
+
+  crm: {
+    title: "Prospectos CRM",
+    subtitle: "Captación, prioridad y seguimiento comercial",
+  },
 };
 
 function goTo(section) {
@@ -917,6 +922,12 @@ function goTo(section) {
 
   if (section === "usuarios") {
     cargarUsuarios();
+  }
+
+  if (section === "crm") {
+    if (typeof window.initCRM === "function") {
+      window.initCRM();
+    }
   }
 
   if (section === "nueva") {
