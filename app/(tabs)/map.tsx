@@ -16,6 +16,7 @@ import { LeafletMap } from "@/components/leaflet-map";
 import { useProperties } from "@/hooks/use-properties";
 import { formatPrice } from "@/lib/properties-data";
 import { ScreenContainer } from "@/components/screen-container";
+import { useCommercial } from "@/hooks/use-commercial";
 
 type UserCoords = {
   latitude: number;
@@ -391,6 +392,7 @@ export default function MapScreen() {
   const { height: windowHeight } = useWindowDimensions();
 
   const { properties, loading } = useProperties();
+  const { trackPropertyEvent } = useCommercial();
 
   const [userLocation, setUserLocation] = useState<UserCoords | null>(null);
 
@@ -525,13 +527,16 @@ export default function MapScreen() {
 
         if (data?.type === "property" || data?.type === "property_marker") {
           if (!data.id) return;
+          void trackPropertyEvent(String(data.id), "map_open", {
+            interaction: data.type === "property_marker" ? "marker" : "popup",
+          }, "map");
           router.push(`/property/${String(data.id)}` as any);
         }
       } catch (error) {
         console.error("[EYESITE] map message error", error);
       }
     },
-    [router],
+    [router, trackPropertyEvent],
   );
 
   return (
