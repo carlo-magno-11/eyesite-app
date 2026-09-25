@@ -86,7 +86,7 @@ Supabase documenta la protección contra contraseñas filtradas como una funció
 
 ## Privilegios de catálogo público y entregas — 25/09/2026
 
-Se volvió a auditar la separación entre permisos SQL y RLS. Se encontró que algunos roles de cliente conservaban privilegios de escritura/truncado/trigger/references aunque las políticas RLS impedían operaciones no autorizadas. Para reducir superficie de ataque se aplicó y versionó 20260925093000_harden_public_catalog_and_delivery_grants.sql.
+Se volvió a auditar la separación entre permisos SQL y RLS. Se encontró que algunos roles de cliente conservaban privilegios de escritura/truncado/trigger/references aunque las políticas RLS impedían operaciones no autorizadas. Para reducir superficie de ataque se aplicó y versionó 20260925083225_harden_public_catalog_and_delivery_grants.sql.
 
 Resultado runtime:
 - propiedades_publicas: anon y authenticated conservan únicamente SELECT.
