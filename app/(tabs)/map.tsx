@@ -500,10 +500,15 @@ export default function MapScreen() {
     [nearby],
   );
 
-  // On web, flex: 1 competes with the header, radius controls and results list,
-  // which can leave the WebView visually short. Give the map an explicit,
-  // responsive viewport height on desktop/web while keeping native behavior unchanged.
-  const webMapHeight = Math.max(620, Math.min(windowHeight * 0.78, 820));
+  // Web needs a real viewport-sized map because the page also contains a
+  // header, hint and a short list below it. The previous 620px minimum made
+  // the map too tall on laptops and smaller browser windows, pushing the
+  // rest of the screen below the fold. Keep native layout untouched and make
+  // the Web map proportional to the available viewport.
+  const webMapHeight = Math.max(
+    420,
+    Math.min(windowHeight * 0.58, 720),
+  );
 
   const handleMapMessage = useCallback(
     (rawData: string) => {
