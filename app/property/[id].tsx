@@ -47,14 +47,10 @@ export default function PropertyDetailScreen() {
     return [...new Set(items)];
   }, [property?.pdfs, property?.kmz_kml, property?.archivos]);
 
-  useEffect(() => {
-    setSignedDocuments({});
-    setLoadingDocument(null);
-  }, [property?.id, session?.user?.id]);
-
   const openPrivateDocument = async (path: string) => {
     if (!property?.id || !session?.user?.id) return;
-    const cachedUrl = signedDocuments[path];
+    const cacheKey = `${session.user.id}:${property.id}:${path}`;
+    const cachedUrl = signedDocuments[cacheKey];
     if (cachedUrl) {
       await Linking.openURL(cachedUrl);
       return;
@@ -69,7 +65,7 @@ export default function PropertyDetailScreen() {
         console.warn('[property] document access:', error?.message ?? 'No se recibió una URL firmada');
         return;
       }
-      setSignedDocuments((current) => ({ ...current, [path]: data.signedUrl }));
+      setSignedDocuments((current) => ({ ...current, [cacheKey]: data.signedUrl }));
       await Linking.openURL(data.signedUrl);
     } finally {
       setLoadingDocument(null);
