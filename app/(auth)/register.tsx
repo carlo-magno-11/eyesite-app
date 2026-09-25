@@ -41,7 +41,15 @@ export default function RegisterScreen() {
   const [showTerms, setShowTerms] = useState(false);
   const [confirmationEmail, setConfirmationEmail] = useState<string | null>(null);
 
-  const passwordChecks = { length: password.length >= 8, number: /\\d/.test(password), upper: /[A-ZÁÉÍÓÚÑ]/.test(password) };\n  const passwordScore = Object.values(passwordChecks).filter(Boolean).length;\n  const passwordLabel = passwordScore <= 1 ? "Débil" : passwordScore === 2 ? "Buena" : "Fuerte";\n\n  const signup = async () => {
+  const passwordChecks = {
+    length: password.length >= 8,
+    number: /\d/.test(password),
+    upper: /[A-ZÁÉÍÓÚÑ]/.test(password),
+  };
+  const passwordScore = Object.values(passwordChecks).filter(Boolean).length;
+  const passwordLabel = passwordScore <= 1 ? "Débil" : passwordScore === 2 ? "Buena" : "Fuerte";
+
+  const signup = async () => {
     if (loading) return;
     if (!legalAccepted) {
       Alert.alert(
@@ -87,7 +95,7 @@ export default function RegisterScreen() {
     }
 
     // Validar contraseña
-    if (password.length < 8) {
+    if (password.length < 8 || !passwordChecks.number || !passwordChecks.upper) {
       return Alert.alert(
         "Contraseña muy corta",
         "La contraseña debe tener al menos 8 caracteres, con al menos una mayúscula y un número.",
