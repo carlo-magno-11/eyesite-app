@@ -122,3 +122,8 @@ Se ajustó a una escala de 55% del viewport, mínimo 320 px y máximo 620 px. El
 Commit: `388b5573ca3564eae8a97dd06ea55f03d6dca47e`.
 
 No se cambió la fuente de datos, Leaflet, OpenStreetMap ni el flujo de navegación. El cambio es exclusivamente de layout Web.
+
+
+## 2026-09-25 — Favoritos multiplataforma
+
+Se revisó `hooks/use-favorites.ts`. La persistencia de favoritos usa RLS sobre `favoritos` y el seguimiento comercial se realiza mediante `track_property_event`, por lo que no se abrió acceso directo a tablas CRM. Se corrigió un detalle de compatibilidad: `expo-haptics` ya no se ejecuta en Web; la vibración queda limitada a iOS/Android. Commit: `d96e9885dad873ad7dd7967d3b21005b77142bd2`.
