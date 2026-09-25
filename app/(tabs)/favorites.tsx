@@ -47,7 +47,10 @@ export default function FavoritesScreen() {
   }, [favs]);
 
   useEffect(() => {
-    void fetchFavoriteProperties();
+    const timer = setTimeout(() => {
+      void fetchFavoriteProperties();
+    }, 0);
+    return () => clearTimeout(timer);
   }, [fetchFavoriteProperties]);
 
   return (
