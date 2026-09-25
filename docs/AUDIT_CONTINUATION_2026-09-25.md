@@ -148,3 +148,16 @@ Se auditó el flujo de notificaciones en Web/iOS/Android. `app/notification-sett
 - `app/(auth)/create-profile.tsx` ahora usa `useResponsive()` para padding horizontal y ancho máximo en escritorio, evitando que el formulario se estire excesivamente en Web/tablet.
 - El teclado iOS conserva `KeyboardAvoidingView` con comportamiento `padding`; los campos siguen usando controles nativos compatibles con Android/Web.
 - Se mantuvo el `upsert` de `profiles` limitado al usuario autenticado y no se modificaron rol/estado desde el cliente.
+
+
+## Auditoría rigurosa de Auth — 2026-09-25
+
+- Se revisaron `useAuth.tsx`, `app/_layout.tsx`, callback de confirmación y términos.
+- `useAuth` mantiene un único listener de Supabase Auth y un único canal Realtime de `profiles`; al cambiar el estado administrativo vuelve a consultar el perfil.
+- `AuthGate` mantiene el orden de seguridad: correo confirmado → perfil → estado administrativo (rechazado/suspendido/pending) → términos → aplicación.
+- El cliente no puede establecer rol/estado al crear perfil; el formulario solo envía identidad y datos de perfil.
+- Se detectó y corrigió un defecto introducido en la guía de contraseña: una edición había dejado saltos de línea literales y una expresión regular incorrecta; el commit `5630557c8c9187ea67726275b712afae6907001e` deja la validación como código TypeScript válido y usa `/\\d/` para detectar números.
+- `terms.tsx` ahora limita su ancho en Web/escritorio mediante `useResponsive`, evitando un panel excesivamente ancho; conserva el requisito de leer y aceptar los tres bloques.
+- El callback acepta enlaces con `code` y `token_hash`, elimina el riesgo de procesar repetidamente el mismo enlace durante la vida del componente y limpia el listener al desmontar.
+- CI: los commits recientes ya generan ejecuciones en GitHub Actions. En este momento las ejecuciones de los commits `5630557c...` y `fe05503d...` estaban en cola; no se deben considerar aprobadas hasta finalizar.
+- Pruebas físicas todavía necesarias: correo real en iOS/Android/Web, enlace universal/deep link, enlace ya usado, recuperación de contraseña, teclado iOS, sesión persistente, cambio pendiente→activa mientras la app permanece abierta y acceso directo a rutas protegidas.
