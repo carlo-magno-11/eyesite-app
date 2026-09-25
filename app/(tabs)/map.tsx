@@ -371,6 +371,14 @@ function createMapHtml(properties: NearbyProperty[], initialRegion: Region) {
     });
   }
 
+  // Leaflet keeps internal pixel dimensions. Recalculate them when the
+  // responsive WebView/iframe changes size (browser resize, orientation,
+  // split-screen, tablet rotation, etc.).
+  const refreshMapSize = () => map.invalidateSize({ pan: false });
+  window.addEventListener('resize', refreshMapSize);
+  setTimeout(refreshMapSize, 0);
+  setTimeout(refreshMapSize, 250);
+
   // Keep Yucatán as the initial view. Users choose the area by panning and zooming.
 </script>
 </body>
