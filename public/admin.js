@@ -3633,9 +3633,21 @@ async function uploadFile(bucket, file, folder) {
     txt: "text/plain",
   };
 
-  const mime = String(file.type || mimeByExtension[extension] || "")
-    .toLowerCase()
-    .trim();
+  const browserMime = String(file.type || "").toLowerCase().trim();
+  const extensionMime = String(mimeByExtension[extension] || "").toLowerCase().trim();
+
+  // Safari/iOS y algunos selectores de archivos pueden entregar un MIME
+  // genérico (por ejemplo application/octet-stream) aunque la extensión sea
+  // válida. Solo hacemos fallback a la extensión para tipos genéricos; nunca
+  // sustituimos un MIME específico que pueda revelar una discrepancia real.
+  const genericBrowserMimes = new Set([
+    "",
+    "application/octet-stream",
+    "binary/octet-stream",
+  ]);
+  const mime = genericBrowserMimes.has(browserMime)
+    ? extensionMime
+    : browserMime;
   const isMediaBucket = bucket === BUCKET_IMAGES;
   const isPrivateBucket = bucket === BUCKET_FILES;
 
