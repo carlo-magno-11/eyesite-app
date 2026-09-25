@@ -493,6 +493,14 @@ export function useProperties(options?: PropertyCatalogOptions) {
     await fetchPage(0, false);
   }, [fetchPage]);
 
+  // Mantiene estable el canal Realtime aunque cambien filtros/búsqueda.
+  // La función actual se actualiza en cada render, pero el listener no se
+  // desmonta/recrea innecesariamente al escribir en el catálogo.
+  const fetchPropertiesRef = useRef(fetchProperties);
+  useEffect(() => {
+    fetchPropertiesRef.current = fetchProperties;
+  }, [fetchProperties]);
+
   const loadMore = useCallback(async () => {
     if (!isCatalogMode || loading || loadingMore || !hasMore) return;
     await fetchPage(properties.length, true);
@@ -500,7 +508,7 @@ export function useProperties(options?: PropertyCatalogOptions) {
 
   useFocusEffect(
     useCallback(() => {
-      void fetchProperties();
+      void fetchPropertiesRef.current();
 
       let refreshTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -514,7 +522,7 @@ export function useProperties(options?: PropertyCatalogOptions) {
             if (refreshTimer) clearTimeout(refreshTimer);
             refreshTimer = setTimeout(() => {
               refreshTimer = null;
-              void fetchProperties();
+              void fetchPropertiesRef.current();
             }, 500);
           },
         )
@@ -524,7 +532,7 @@ export function useProperties(options?: PropertyCatalogOptions) {
         if (refreshTimer) clearTimeout(refreshTimer);
         void supabase.removeChannel(channel);
       };
-    }, [fetchProperties]),
+    }, []),
   );
 
   return {
