@@ -330,3 +330,14 @@ Validación GitHub:
 - El commit actual de esta etapa es `b3ac0727424254ef57e2f527642f1d08a7264811`.
 - GitHub Actions del commit actual está en ejecución al momento de documentar este apartado; no se marca como aprobado hasta recibir su conclusión.
 - El workflow de calidad ejecuta TypeScript, lint, tests, export Web y validación de configuración nativa iOS.
+
+## 2026-09-25 — Tarjetas, detalle y favoritos: revisión de presentación y transferencia
+
+- Se rediseñó `components/property-card.tsx` para conservar la identidad EYESITE (negro/dorado/gris) con una presentación más cercana a iOS: superficies redondeadas, jerarquía visual, microinteracción de pulsación, badges de estado/rendimiento y controles basados en los iconos existentes de `IconSymbol`.
+- Durante la revisión se detectó que `play.fill` no formaba parte del mapa de iconos soportados. Se sustituyó por `play.circle.fill`, que sí está definido en `IconSymbol`, evitando una referencia de icono inválida en Android/Web.
+- El control de favoritos de la tarjeta recibió etiquetas y estado de accesibilidad para lectores de pantalla.
+- Se detectó un problema real en el detalle: `galleryHeight` ya era responsive, pero los slides internos de imagen/video seguían fijados a 300 px. Se alinearon al alto responsive del contenedor para evitar espacios vacíos o galerías desproporcionadas en Web/tablet/escritorio.
+- El precalentamiento de imágenes del detalle se limitó a las primeras 3 imágenes. Esto conserva una carga rápida inicial sin descargar de golpe toda la galería cuando una propiedad contiene muchos medios.
+- Se detectó un problema de escala en Favoritos: la pantalla reutilizaba `useProperties()` sin modo catálogo y, después de introducir paginación, solo podía recibir la primera página del catálogo. Ahora Favoritos consulta directamente los IDs guardados contra `propiedades_publicas`, respeta el orden de favoritos y no queda limitado a 24 propiedades.
+- Las consultas continúan usando `propiedades_publicas`; no se abrió acceso directo a `propiedades`.
+- Los cambios están aislados en `fix/eyesite-platform-security-20260925`. CI de estos últimos commits debe verificarse antes de marcar esta etapa como cerrada.
