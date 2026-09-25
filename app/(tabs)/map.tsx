@@ -431,7 +431,9 @@ export default function MapScreen() {
       latitude: DEFAULT_REGION.latitude,
       longitude: DEFAULT_REGION.longitude,
     };
-    void fetchMapProperties(center, userLocation ? 100 : 250);
+    const timer = setTimeout(() => {
+      void fetchMapProperties(center, userLocation ? 100 : 250);
+    }, 0);
 
     let refreshTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -455,6 +457,7 @@ export default function MapScreen() {
       .subscribe();
 
     return () => {
+      clearTimeout(timer);
       if (refreshTimer) clearTimeout(refreshTimer);
       void supabase.removeChannel(channel);
     };
