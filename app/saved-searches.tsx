@@ -59,6 +59,14 @@ export default function SavedSearchesScreen() {
                     {(search.tipo ? 'Tipo: ' + search.tipo : 'Todos los tipos') +
                       (search.municipio ? ' · ' + search.municipio : '')}
                   </Text>
+                  <Text style={styles.cardMeta}>
+                    {[
+                      search.min_price != null ? `Desde ${Number(search.min_price).toLocaleString('es-MX')}` : '',
+                      search.max_price != null ? `Hasta ${Number(search.max_price).toLocaleString('es-MX')}` : '',
+                      search.min_surface != null ? `Desde ${Number(search.min_surface).toLocaleString('es-MX')} m²` : '',
+                      search.max_surface != null ? `Hasta ${Number(search.max_surface).toLocaleString('es-MX')} m²` : '',
+                    ].filter(Boolean).join(' · ') || 'Sin límites de precio o superficie'}
+                  </Text>
                 </View>
                 <View style={[styles.status, !search.activa && styles.statusOff]}>
                   <Text style={styles.statusText}>{search.activa ? 'ACTIVA' : 'PAUSADA'}</Text>
