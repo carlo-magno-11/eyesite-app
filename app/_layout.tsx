@@ -57,7 +57,25 @@ function AuthGate({ children }: { children: React.ReactNode }) {
     const inResetPassword = segmentList[0] === "reset-password";
     const inCreateProfile = segmentList[0] === "(auth)" && segmentList[1] === "create-profile";
     const inAuthCallback = segmentList[0] === "(auth)" && segmentList[1] === "callback";
-    const isProtected = !inAuth && !inTerms && !inPending && !inDenied && !inVerifyEmail && !inCreateProfile && !inResetPassword;
+
+    // Apple App Review: the public property-discovery experience does not
+    // require an account. Account-only actions (favorites, publishing,
+    // profile, notifications, requests, etc.) still remain behind AuthGate.
+    const inPublicContent =
+      segmentList[0] === "(tabs)" ||
+      segmentList[0] === "property" ||
+      segmentList[0] === "about" ||
+      segmentList[0] === "privacy";
+
+    const isProtected =
+      !inAuth &&
+      !inTerms &&
+      !inPending &&
+      !inDenied &&
+      !inVerifyEmail &&
+      !inCreateProfile &&
+      !inResetPassword &&
+      !inPublicContent;
     const emailConfirmed = !!session?.user?.email_confirmed_at;
 
     if (!session && isProtected && current !== "(auth)/login") {
