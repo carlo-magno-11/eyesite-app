@@ -145,6 +145,10 @@ Deno.serve(async (req) => {
 
     resolvedUserIds = [...new Set(resolvedUserIds)];
 
+    if (resolvedUserIds.length > 500) {
+      return new Response(JSON.stringify({ error: "La solicitud supera el máximo de 500 destinatarios" }), { status: 400, headers: H });
+    }
+
     let query = adminClient
       .from("profiles")
       .select("id,expo_push_token,notificaciones_push,notificaciones_in_app,anuncios_push")
