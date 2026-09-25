@@ -27,6 +27,7 @@ export default function RegisterScreen() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [passwordFocused, setPasswordFocused] = useState(false);
   const [nombre, setNombre] = useState("");
   const [telefono, setTelefono] = useState("");
   const [ciudad, setCiudad] = useState("");
@@ -40,7 +41,7 @@ export default function RegisterScreen() {
   const [showTerms, setShowTerms] = useState(false);
   const [confirmationEmail, setConfirmationEmail] = useState<string | null>(null);
 
-  const signup = async () => {
+  const passwordChecks = { length: password.length >= 8, number: /\\d/.test(password), upper: /[A-ZÁÉÍÓÚÑ]/.test(password) };\n  const passwordScore = Object.values(passwordChecks).filter(Boolean).length;\n  const passwordLabel = passwordScore <= 1 ? "Débil" : passwordScore === 2 ? "Buena" : "Fuerte";\n\n  const signup = async () => {
     if (loading) return;
     if (!legalAccepted) {
       Alert.alert(
@@ -86,10 +87,10 @@ export default function RegisterScreen() {
     }
 
     // Validar contraseña
-    if (password.length < 6) {
+    if (password.length < 8) {
       return Alert.alert(
         "Contraseña muy corta",
-        "La contraseña debe tener al menos 6 caracteres.",
+        "La contraseña debe tener al menos 8 caracteres, con al menos una mayúscula y un número.",
       );
     }
 
@@ -305,11 +306,13 @@ export default function RegisterScreen() {
                 <TextInput
                   value={password}
                   onChangeText={setPassword}
-                  placeholder="Mínimo 6 caracteres"
+                  placeholder="Mínimo 8 caracteres"
                   placeholderTextColor="#666"
                   secureTextEntry={!showPassword}
                   autoCapitalize="none"
                   autoCorrect={false}
+                  onFocus={() => setPasswordFocused(true)}
+                  onBlur={() => setPasswordFocused(false)}
                   style={styles.input}
                 />
 
@@ -325,6 +328,20 @@ export default function RegisterScreen() {
                   />
                 </Pressable>
               </View>
+              {(passwordFocused || password.length > 0) && (
+                <View style={styles.passwordGuide}>
+                  <View style={styles.passwordGuideHeader}>
+                    <Text style={styles.passwordGuideTitle}>SEGURIDAD: {passwordLabel.toUpperCase()}</Text>
+                    <Text style={styles.passwordGuideScore}>{passwordScore}/3</Text>
+                  </View>
+                  <View style={styles.passwordBarTrack}>
+                    <View style={[styles.passwordBar, { width: passwordScore === 0 ? "8%" : passwordScore === 1 ? "33%" : passwordScore === 2 ? "66%" : "100%" }]} />
+                  </View>
+                  <Text style={styles.passwordRule}>• {passwordChecks.length ? "✓" : "○"} 8 caracteres o más</Text>
+                  <Text style={styles.passwordRule}>• {passwordChecks.upper ? "✓" : "○"} Una mayúscula</Text>
+                  <Text style={styles.passwordRule}>• {passwordChecks.number ? "✓" : "○"} Un número</Text>
+                </View>
+              )}
             </View>
 
             {/* CONFIRMAR CONTRASEÑA */}
@@ -590,6 +607,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 12,
   },
+
+  passwordGuide: { marginTop: 8, padding: 12, borderRadius: 10, backgroundColor: "#141414", borderWidth: 1, borderColor: "#292929" },
+  passwordGuideHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  passwordGuideTitle: { color: "#C9A84C", fontSize: 9, fontWeight: "900", letterSpacing: 0.8 },
+  passwordGuideScore: { color: "#777", fontSize: 9, fontWeight: "800" },
+  passwordBarTrack: { height: 3, backgroundColor: "#292929", borderRadius: 3, overflow: "hidden", marginVertical: 9 },
+  passwordBar: { height: 3, backgroundColor: "#C9A84C", borderRadius: 3 },
+  passwordRule: { color: "#8F8F8F", fontSize: 10, lineHeight: 17 },
 
   optional: { color: "#777", fontWeight: "400" },
 
