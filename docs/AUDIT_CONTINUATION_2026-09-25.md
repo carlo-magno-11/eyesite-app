@@ -199,3 +199,8 @@ La corrección de identidad del token push quedó aplicada en la rama aislada. E
 ### Endurecimiento adicional de sesión — 2026-09-25
 
 Siguiendo la documentación actual de Supabase, el circuito de notificaciones/push dejó de basarse en getSession() para verificar identidad antes de operaciones sensibles y ahora usa auth.getUser(), que valida el usuario contra Auth. La sesión sigue siendo el contexto de la aplicación, pero la identidad usada para cargar notificaciones y guardar el token se obtiene del servidor de Auth. Commit: 4fd1cb229911241672b10c2917c075e1604bce6a.
+
+
+## CI — corrección de lanzamiento EYESITE — 2026-09-25
+
+El run 396 confirmó native-config exitoso (generación iOS + Privacy Manifest), mientras quality falló exclusivamente en ESLint por el nuevo componente EyesiteLaunchSplash: React Hooks detectó lecturas de ref durante render. Se verificó el log exacto antes de modificarlo. Se sustituyeron los Animated.Value almacenados como useRef(...).current por estado inicializado de forma perezosa, manteniendo referencias estables sin leer ref.current durante render. Commit: 81e3ee895529075ae1c3787f0f04b9947f846f67. El run 397 está en ejecución; no se declara CI aprobado hasta finalizar.
