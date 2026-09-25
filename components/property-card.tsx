@@ -65,7 +65,7 @@ export function PropertyCard({ property, compact = false }: PropertyCardProps) {
           </View>
           {hasVideo && (
             <View style={styles.compactMediaBadge}>
-              <IconSymbol name="play.fill" size={10} color="#0E0E0E" />
+              <IconSymbol name="play.circle.fill" size={10} color="#0E0E0E" />
             </View>
           )}
         </View>
@@ -165,7 +165,7 @@ export function PropertyCard({ property, compact = false }: PropertyCardProps) {
 
           {hasVideo && (
             <View style={styles.videoBadge}>
-              <IconSymbol name="play.fill" size={10} color="#0E0E0E" />
+              <IconSymbol name="play.circle.fill" size={10} color="#0E0E0E" />
               <Text style={styles.videoBadgeText}>VIDEO</Text>
             </View>
           )}
