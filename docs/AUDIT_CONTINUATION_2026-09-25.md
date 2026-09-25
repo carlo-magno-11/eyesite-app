@@ -61,6 +61,10 @@ La función no queda abierta: exige el encabezado secreto propio `x-eyesite-cron
 7. Probar flujo completo de medios: envío → edición → promoción → aprobación → vista pública → mapa.
 8. Probar anuncios/notificaciones en iOS, Android y Web, incluyendo inmediatos, programados, preferencias, tokens inválidos y reintentos.
 
+## Security Advisor runtime
+
+El proyecto Supabase fue revisado en runtime. Los avisos actuales son: 4 tablas CRM con RLS sin políticas directas (sin grants de cliente y operadas por RPC), pg_net en public porque el scheduler lo usa, 26 SECURITY DEFINER ejecutables por authenticated (con controles is_admin/usuario activo revisados) y leaked-password protection desactivada en Auth.
+
 ## Verificación runtime adicional
 
 - Supabase `send-notification` fue desplegada como versión 7 con JWT obligatorio.
