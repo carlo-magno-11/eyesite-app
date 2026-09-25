@@ -111,3 +111,14 @@ La revisión del `PropertyCard` confirmó que la tarjeta principal usa `width: '
 ## Estado de verificación
 
 Esta corrección requiere nueva ejecución de CI y prueba visual física en Web, especialmente en 768, 1024, 1280, 1440 y 1920 px. No se considera validada físicamente hasta comprobar esos anchos y al menos un iPhone y un Android.
+
+
+## 2026-09-25 — Ajuste final de altura del mapa Web
+
+La primera corrección del mapa había reducido la altura a 62% del viewport con mínimo de 420 px. Al revisar la composición completa de la pantalla se detectó que ese mínimo podía dejar poco espacio para el encabezado y la lista de resultados en ventanas Web de poca altura.
+
+Se ajustó a una escala de 55% del viewport, mínimo 320 px y máximo 620 px. El mapa sigue siendo suficientemente amplio en escritorio, pero ahora deja espacio razonable para el contenido que lo rodea en laptops, tablets y ventanas divididas.
+
+Commit: `388b5573ca3564eae8a97dd06ea55f03d6dca47e`.
+
+No se cambió la fuente de datos, Leaflet, OpenStreetMap ni el flujo de navegación. El cambio es exclusivamente de layout Web.
