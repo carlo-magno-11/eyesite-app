@@ -22,7 +22,9 @@ Se construye únicamente la base comercial prioritaria:
 
 ## Cambios realizados
 
-### Supabase (solo archivo de migración; NO aplicado a producción)
+### Supabase
+- Migración `20260925230000_commercial_crm_foundation.sql` aplicada al proyecto Supabase de producción después de validación transaccional.
+- Es un cambio aditivo: no modifica ni elimina datos existentes.
 - `property_events`
 - `saved_searches`
 - `prospectos`
@@ -67,7 +69,9 @@ La migración todavía no se ejecuta en la base de producción.
 2. Se validó creación de tablas, funciones y políticas.
 3. Se probó en transacción el registro de un evento y la creación de un prospecto usando un usuario activo real; se hizo rollback.
 4. Se probó en transacción el listado y actualización administrativa de un prospecto; se hizo rollback.
-5. Se verificó posteriormente que las tablas de la migración no quedaron creadas en producción.
+5. La migración fue aplicada a producción después de esas validaciones.
+6. Se verificó la presencia de las cinco tablas nuevas.
+7. Security Advisor no reportó un problema nuevo distinto de los avisos esperables por tablas CRM sin acceso directo y funciones SECURITY DEFINER protegidas por `is_admin()`; permanecen los avisos previos de `pg_net` en public y leaked-password protection.
 
 ## Pruebas todavía pendientes
 
