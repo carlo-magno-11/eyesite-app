@@ -582,7 +582,7 @@ export function useProperty(id?: string) {
           event: '*',
           schema: 'public',
           table: 'propiedades_cambios',
-          filter: `propiedad_id=eq.${id}`,
+          filter: `property_id=eq.${id}`,
         },
         () => {
           void fetchProperty();
