@@ -407,16 +407,23 @@ export function useProperties(options?: PropertyCatalogOptions) {
   const [hasMore, setHasMore] = useState(false);
 
   const isCatalogMode = Boolean(options);
+  const search = options?.search?.trim() ?? '';
+  const municipio = options?.municipio?.trim() ?? '';
+  const minPrice = normalizeCatalogNumber(options?.minPrice);
+  const maxPrice = normalizeCatalogNumber(options?.maxPrice);
+  const minSurface = normalizeCatalogNumber(options?.minSurface);
+  const maxSurface = normalizeCatalogNumber(options?.maxSurface);
+  const tipo = options?.tipo?.trim() ?? '';
   const pageSize = Math.max(12, Math.min(options?.pageSize ?? CATALOG_PAGE_SIZE, 48));
 
   const filterKey = JSON.stringify({
-    search: options?.search?.trim().toLowerCase() ?? '',
-    municipio: options?.municipio?.trim().toLowerCase() ?? '',
-    minPrice: normalizeCatalogNumber(options?.minPrice),
-    maxPrice: normalizeCatalogNumber(options?.maxPrice),
-    minSurface: normalizeCatalogNumber(options?.minSurface),
-    maxSurface: normalizeCatalogNumber(options?.maxSurface),
-    tipo: options?.tipo?.trim().toLowerCase() ?? '',
+    search: search.toLowerCase(),
+    municipio: municipio.toLowerCase(),
+    minPrice,
+    maxPrice,
+    minSurface,
+    maxSurface,
+    tipo: tipo.toLowerCase(),
     pageSize,
   });
 
@@ -433,9 +440,6 @@ export function useProperties(options?: PropertyCatalogOptions) {
           .order('created_at', { ascending: false });
 
         if (isCatalogMode && options) {
-          const search = options.search?.trim();
-          const municipio = options.municipio?.trim();
-
           if (search) {
             query = query.or(
               `titulo.ilike.%${search}%,municipio.ilike.%${search}%,ubicacion.ilike.%${search}%`,
@@ -443,12 +447,7 @@ export function useProperties(options?: PropertyCatalogOptions) {
           }
 
           if (municipio) query = query.ilike('municipio', `%${municipio}%`);
-          if (options.tipo) query = query.eq('tipo', options.tipo);
-
-          const minPrice = normalizeCatalogNumber(options.minPrice);
-          const maxPrice = normalizeCatalogNumber(options.maxPrice);
-          const minSurface = normalizeCatalogNumber(options.minSurface);
-          const maxSurface = normalizeCatalogNumber(options.maxSurface);
+          if (tipo) query = query.eq('tipo', tipo);
 
           if (minPrice !== null) query = query.gte('precio_actual', minPrice);
           if (maxPrice !== null) query = query.lte('precio_actual', maxPrice);
@@ -475,7 +474,7 @@ export function useProperties(options?: PropertyCatalogOptions) {
         else setLoading(false);
       }
     },
-    [filterKey, isCatalogMode, options, pageSize],
+    [filterKey, isCatalogMode, search, municipio, tipo, minPrice, maxPrice, minSurface, maxSurface, pageSize],
   );
 
   const fetchProperties = useCallback(async () => {
