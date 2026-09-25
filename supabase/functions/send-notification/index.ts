@@ -205,6 +205,31 @@ Deno.serve(async (req) => {
     }
 
     const isAnnouncement = Boolean(body.announcement_id || navigationData.announcement_id || String(body.tipo || "").toLowerCase() === "anuncio");
+    const announcementId = body.announcement_id ? String(body.announcement_id) : null;
+
+    if (announcementId) {
+      const { data: announcement, error: announcementError } = await adminClient
+        .from("anuncios")
+        .select("id,activa,estado_publicacion")
+        .eq("id", announcementId)
+        .maybeSingle();
+      if (announcementError) throw announcementError;
+      if (!announcement || announcement.estado_publicacion !== "publicado" || announcement.activa !== true) {
+        return new Response(JSON.stringify({ error: "El anuncio no está publicado y activo" }), { status: 400, headers: H });
+      }
+
+      const deliveryRows = (rows || []).map((row: any) => ({
+        anuncio_id: announcementId,
+        user_id: row.id,
+      }));
+      if (deliveryRows.length) {
+        const { error: deliveryError } = await adminClient
+          .from("anuncio_entregas")
+          .upsert(deliveryRows, { onConflict: "anuncio_id,user_id", ignoreDuplicates: true });
+        if (deliveryError) throw deliveryError;
+      }
+    }
+
     const messages = (rows || [])
       .filter((row: any) => {
         const pushEnabled = isAnnouncement
@@ -215,6 +240,7 @@ Deno.serve(async (req) => {
           && row.expo_push_token.startsWith("ExponentPushToken[");
       })
       .map((row: any) => ({
+        userId: row.id,
         to: row.expo_push_token,
         sound: "default",
         title: String(body.titulo || "EYESITE"),
@@ -240,15 +266,57 @@ Deno.serve(async (req) => {
 
     let sent = 0;
     const invalidTokens: string[] = [];
+    const deliveryNow = new Date().toISOString();
 
-    tickets.forEach((ticket: any, index: number) => {
+    for (let index = 0; index < tickets.length; index += 1) {
+      const ticket = tickets[index];
+      const message = messages[index];
       if (ticket?.status === "ok") {
         sent += 1;
+        if (announcementId && message?.userId) {
+          await adminClient
+            .from("anuncio_entregas")
+            .update({
+              push_status: "sent",
+              push_attempts: 1,
+              sent_at: deliveryNow,
+              push_next_retry_at: null,
+              push_error: null,
+              updated_at: deliveryNow,
+            })
+            .eq("anuncio_id", announcementId)
+            .eq("user_id", message.userId);
+        }
       } else if (ticket?.details?.error === "DeviceNotRegistered") {
-        const token = messages[index]?.to;
+        const token = message?.to;
         if (token) invalidTokens.push(token);
+        if (announcementId && message?.userId) {
+          await adminClient
+            .from("anuncio_entregas")
+            .update({
+              push_status: "not_configured",
+              push_attempts: 1,
+              push_next_retry_at: null,
+              push_error: "DeviceNotRegistered",
+              updated_at: deliveryNow,
+            })
+            .eq("anuncio_id", announcementId)
+            .eq("user_id", message.userId);
+        }
+      } else if (announcementId && message?.userId) {
+        await adminClient
+          .from("anuncio_entregas")
+          .update({
+            push_status: "error",
+            push_attempts: 1,
+            push_next_retry_at: deliveryNow,
+            push_error: String(ticket?.details?.error || ticket?.message || "Push rechazado"),
+            updated_at: deliveryNow,
+          })
+          .eq("anuncio_id", announcementId)
+          .eq("user_id", message.userId);
       }
-    });
+    }
 
     if (invalidTokens.length) {
       await adminClient
