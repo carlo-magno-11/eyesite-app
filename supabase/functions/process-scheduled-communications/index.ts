@@ -20,6 +20,7 @@ async function mapWithConcurrency(items,concurrency,worker){
 }
 Deno.serve(async(req)=>{
  if(req.method==="OPTIONS")return new Response("ok",{headers:H});
+ let schedulerClaimed=false;
  try{
   const admin=createClient(Deno.env.get("SUPABASE_URL")!,Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
   const supplied=req.headers.get("x-eyesite-cron-secret")||"";
@@ -29,7 +30,7 @@ Deno.serve(async(req)=>{
   if(claimError)throw claimError;
   if(claimed!==true)return new Response(JSON.stringify({ok:true,skipped:true,reason:"scheduler_locked"}),{status:200,headers:H});
   const now=new Date().toISOString(), result={notifications:0,notification_push_sent:0,notification_push_retried:0,announcements:0,announcement_push_sent:0,skipped:false,errors:[]};
-  let schedulerClaimed=true;
+  schedulerClaimed=true;
   const {data:dueN,error:nError}=await admin.from("notificaciones").select("id").eq("estado_envio","pendiente").lte("programada_para",now).order("programada_para").limit(100);
   if(nError)throw nError;
   if(dueN?.length){
@@ -119,5 +120,5 @@ Deno.serve(async(req)=>{
   await admin.from("anuncios").update({activa:false,updated_at:now}).eq("activa",true).not("fecha_expiracion","is",null).lte("fecha_expiracion",now);
   return new Response(JSON.stringify({ok:true,...result}),{headers:H});
  }catch(e){console.error("[process-scheduled-communications]",e);return new Response(JSON.stringify({error:e instanceof Error?e.message:String(e)}),{status:500,headers:H});}
- finally{if(typeof schedulerClaimed!=="undefined"&&schedulerClaimed){try{await admin.rpc("release_eyesite_scheduler");}catch(releaseError){console.error("[process-scheduled-communications] release lock failed",releaseError);}}}
+ finally{if(schedulerClaimed){try{await admin.rpc("release_eyesite_scheduler");}catch(releaseError){console.error("[process-scheduled-communications] release lock failed",releaseError);}}}
 });
