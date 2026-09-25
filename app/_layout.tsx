@@ -147,6 +147,17 @@ export default Sentry.wrap(function RootLayout() {
     void import("expo-notifications").then(async (Notifications) => {
       if (!mounted) return;
 
+      // Permite que una notificación push también sea visible cuando la app
+      // está en primer plano. El centro in-app sigue funcionando por separado.
+      await Notifications.setNotificationHandler({
+        handleNotification: async () => ({
+          shouldShowBanner: true,
+          shouldShowList: true,
+          shouldPlaySound: true,
+          shouldSetBadge: false,
+        }),
+      });
+
       responseSubscription = Notifications.addNotificationResponseReceivedListener(openNotification);
 
       const lastResponse = await Notifications.getLastNotificationResponseAsync();
