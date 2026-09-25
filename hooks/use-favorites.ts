@@ -36,12 +36,18 @@ export function useFavorites() {
         if (error && error.code !== '23505') throw error;
       }
 
-      void supabase.rpc('track_property_event', {
-        p_property_id: id,
-        p_event_type: 'favorite',
-        p_source: 'app',
-        p_metadata: { active: !wasFavorite },
-      }).catch(() => {});
+      void (async () => {
+        try {
+          await supabase.rpc('track_property_event', {
+            p_property_id: id,
+            p_event_type: 'favorite',
+            p_source: 'app',
+            p_metadata: { active: !wasFavorite },
+          });
+        } catch {
+          // Analytics must never block the favorite action.
+        }
+      })();
 
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     } catch (e: any) {
