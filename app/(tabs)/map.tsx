@@ -13,10 +13,10 @@ import { useRouter } from "expo-router";
 import * as Location from "expo-location";
 import { LeafletMap } from "@/components/leaflet-map";
 
-import { useProperties } from "@/hooks/use-properties";
 import { formatPrice } from "@/lib/properties-data";
 import { ScreenContainer } from "@/components/screen-container";
 import { useCommercial } from "@/hooks/use-commercial";
+import { supabase } from "@/lib/supabase";
 
 type UserCoords = {
   latitude: number;
@@ -391,12 +391,63 @@ export default function MapScreen() {
   const router = useRouter();
   const { height: windowHeight } = useWindowDimensions();
 
-  const { properties, loading } = useProperties();
   const { trackPropertyEvent } = useCommercial();
+  const [properties, setProperties] = useState<MapProperty[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [mapError, setMapError] = useState<string | null>(null);
 
   const [userLocation, setUserLocation] = useState<UserCoords | null>(null);
 
   const [locating, setLocating] = useState(false);
+
+  const fetchMapProperties = useCallback(async (center: UserCoords, radiusKm: number) => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase.rpc("get_public_map_properties", {
+        p_lat: center.latitude,
+        p_lon: center.longitude,
+        p_radius_km: radiusKm,
+        p_limit: 500,
+      });
+
+      if (error) throw error;
+      setProperties((data ?? []) as MapProperty[]);
+      setMapError(null);
+    } catch (error) {
+      console.error("[EYESITE] map properties error", error);
+      setProperties([]);
+      setMapError(error instanceof Error ? error.message : "No se pudieron cargar las propiedades del mapa.");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    const center = userLocation ?? {
+      latitude: DEFAULT_REGION.latitude,
+      longitude: DEFAULT_REGION.longitude,
+    };
+    void fetchMapProperties(center, userLocation ? 100 : 250);
+
+    const channel = supabase
+      .channel("eyesite-map-property-feed")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "propiedades_cambios",
+        },
+        () => {
+          void fetchMapProperties(center, userLocation ? 100 : 250);
+        },
+      )
+      .subscribe();
+
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [fetchMapProperties, userLocation]);
 
   const requestLocation = useCallback(async () => {
     setLocating(true);
@@ -593,14 +644,14 @@ export default function MapScreen() {
           )}
 
           {!loading && geoProperties.length === 0 && (
+
             <View style={styles.emptyOverlay}>
               <Text style={styles.emptyTitle}>
-                Aún no hay propiedades ubicadas
+                {mapError ? "No se pudieron cargar las propiedades" : "Aún no hay propiedades ubicadas"}
               </Text>
 
               <Text style={styles.emptyText}>
-                Solo aparecen propiedades EYESITE activas, publicadas por
-                administración y con coordenadas válidas.
+                {mapError || "Solo aparecen propiedades EYESITE activas, publicadas por administración y con coordenadas válidas."}
               </Text>
             </View>
           )}
