@@ -70,20 +70,33 @@ function AuthGate({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    if (session && emailConfirmed && profile && !termsOk && !inTerms && !inAuth) {
-      router.replace("/terms" as never);
-      return;
-    }
+    if (session && emailConfirmed && profile) {
+      // Access state takes precedence over terms. A rejected/suspended account
+      // must never be sent through the terms flow, and a pending account must
+      // remain in the approval flow until an admin activates it.
+      if ((profile.estado === "rechazado" || profile.estado === "suspendida")) {
+        if (!inDenied) router.replace("/denied" as never);
+        return;
+      }
 
-    if (session && emailConfirmed && termsOk) {
-      if (profile?.estado === "pendiente" && !inPending) {
-        router.replace("/pending" as never);
-      } else if ((profile?.estado === "rechazado" || profile?.estado === "suspendida") && !inDenied) {
-        router.replace("/denied" as never);
-      } else if (profile?.estado === "activa" && (inAuth || inTerms || inPending || inDenied || inVerifyEmail)) {
-        router.replace("/(tabs)" as never);
-      } else if (!profile?.estado && isProtected) {
+      if (profile.estado === "pendiente") {
+        if (!inPending) router.replace("/pending" as never);
+        return;
+      }
+
+      if (profile.estado === "activa") {
+        if (!termsOk && !inTerms && !inAuth) {
+          router.replace("/terms" as never);
+          return;
+        }
+
+        if (termsOk && (inAuth || inTerms || inPending || inDenied || inVerifyEmail)) {
+          router.replace("/(tabs)" as never);
+          return;
+        }
+      } else if (!profile.estado && isProtected) {
         router.replace("/(auth)/create-profile" as never);
+        return;
       }
     }
   }, [session, profile, loading, termsOk, current, router, segments]);
