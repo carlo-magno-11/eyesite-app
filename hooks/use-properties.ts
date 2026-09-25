@@ -374,155 +374,144 @@ export function mapProperty(raw: any): Property {
 
 let propertyChannelGeneration = 0;
 
-export function useProperties() {
-  const [
-    properties,
-    setProperties,
-  ] = useState<Property[]>([]);
+const CATALOG_PAGE_SIZE = 24;
 
-  const [
-    loading,
-    setLoading,
-  ] = useState(true);
+export type PropertyCatalogOptions = {
+  search?: string;
+  municipio?: string;
+  minPrice?: number | null;
+  maxPrice?: number | null;
+  minSurface?: number | null;
+  maxSurface?: number | null;
+  tipo?: string | null;
+  pageSize?: number;
+};
 
-  const [
-    error,
-    setError,
-  ] = useState<string | null>(
-    null
-  );
+const CATALOG_FIELDS = [
+  'id','codigo','titulo','tipo','municipio','ubicacion','direccion',
+  'superficie','unidad_superficie','precio_actual','precio_mercado','precio',
+  'precio_esperado','unidad_precio','rendimiento','moneda','destacada',
+  'fotos','fotos_pro','videos','portada_url','portada_tipo','tipo_portada',
+  'video_url','activa','estado','orden','created_at','updated_at','latitud','longitud',
+].join(',');
 
-  const fetchProperties =
-    useCallback(
-      async () => {
-        try {
-          setLoading(true);
+function normalizeCatalogNumber(value?: number | null) {
+  return typeof value === 'number' && Number.isFinite(value) ? value : null;
+}
 
-          console.log(
-            '🔍 EYESITE: cargando propiedades públicas desde Supabase...'
-          );
+export function useProperties(options?: PropertyCatalogOptions) {
+  const [properties, setProperties] = useState<Property[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [hasMore, setHasMore] = useState(false);
 
-          /*
-           * IMPORTANTE:
-           * La app solamente consulta
-           * propiedades_publicas.
-           *
-           * Nunca propiedades directamente.
-           */
-          const {
-            data,
-            error: err,
-          } = await supabase
-            .from(
-              'propiedades_publicas'
-            )
-            .select('*')
-            .eq(
-              'estado',
-              'activa'
-            )
-            .order(
-              'created_at',
-              {
-                ascending: false,
-              }
+  const isCatalogMode = Boolean(options);
+  const pageSize = Math.max(12, Math.min(options?.pageSize ?? CATALOG_PAGE_SIZE, 48));
+
+  const filterKey = JSON.stringify({
+    search: options?.search?.trim().toLowerCase() ?? '',
+    municipio: options?.municipio?.trim().toLowerCase() ?? '',
+    minPrice: normalizeCatalogNumber(options?.minPrice),
+    maxPrice: normalizeCatalogNumber(options?.maxPrice),
+    minSurface: normalizeCatalogNumber(options?.minSurface),
+    maxSurface: normalizeCatalogNumber(options?.maxSurface),
+    tipo: options?.tipo?.trim().toLowerCase() ?? '',
+    pageSize,
+  });
+
+  const fetchPage = useCallback(
+    async (from: number, append: boolean) => {
+      try {
+        if (append) setLoadingMore(true);
+        else setLoading(true);
+
+        let query = supabase
+          .from('propiedades_publicas')
+          .select(isCatalogMode ? CATALOG_FIELDS : '*', { count: 'exact' })
+          .eq('estado', 'activa')
+          .order('created_at', { ascending: false });
+
+        if (isCatalogMode && options) {
+          const search = options.search?.trim();
+          const municipio = options.municipio?.trim();
+
+          if (search) {
+            query = query.or(
+              `titulo.ilike.%${search}%,municipio.ilike.%${search}%,ubicacion.ilike.%${search}%`,
             );
-
-          if (err) {
-            console.error(
-              '❌ EYESITE Supabase:',
-              err.message
-            );
-
-            setError(
-              err.message
-            );
-
-            setProperties([]);
-
-            return;
           }
 
-          const mapped =
-            (data ?? []).map(
-              mapProperty
-            );
+          if (municipio) query = query.ilike('municipio', `%${municipio}%`);
+          if (options.tipo) query = query.eq('tipo', options.tipo);
 
-          console.log(
-            `✅ EYESITE: ${mapped.length} propiedades activas`
-          );
+          const minPrice = normalizeCatalogNumber(options.minPrice);
+          const maxPrice = normalizeCatalogNumber(options.maxPrice);
+          const minSurface = normalizeCatalogNumber(options.minSurface);
+          const maxSurface = normalizeCatalogNumber(options.maxSurface);
 
-          setProperties(
-            mapped
-          );
+          if (minPrice !== null) query = query.gte('precio_actual', minPrice);
+          if (maxPrice !== null) query = query.lte('precio_actual', maxPrice);
+          if (minSurface !== null) query = query.gte('superficie', minSurface);
+          if (maxSurface !== null) query = query.lte('superficie', maxSurface);
 
-          setError(null);
-        } catch (e) {
-          const message =
-            e instanceof Error
-              ? e.message
-              : 'Error desconocido';
-
-          console.error(
-            '❌ EYESITE propiedades:',
-            message
-          );
-
-          setError(
-            message
-          );
-
-          setProperties([]);
-        } finally {
-          setLoading(false);
+          query = query.range(from, from + pageSize - 1);
         }
-      },
-      []
-    );
+
+        const { data, error: err, count } = await query;
+        if (err) throw err;
+
+        const mapped = (data ?? []).map(mapProperty);
+        setProperties((current) => (append ? [...current, ...mapped] : mapped));
+        setHasMore(isCatalogMode ? from + mapped.length < (count ?? 0) : false);
+        setError(null);
+      } catch (e) {
+        const message = e instanceof Error ? e.message : 'Error desconocido';
+        console.error('❌ EYESITE propiedades:', message);
+        setError(message);
+        if (!append) setProperties([]);
+      } finally {
+        if (append) setLoadingMore(false);
+        else setLoading(false);
+      }
+    },
+    [filterKey, isCatalogMode, options, pageSize],
+  );
+
+  const fetchProperties = useCallback(async () => {
+    await fetchPage(0, false);
+  }, [fetchPage]);
+
+  const loadMore = useCallback(async () => {
+    if (!isCatalogMode || loading || loadingMore || !hasMore) return;
+    await fetchPage(properties.length, true);
+  }, [fetchPage, hasMore, isCatalogMode, loading, loadingMore, properties.length]);
 
   useFocusEffect(
     useCallback(() => {
-      fetchProperties();
+      void fetchProperties();
 
-      /*
-       * Escuchamos cambios de propiedades.
-       * La lectura posterior sigue siendo mediante
-       * propiedades_publicas.
-       */
-      const channel =
-        supabase
-          .channel(
-            `eyesite-live-properties-${++propertyChannelGeneration}`
-          )
-          .on(
-            'postgres_changes',
-            {
-              event: '*',
-              schema: 'public',
-              table: 'propiedades_cambios',
-            },
-            () => {
-              fetchProperties();
-            }
-          )
-          .subscribe();
+      const channel = supabase
+        .channel(`eyesite-live-properties-${++propertyChannelGeneration}`)
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'propiedades_cambios' },
+          () => { void fetchProperties(); },
+        )
+        .subscribe();
 
-      return () => {
-        supabase.removeChannel(
-          channel
-        );
-      };
-    }, [
-      fetchProperties,
-    ])
+      return () => { supabase.removeChannel(channel); };
+    }, [fetchProperties]),
   );
 
   return {
     properties,
     loading,
+    loadingMore,
+    hasMore,
     error,
-    refetch:
-      fetchProperties,
+    refetch: fetchProperties,
+    loadMore,
   };
 }
 
