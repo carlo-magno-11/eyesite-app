@@ -10,8 +10,8 @@ export default function ResetPasswordScreen() {
 
   const save = async () => {
     if (saving) return;
-    if (password.length < 6) {
-      Alert.alert("Contraseña muy corta", "Usa al menos 6 caracteres.");
+    if (password.length < 8 || !/[A-ZÁÉÍÓÚÑ]/.test(password) || !/\d/.test(password)) {
+      Alert.alert("Contraseña no válida", "Usa al menos 8 caracteres, una mayúscula y un número.");
       return;
     }
     if (password !== confirm) {
