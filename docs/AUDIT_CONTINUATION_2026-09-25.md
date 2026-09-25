@@ -314,3 +314,19 @@ Se revisó el flujo de lectura del catálogo pensando en múltiples usuarios y u
 - El asesor de rendimiento reporta varios índices sin uso histórico. No se eliminan automáticamente: algunos pueden estar preparados para crecimiento futuro y eliminarlos ahora sería una optimización prematura.
 
 Estado: cambio de cliente aplicado en rama aislada; requiere CI y prueba Web/iOS/Android antes de considerarlo cerrado.
+
+
+## 2026-09-25 — Correcciones de concurrencia y tamaño del mapa Web
+
+- Se detectó una condición de carrera real en `useProperties`: aunque ya existía `requestGeneration` para impedir que una respuesta vieja sobrescribiera los datos, `catch/finally` todavía podían modificar `error/loading/loadingMore` después de que una solicitud más nueva hubiera comenzado.
+- Se corrigió `hooks/use-properties.ts` para que las ramas `catch/finally` también respeten el identificador de generación. Esto evita estados visuales incorrectos cuando el usuario cambia rápidamente búsqueda/filtros o dispara cargas consecutivas.
+- Se detectó que la altura Web del mapa había quedado con tres fórmulas distintas por breakpoint (42%, 52%, 60%), lo que podía producir un mapa desproporcionado entre pantallas. Se unificó a un cálculo responsive de 55% de la altura disponible, con límites de 320–620 px.
+- El mapa también recibió protección de generación de solicitudes y debounce de 500 ms para Realtime: una actualización vieja ya no puede apagar el indicador de carga ni reemplazar resultados nuevos, y varios cambios consecutivos del panel se agrupan en una sola lectura.
+- Se retiró una variable de ancho que dejó de ser necesaria después de unificar la fórmula del mapa para evitar advertencias de TypeScript/lint.
+- Importante: el flujo sigue usando Leaflet/OpenStreetMap y no introduce Google Cloud.
+
+Validación GitHub:
+- El commit intermedio que accidentalmente dejó un archivo temporal fue revertido inmediatamente moviendo la rama de reparación al commit estable anterior; el archivo `hooks/use-properties.ts` fue restaurado y luego corregido de forma verificable.
+- El commit actual de esta etapa es `b3ac0727424254ef57e2f527642f1d08a7264811`.
+- GitHub Actions del commit actual está en ejecución al momento de documentar este apartado; no se marca como aprobado hasta recibir su conclusión.
+- El workflow de calidad ejecuta TypeScript, lint, tests, export Web y validación de configuración nativa iOS.
