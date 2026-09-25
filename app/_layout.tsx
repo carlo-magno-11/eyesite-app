@@ -50,7 +50,7 @@ function AuthGate({ children }: { children: React.ReactNode }) {
     const inPending = segmentList[0] === "pending";
     const inDenied = segmentList[0] === "denied";
     const inVerifyEmail = segmentList[0] === "verify-email";\n    const inResetPassword = segmentList[0] === "reset-password";
-    const inCreateProfile = segmentList[0] === "(auth)" && segmentList[1] === "create-profile";
+    const inCreateProfile = segmentList[0] === "(auth)" && segmentList[1] === "create-profile";\n    const inAuthCallback = segmentList[0] === "(auth)" && segmentList[1] === "callback";
     const isProtected = !inAuth && !inTerms && !inPending && !inDenied && !inVerifyEmail && !inCreateProfile && !inResetPassword;
     const emailConfirmed = !!session?.user?.email_confirmed_at;
 
@@ -89,7 +89,7 @@ function AuthGate({ children }: { children: React.ReactNode }) {
           return;
         }
 
-        if (termsOk && (inAuth || inTerms || inPending || inDenied || inVerifyEmail)) {
+        if (termsOk && (inAuth || inTerms || inPending || inDenied || inVerifyEmail) && !inAuthCallback) {
           router.replace("/(tabs)" as never);
           return;
         }
