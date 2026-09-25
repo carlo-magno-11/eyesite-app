@@ -277,3 +277,13 @@ Validación de producción:
 - Devuelve únicamente propiedades activas con coordenadas válidas.
 - Actualmente encontró 3 propiedades ubicadas en esa zona.
 - La migración versionada corresponde a `supabase/migrations/20260925210000_scale_public_map_queries.sql`.
+
+
+## Escalado del catálogo y mapa Web — 2026-09-25
+
+- El catálogo público ya no descarga toda la vista `propiedades_publicas` en cada entrada cuando se usa la pantalla de oportunidades. `useProperties(options)` admite filtros de servidor (texto, municipio, tipo, precio y superficie), selecciona únicamente campos necesarios para las tarjetas y pagina en bloques de 24 con `onEndReached`.
+- La paginación solicita una fila adicional para detectar `hasMore`, evitando un `count=exact` por página. Se añadió protección contra respuestas antiguas que lleguen después de cambiar filtros.
+- Se mantuvo la ruta pública `propiedades_publicas`; no se expone ni consulta directamente `propiedades` desde el cliente.
+- La pantalla de propiedades conserva búsqueda, filtros, favoritos, búsquedas guardadas y Realtime; el detalle continúa consultando la vista pública completa mediante `useProperty`.
+- El mapa Web ahora ajusta su altura por clase de viewport: teléfono, tablet y escritorio tienen límites distintos para evitar mapas demasiado pequeños o excesivamente altos. El iframe Leaflet sigue ocupando todo el contenedor y conserva `invalidateSize()` al redimensionar.
+- No se añadió Google Maps ni Google Cloud; el mapa continúa con Leaflet/OpenStreetMap.
