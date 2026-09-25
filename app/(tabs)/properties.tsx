@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { View, Text, TextInput, FlatList, Pressable, StyleSheet, ActivityIndicator, Alert } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
@@ -13,22 +13,28 @@ import { useSavedSearches } from '@/hooks/use-commercial';
 export default function PropertiesScreen() {
   const params = useLocalSearchParams<{ filter?: string }>();
   const [search, setSearch] = useState('');
+  const [catalogSearch, setCatalogSearch] = useState('');
   const [municipio, setMunicipio] = useState('');
   const [minPrice, setMinPrice] = useState('');
   const [maxPrice, setMaxPrice] = useState('');
   const [minSurface, setMinSurface] = useState('');
   const [maxSurface, setMaxSurface] = useState('');
+  useEffect(() => {
+    const timer = setTimeout(() => setCatalogSearch(search), 300);
+    return () => clearTimeout(timer);
+  }, [search]);
+
   const initialFilter = typeof params.filter === 'string' && params.filter ? params.filter : 'all';
   const [activeFilter, setActiveFilter] = useState<string>(initialFilter);
   const catalogOptions = useMemo(() => ({
-    search,
+    search: catalogSearch,
     municipio,
     minPrice: minPrice ? Number(minPrice) : null,
     maxPrice: maxPrice ? Number(maxPrice) : null,
     minSurface: minSurface ? Number(minSurface) : null,
     maxSurface: maxSurface ? Number(maxSurface) : null,
     tipo: activeFilter === 'all' ? null : activeFilter,
-  }), [search, municipio, minPrice, maxPrice, minSurface, maxSurface, activeFilter]);
+  }), [catalogSearch, municipio, minPrice, maxPrice, minSurface, maxSurface, activeFilter]);
 
   const {
     properties,
@@ -44,7 +50,7 @@ export default function PropertiesScreen() {
   const { user } = useAuth();
   const { save } = useSavedSearches(user?.id);
 
-  const visibleCountLabel = hasMore ? \`${properties.length}+\` : String(properties.length);
+  const visibleCountLabel = hasMore ? `${properties.length}+` : String(properties.length);
 
 
   return (
