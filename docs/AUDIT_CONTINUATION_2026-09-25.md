@@ -300,3 +300,17 @@ Validación de producción:
 - No se modificó el contrato de detalle, favoritos, búsquedas guardadas ni el feed Realtime.
 - El cambio queda aislado en `fix/eyesite-platform-security-20260925`; no se tocó `main`.
 - CI del commit de esta corrección queda pendiente de ejecución/confirmación; no se marca como aprobado hasta recibir el resultado real de GitHub Actions.
+
+
+## Escalabilidad de transferencia del catálogo y Realtime — 2026-09-25
+
+Se revisó el flujo de lectura del catálogo pensando en múltiples usuarios y un número creciente de propiedades.
+
+- El catálogo ya usa paginación de 24 elementos; se conserva esa estrategia.
+- Se redujo el payload de cada página: el listado ya no solicita PDFs, KMZ/KML, JSON pesados, arrays de videos ni `fotos_pro`. Se mantienen únicamente los datos necesarios para tarjetas, filtros, ubicación y portada/fallback.
+- El detalle de propiedad continúa solicitando el registro completo únicamente cuando el usuario entra a una propiedad.
+- El canal Realtime de `propiedades_cambios` ahora agrupa cambios consecutivos durante 500 ms antes de volver a consultar el catálogo. Esto evita una ráfaga de lecturas cuando el administrador publica o edita varios campos seguidos.
+- Se verificó que la base dispone de `pg_trgm` para una futura optimización de búsquedas de texto. No se creó un índice nuevo todavía: primero se debe medir el patrón real de consultas para evitar índices innecesarios.
+- El asesor de rendimiento reporta varios índices sin uso histórico. No se eliminan automáticamente: algunos pueden estar preparados para crecimiento futuro y eliminarlos ahora sería una optimización prematura.
+
+Estado: cambio de cliente aplicado en rama aislada; requiere CI y prueba Web/iOS/Android antes de considerarlo cerrado.
