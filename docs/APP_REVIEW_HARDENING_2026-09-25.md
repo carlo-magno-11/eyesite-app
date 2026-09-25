@@ -52,3 +52,8 @@ No se modifica `main` ni se hace merge a `release/eyesite-definitive` todavía.
 - La búsqueda pública no confirmó una página indexada para `eyesite.mx` ni `auth.eyesite.mx`; esto NO demuestra que estén caídos, por lo que deben verificarse directamente desde navegador/dispositivo.
 - `app.config.ts` mantiene iOS `supportsTablet=true`, bundle ID `com.eyesite.app`, scheme `eyesite`, permiso de ubicación When In Use y configuración de notificaciones.
 - El binario de producción y los deep links reales siguen pendientes de prueba física.
+
+
+## Corrección de seguridad posterior
+
+El primer ajuste de acceso público usaba todo el grupo `(tabs)`. Se corrigió inmediatamente para permitir sin sesión únicamente `index`, `properties`, `map` y `contact`; rutas de cuenta, favoritos y publicación dentro del mismo grupo permanecen protegidas.
