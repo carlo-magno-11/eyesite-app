@@ -195,3 +195,7 @@ Se revisó el circuito completo de centro de notificaciones, preferencias, Realt
 ### Estado
 
 La corrección de identidad del token push quedó aplicada en la rama aislada. El commit no mostró todavía una ejecución de GitHub Actions asociada al SHA al momento de esta auditoría, por lo que CI de este cambio queda pendiente de confirmación. No se modifica main ni se considera este bloque físicamente validado hasta ejecutar build/lint/TypeScript y pruebas reales de push en iOS/Android.
+
+### Endurecimiento adicional de sesión — 2026-09-25
+
+Siguiendo la documentación actual de Supabase, el circuito de notificaciones/push dejó de basarse en getSession() para verificar identidad antes de operaciones sensibles y ahora usa auth.getUser(), que valida el usuario contra Auth. La sesión sigue siendo el contexto de la aplicación, pero la identidad usada para cargar notificaciones y guardar el token se obtiene del servidor de Auth. Commit: 4fd1cb229911241672b10c2917c075e1604bce6a.
