@@ -269,10 +269,12 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ ok: true, sent: 0, invalid_tokens: 0 }), { headers: H });
     }
 
+    const expoMessages = messages.map(({ userId: _userId, ...message }) => message);
+
     const expoResponse = await fetch("https://exp.host/--/api/v2/push/send", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(messages),
+      body: JSON.stringify(expoMessages),
     });
 
     const expoResult = await expoResponse.json();
