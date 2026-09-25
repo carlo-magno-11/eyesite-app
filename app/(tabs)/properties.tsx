@@ -106,7 +106,16 @@ export default function PropertiesScreen() {
           columnWrapperStyle={propertyColumns > 1 ? styles.columnWrapper : undefined}
           contentContainerStyle={[styles.listContainer, { paddingHorizontal: horizontalPadding, maxWidth: contentMaxWidth }, isDesktop && styles.contentCentered]}
           showsVerticalScrollIndicator={false}
-          renderItem={({ item }) => <View style={propertyColumns > 1 ? styles.gridItem : styles.singleItem}><PropertyCard property={item} /></View>}
+          renderItem={({ item }) => <View
+              style={[
+                propertyColumns > 1 ? styles.gridItem : styles.singleItem,
+                propertyColumns === 2 && styles.gridItemTwo,
+                propertyColumns === 3 && styles.gridItemThree,
+                propertyColumns === 4 && styles.gridItemFour,
+              ]}
+            >
+              <PropertyCard property={item} />
+            </View>}
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
               <Text style={styles.emptyIcon}>🔍</Text>
@@ -205,11 +214,18 @@ const styles = StyleSheet.create({
   },
   columnWrapper: {
     justifyContent: 'space-between',
-    gap: 16,
   },
   gridItem: {
-    flex: 1,
     minWidth: 0,
+  },
+  gridItemTwo: {
+    width: '48.5%',
+  },
+  gridItemThree: {
+    width: '31.5%',
+  },
+  gridItemFour: {
+    width: '23.5%',
   },
   singleItem: {
     width: '100%',
