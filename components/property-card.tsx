@@ -133,6 +133,9 @@ export function PropertyCard({ property, compact = false }: PropertyCardProps) {
           </View>
 
           <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={favorite ? "Quitar de favoritos" : "Agregar a favoritos"}
+            accessibilityState={{ selected: favorite }}
             onPress={handleFavorite}
             hitSlop={8}
             style={({ pressed }) => [
