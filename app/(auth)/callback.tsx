@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 import * as Linking from "expo-linking";
+import { router } from "expo-router";
 
 import { supabase } from "@/lib/supabase";
 
@@ -60,10 +61,16 @@ export default function AuthCallbackScreen() {
 
         if (!mounted) return;
 
+        if (type === "recovery") {
+          setMessage("Sesión de recuperación iniciada. Puedes crear una nueva contraseña.");
+          router.replace("/reset-password" as never);
+          return;
+        }
+
         setMessage("¡Correo confirmado correctamente!");
 
-        // NO navegamos manualmente.
-        // useAuth + AuthGate controlan el flujo de EYESITE.
+        // La confirmación normal queda bajo el control de AuthGate.
+        // En recuperación sí debemos abrir explícitamente la pantalla de cambio de contraseña.
       } catch (error: any) {
         console.error("[EYESITE] auth callback error:", error);
 

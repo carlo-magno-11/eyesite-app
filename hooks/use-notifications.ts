@@ -1,3 +1,4 @@
+import { AppState, type AppStateStatus } from "react-native";
 import { useCallback, useEffect, useState } from "react";
 import { Platform } from "react-native";
 import Constants from "expo-constants";
@@ -17,6 +18,7 @@ const isExpoGo = Constants.executionEnvironment === "storeClient";
 export function useNotifications(userId?: string) {
   const [items, setItems] = useState<NotificationItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (!userId) {
@@ -26,6 +28,7 @@ export function useNotifications(userId?: string) {
     }
 
     setLoading(true);
+    setErrorMessage(null);
 
     const { data, error } = await supabase
       .from("notificaciones")
@@ -36,8 +39,12 @@ export function useNotifications(userId?: string) {
       .order("created_at", { ascending: false })
       .limit(100);
 
-    if (!error) setItems(data ?? []);
-    else console.error("[EYESITE] notifications load error:", error);
+    if (!error) {
+      setItems(data ?? []);
+    } else {
+      console.error("[EYESITE] notifications load error:", error);
+      setErrorMessage(error.message || "No se pudieron cargar las notificaciones.");
+    }
 
     setLoading(false);
   }, [userId]);
@@ -55,10 +62,20 @@ export function useNotifications(userId?: string) {
         table: "notificaciones",
         filter: `user_id=eq.${userId}`,
       }, () => void load())
-      .subscribe();
+      .subscribe((status) => {
+        if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
+          void load();
+        }
+      });
+
+    const handleAppState = (nextState: AppStateStatus) => {
+      if (nextState === "active") void load();
+    };
+    const appStateSubscription = AppState.addEventListener("change", handleAppState);
 
     return () => {
       clearTimeout(timer);
+      appStateSubscription.remove();
       void supabase.removeChannel(channel);
     };
   }, [userId, load]);
@@ -90,6 +107,7 @@ export function useNotifications(userId?: string) {
     unread: items.filter(notification => !notification.leida).length,
     markRead,
     refetch: load,
+    error: errorMessage,
   };
 }
 
