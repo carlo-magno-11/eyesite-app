@@ -161,3 +161,12 @@ Se auditó el flujo de notificaciones en Web/iOS/Android. `app/notification-sett
 - El callback acepta enlaces con `code` y `token_hash`, elimina el riesgo de procesar repetidamente el mismo enlace durante la vida del componente y limpia el listener al desmontar.
 - CI: los commits recientes ya generan ejecuciones en GitHub Actions. En este momento las ejecuciones de los commits `5630557c...` y `fe05503d...` estaban en cola; no se deben considerar aprobadas hasta finalizar.
 - Pruebas físicas todavía necesarias: correo real en iOS/Android/Web, enlace universal/deep link, enlace ya usado, recuperación de contraseña, teclado iOS, sesión persistente, cambio pendiente→activa mientras la app permanece abierta y acceso directo a rutas protegidas.
+
+
+## Recuperación de contraseña — auditoría estricta 2026-09-25
+
+- Se verificó el flujo `forgot-password → auth/callback → reset-password`.
+- El formulario de recuperación ya devuelve un mensaje genérico para errores del proveedor, conservando un mensaje específico únicamente para rate limiting; no se muestran detalles internos de Supabase al usuario.
+- La nueva contraseña recuperada exige la misma política mínima del registro: 8 caracteres, una mayúscula y un número.
+- Se detectó durante la edición un cierre JSX incorrecto en `app/reset-password.tsx`; la modificación defectuosa fue retirada del historial activo mediante retorno controlado de la rama y se reaplicó solo el cambio seguro de política. El archivo actual debe pasar TypeScript/ESLint antes de considerarse cerrado.
+- No se considera suficiente revisar código: falta prueba real de enlace expirado/reutilizado, recuperación en iOS/Android/Web, sesión de recuperación, actualización efectiva y cierre posterior de la sesión.
