@@ -156,7 +156,7 @@ export default function NotificationsScreen() {
         <FlatList
           data={announcements}
           keyExtractor={(item) => item.id}
-          contentContainerStyle={s.l}
+          contentContainerStyle={[s.l, { paddingHorizontal: horizontalPadding, maxWidth: contentMaxWidth, width: "100%", alignSelf: "center" }]}
           ListEmptyComponent={
             <View style={s.e}>
               <Text style={s.i}>📢</Text>
