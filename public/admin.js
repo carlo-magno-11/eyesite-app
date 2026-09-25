@@ -29,6 +29,7 @@ let usuarios = [];
 
 let propiedadEditando = null;
 let pendienteViendo = null;
+let pendienteEditando = null;
 
 let nuevasImagenes = [];
 let nuevosArchivos = [];
@@ -1622,6 +1623,9 @@ async function verPropiedad(id) {
   if (deleteButton) {
     deleteButton.style.display = "inline-block";
   }
+
+  const editButton = document.getElementById("vedit");
+  if (editButton) editButton.style.display = String(p.estado || "").toLowerCase() === "pendiente" ? "inline-block" : "none";
 
   if (approveButton) {
     approveButton.style.display = "none";
@@ -3823,15 +3827,17 @@ function collectPropertyForm(mode, statusOverride = null) {
 
   estado = String(estado).toLowerCase().trim();
 
-  if (estado !== "activa" && estado !== "inactiva") {
+  if (mode === "pending") {
+    estado = "pendiente";
+  } else if (estado !== "activa" && estado !== "inactiva") {
     estado = "activa";
   }
 
   const tipo = valueOf(`${mode}_tipo`) || "terreno";
 
   const detalles =
-    mode === "edit" &&
-    propiedadEditando?.detalles &&
+    (mode === "edit" && propiedadEditando?.detalles) ||
+    (mode === "pending" && pendienteEditando?.detalles) &&
     typeof propiedadEditando.detalles === "object"
       ? {
           ...propiedadEditando.detalles,
@@ -3954,10 +3960,16 @@ function collectPropertyForm(mode, statusOverride = null) {
 
   data.construccion_m2 = readNumberField(`${mode}_construccion_m2`);
 
+  if (mode === "pending") {
+    delete data.estado;
+    delete data.activa;
+    delete data.status;
+  }
+
   return data;
 }
 
-function validateProperty(data) {
+function validateProperty(data, options = {}) {
   const estado = String(data.estado || "activa")
     .trim()
     .toLowerCase();
@@ -3968,6 +3980,14 @@ function validateProperty(data) {
    *
    * La validación completa solamente bloquea PUBLICAR / ACTIVAR.
    */
+  if (options.allowPending && options.mode === "pending") {
+    if (!data.titulo?.trim() || !data.tipo?.trim() || !data.municipio?.trim()) {
+      toast("Título, tipo y municipio son obligatorios.");
+      return false;
+    }
+    return true;
+  }
+
   if (estado !== "activa") {
     return true;
   }
@@ -4540,6 +4560,79 @@ async function saveEdit() {
       }
     },
   );
+}
+
+/* ============================================================
+   EDITAR SOLICITUD PENDIENTE — MISMO EDITOR QUE PROPIEDADES
+   ============================================================ */
+
+function editarPendiente(id) {
+  const p = pendientes.find((item) => String(item.id) === String(id));
+  if (!p) { toast("No se encontró la solicitud."); return; }
+  if (String(p.estado || "").toLowerCase() !== "pendiente") { toast("La solicitud ya no está pendiente."); return; }
+  pendienteEditando = p;
+  editImagenes = normalizeArray(p.imagenes || p.fotos || []).map((item) => typeof item === "string" ? item : ({ ...item, existing: true }));
+  editFotosPro = normalizeArray(p.fotos_pro || p.imagenes_pro || []).map((item) => typeof item === "string" ? item : ({ ...item, existing: true }));
+  editVideos = normalizeArray(p.videos || []).map((item) => typeof item === "string" ? item : ({ ...item, existing: true }));
+  editArchivos = normalizeArray(p.archivos || []).map((item) => typeof item === "string" ? item : ({ ...item, existing: true }));
+  editEnlaces = normalizeArray(p.enlaces || []);
+  editPdfs = normalizeArray(p.pdfs || []);
+  editKmzKml = normalizeArray(p.kmz_kml || []);
+  editPortadaVideo = p.portada_url || null;
+  const form = document.getElementById("ef");
+  if (!form) return;
+  form.innerHTML = propertyFormHTML(p, "pending");
+  bindPropertyForm("pending", p);
+  const title = document.querySelector("#emod .mt");
+  const subtitle = document.getElementById("emsub");
+  if (title) title.textContent = "EDITAR SOLICITUD PENDIENTE";
+  if (subtitle) subtitle.textContent = getPropTitle(p) + " · Los cambios seguirán PENDIENTES";
+  const button = document.getElementById("esb");
+  if (button) { button.textContent = "Guardar cambios sin publicar"; button.onclick = savePendingEdit; }
+  openMod("emod");
+}
+
+async function savePendingEdit() {
+  if (!pendienteEditando) { toast("No hay una solicitud seleccionada."); return; }
+  const btn = document.getElementById("esb");
+  if (btn?.disabled) return;
+  const data = collectPropertyForm("pending");
+  if (!validateProperty(data, { allowPending: true, mode: "pending" })) return;
+  confirmar("Guardar cambios de solicitud", "La solicitud seguirá PENDIENTE y no se publicará todavía.", async () => {
+    if (btn) btn.disabled = true;
+    try {
+      const requestId = pendienteEditando.id;
+      const base = "submissions/" + requestId + "/assets";
+      const images = await uploadCollection(editImagenes, BUCKET_IMAGES, base);
+      const fotosPro = await uploadCollection(editFotosPro, BUCKET_IMAGES, base + "/pro");
+      const videos = await uploadCollection(editVideos, BUCKET_IMAGES, base + "/videos");
+      const videoCover = editPortadaVideo instanceof File ? await uploadFile(BUCKET_IMAGES, editPortadaVideo, base + "/video-covers") : null;
+      const files = await uploadCollection(editArchivos, BUCKET_FILES, "submissions/" + requestId + "/files");
+      const payload = {
+        ...data,
+        fotos: images.map(x => typeof x === "string" ? x : x?.url).filter(Boolean),
+        imagenes: images,
+        fotos_pro: fotosPro.map(x => typeof x === "string" ? x : x?.url).filter(Boolean),
+        videos: videos.map(x => typeof x === "string" ? x : x?.url).filter(Boolean),
+        video_url: videos[0]?.url || videos[0] || pendienteEditando.video_url || null,
+        portada_url: videoCover?.url || (typeof editPortadaVideo === "string" ? editPortadaVideo : (pendienteEditando.portada_url || images[0]?.url || images[0] || null)),
+        tipo_portada: videoCover ? "video" : (pendienteEditando.tipo_portada || (videos.length ? "video" : (images.length ? "foto" : null))),
+        portada_tipo: videoCover ? "video" : (pendienteEditando.portada_tipo || (videos.length ? "video" : (images.length ? "foto" : null))),
+        archivos: files,
+        pdfs: [...new Set([...editPdfs, ...classifyPrivateFileItems(files).pdfs])],
+        kmz_kml: [...new Set([...editKmzKml, ...classifyPrivateFileItems(files).kmzKml])],
+        enlaces: editEnlaces,
+      };
+      const { error } = await s.rpc("admin_update_property_request", { p_request_id: requestId, p_payload: payload });
+      if (error) throw error;
+      toast("Solicitud actualizada. Sigue PENDIENTE.");
+      closeMod("emod");
+      pendienteEditando = null;
+      editImagenes=[]; editArchivos=[]; editEnlaces=[]; editFotosPro=[]; editVideos=[]; editPortadaVideo=null; editPdfs=[]; editKmzKml=[];
+      await cargarPendientes(); await cargarDashboard(); renderPendientes();
+    } catch (error) { console.error("[savePendingEdit]", error); toast(error?.message || "No se pudieron guardar los cambios de la solicitud."); }
+    finally { if (btn) btn.disabled = false; }
+  });
 }
 
 /* ============================================================
