@@ -153,6 +153,7 @@ export default function PropertyDetailScreen() {
   useEffect(() => {
     const imageUrls = mediaList
       .filter((item) => item.type === 'image')
+      .slice(0, 3)
       .map((item) => item.url)
       .filter(Boolean);
     if (imageUrls.length) {
