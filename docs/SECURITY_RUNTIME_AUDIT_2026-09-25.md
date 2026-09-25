@@ -82,3 +82,17 @@ Supabase documenta la protección contra contraseñas filtradas como una funció
 - No public `SECURITY DEFINER` function is executable by `anon`.
 - The public `SECURITY DEFINER` functions audited all contain an explicit `search_path` configuration; no missing `search_path` case was found in the runtime query.
 - This preserves the current model in which privileged database operations are reachable only through authenticated sessions and their internal authorization checks.
+
+
+## Privilegios de catálogo público y entregas — 25/09/2026
+
+Se volvió a auditar la separación entre permisos SQL y RLS. Se encontró que algunos roles de cliente conservaban privilegios de escritura/truncado/trigger/references aunque las políticas RLS impedían operaciones no autorizadas. Para reducir superficie de ataque se aplicó y versionó 20260925093000_harden_public_catalog_and_delivery_grants.sql.
+
+Resultado runtime:
+- propiedades_publicas: anon y authenticated conservan únicamente SELECT.
+- anuncios: anon y authenticated conservan únicamente SELECT; las mutaciones administrativas siguen el flujo protegido de administración/RPC.
+- anuncio_entregas: authenticated conserva únicamente SELECT; anon no tiene privilegios de tabla. Las escrituras del ledger quedan en workflows confiables de servidor.
+
+El Security Advisor sigue mostrando las cuatro tablas CRM con RLS sin políticas directas, pg_net en public, 26 funciones SECURITY DEFINER ejecutables por authenticated y protección de contraseñas filtradas desactivada. Estos avisos restantes requieren decisiones separadas porque cambiar cualquiera de ellos a ciegas puede romper el CRM, el scheduler o el flujo de Auth.
+
+La ejecución de CI asociada al nuevo commit aún no aparece en el conector de GitHub; por ello no se marca como aprobada hasta que exista un run verificable.
