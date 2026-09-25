@@ -38,6 +38,7 @@ export default function RegisterScreen() {
   const [loading, setLoading] = useState(false);
   const [legalAccepted, setLegalAccepted] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
+  const [confirmationEmail, setConfirmationEmail] = useState<string | null>(null);
 
   const signup = async () => {
     if (loading) return;
@@ -156,17 +157,7 @@ export default function RegisterScreen() {
 
       // Cuenta creada pero requiere confirmar correo
       if (data.user && !data.session) {
-        Alert.alert(
-          "Verifica tu correo",
-          `Te enviamos un enlace de confirmación a ${cleanEmail}. Revisa también la carpeta de spam.`,
-          [
-            {
-              text: "Ir al inicio de sesión",
-              onPress: () => router.replace("/(auth)/login" as never),
-            },
-          ],
-        );
-
+        setConfirmationEmail(cleanEmail);
         return;
       }
 
@@ -198,6 +189,28 @@ export default function RegisterScreen() {
 
   return (
     <AuthBackground>
+      {confirmationEmail ? (
+        <View style={styles.confirmationScreen}>
+          <View style={styles.confirmationCard}>
+            <Ionicons name="mail-outline" size={56} color="#C9A84C" />
+            <Text style={styles.confirmationTitle}>CONFIRMA TU CORREO</Text>
+            <Text style={styles.confirmationText}>Tu cuenta fue creada correctamente.</Text>
+            <Text style={styles.confirmationText}>Te enviamos un enlace de confirmación a:</Text>
+            <Text style={styles.confirmationEmail}>{confirmationEmail}</Text>
+            <Text style={styles.confirmationHint}>
+              Revisa tu bandeja de entrada y también Spam o Correo no deseado.
+              Debes confirmar tu correo antes de continuar.
+            </Text>
+            <TouchableOpacity
+              onPress={() => router.replace("/(auth)/login" as never)}
+              style={styles.button}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.buttonText}>IR A INICIAR SESIÓN</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      ) : (
       <KeyboardAvoidingView
         style={styles.keyboard}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
@@ -446,11 +459,59 @@ export default function RegisterScreen() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+      )}
     </AuthBackground>
   );
 }
 
 const styles = StyleSheet.create({
+  confirmationScreen: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 24,
+  },
+  confirmationCard: {
+    width: "100%",
+    maxWidth: 560,
+    backgroundColor: "#171717",
+    borderWidth: 1,
+    borderColor: "#C9A84C",
+    borderRadius: 16,
+    padding: 28,
+    alignItems: "center",
+  },
+  confirmationTitle: {
+    color: "#C9A84C",
+    fontSize: 24,
+    fontWeight: "900",
+    letterSpacing: 1,
+    marginTop: 16,
+    marginBottom: 12,
+    textAlign: "center",
+  },
+  confirmationText: {
+    color: "#E5E5E5",
+    fontSize: 15,
+    lineHeight: 22,
+    textAlign: "center",
+  },
+  confirmationEmail: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontWeight: "800",
+    marginTop: 8,
+    marginBottom: 16,
+    textAlign: "center",
+  },
+  confirmationHint: {
+    color: "#AFAFAF",
+    fontSize: 13,
+    lineHeight: 20,
+    textAlign: "center",
+    marginBottom: 22,
+  },
+
   keyboard: {
     flex: 1,
   },
