@@ -8,6 +8,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useNotifications } from '@/hooks/use-notifications';
 import { useResponsive } from '@/hooks/use-responsive';
 import { Ionicons } from '@expo/vector-icons';
+import { rankPropertyMatches } from '@/lib/commercial';
 
 const CATEGORIES = [
   { key: 'terreno', label: 'Terrenos', icon: '🌿' },
@@ -19,7 +20,7 @@ const CATEGORIES = [
 
 export default function HomeScreen() {
   const { properties, loading } = useProperties();
-  const { user, session } = useAuth();
+  const { user, session, profile } = useAuth();
   const { unread } = useNotifications(user?.id);
   const { horizontalPadding, contentMaxWidth, isDesktop, isLargeDesktop, propertyColumns } = useResponsive();
   const featuredProperties = properties.filter((p) => p.featured || p.destacada);
@@ -29,6 +30,19 @@ export default function HomeScreen() {
     featuredProperties.length > 0
       ? featuredProperties
       : properties.slice(0, 6);
+
+  const budgetNumber = Number(String(profile?.presupuesto ?? '').replace(/[^0-9.]/g, '')) || 0;
+  const recommendedProperties = budgetNumber > 0 || profile?.ciudad
+    ? rankPropertyMatches(
+        properties,
+        {
+          minPrice: budgetNumber > 0 ? budgetNumber * 0.8 : null,
+          maxPrice: budgetNumber > 0 ? budgetNumber * 1.2 : null,
+          municipio: profile?.ciudad ?? null,
+        },
+        profile?.ciudad || budgetNumber > 0 ? 50 : 101,
+      ).slice(0, 3)
+    : [];
 
   const handleCategoryPress = (key: string) => {
     router.push({ pathname: '/(tabs)/properties', params: { filter: key } } as any);
@@ -109,6 +123,40 @@ export default function HomeScreen() {
             ))}
           </ScrollView>
         </View>
+
+        {/* Recomendaciones comerciales */}
+        {session && recommendedProperties.length > 0 ? (
+          <View style={[styles.section, { paddingHorizontal: horizontalPadding, maxWidth: contentMaxWidth }, isDesktop && styles.centeredContent]}>
+            <View style={styles.sectionHeader}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.sectionTitle}>PARA TI</Text>
+                <Text style={styles.recommendationHint}>Basado en tu presupuesto y zona.</Text>
+              </View>
+              <Pressable onPress={() => router.push('/saved-searches' as never)}>
+                <Text style={styles.viewAllLink}>Mis búsquedas →</Text>
+              </Pressable>
+            </View>
+            <View style={[styles.propertiesGrid, propertyColumns > 1 && styles.propertiesGridRow]}>
+              {recommendedProperties.map((property) => (
+                <View
+                  key={property.id}
+                  style={[
+                    styles.propertyGridItem,
+                    propertyColumns > 1 && styles.propertyGridItemMulti,
+                    propertyColumns === 2 && styles.propertyGridItemTwo,
+                    propertyColumns === 3 && styles.propertyGridItemThree,
+                    propertyColumns === 4 && styles.propertyGridItemFour,
+                  ]}
+                >
+                  <View style={styles.matchBadge}>
+                    <Text style={styles.matchBadgeText}>{property.matchScore}% COMPATIBLE</Text>
+                  </View>
+                  <PropertyCard property={property} />
+                </View>
+              ))}
+            </View>
+          </View>
+        ) : null}
 
         {/* Oportunidades Destacadas */}
         <View style={[styles.section, { paddingHorizontal: horizontalPadding, maxWidth: contentMaxWidth }, isDesktop && styles.centeredContent]}>
@@ -265,6 +313,27 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 16,
+  },
+  recommendationHint: {
+    color: '#777',
+    fontSize: 11,
+    marginTop: 4,
+  },
+  matchBadge: {
+    position: 'absolute',
+    zIndex: 2,
+    top: 8,
+    left: 8,
+    backgroundColor: '#C9A84C',
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  matchBadgeText: {
+    color: '#0D0D0D',
+    fontSize: 9,
+    fontWeight: '900',
+    letterSpacing: 0.4,
   },
   sectionTitle: {
     fontSize: 16,
