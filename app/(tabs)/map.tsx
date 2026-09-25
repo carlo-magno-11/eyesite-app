@@ -510,14 +510,11 @@ export default function MapScreen() {
     [nearby],
   );
 
-  // Web needs a real viewport-sized map because the page also contains a
-  // header, hint and a short list below it. The previous 620px minimum made
-  // the map too tall on laptops and smaller browser windows, pushing the
-  // rest of the screen below the fold. Keep native layout untouched and make
-  // the Web map proportional to the available viewport.
+  // Web: keep the map responsive across laptops, tablets and split-screen.
+  // The map shares the page with a header and a short result list.
   const webMapHeight = Math.max(
-    520,
-    Math.min(windowHeight * 0.68, 760),
+    420,
+    Math.min(windowHeight * 0.62, 680),
   );
 
   const handleMapMessage = useCallback(
