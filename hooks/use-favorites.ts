@@ -49,7 +49,9 @@ export function useFavorites() {
         }
       })();
 
-      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      if (process.env.EXPO_OS !== 'web') {
+        await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      }
     } catch (e: any) {
       console.warn('[favorites] toggle:', e?.message || e);
       await load();
