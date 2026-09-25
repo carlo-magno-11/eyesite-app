@@ -1910,22 +1910,11 @@ async function editarPropiedad(id) {
     };
   });
 
-  editArchivos = normalizeArray([...(p.archivos || p.files || p.documentos || []), ...(p.pdfs || []), ...(p.kmz_kml || [])]).map(
-    (item) => {
-      if (typeof item === "string") {
-        return {
-          url: item,
-          name: item,
-          existing: true,
-        };
-      }
-
-      return {
-        ...item,
-        existing: true,
-      };
-    },
-  );
+  editArchivos = preserveExistingFileItems([
+    ...(Array.isArray(p.archivos) ? p.archivos : []),
+    ...(Array.isArray(p.pdfs) ? p.pdfs : []),
+    ...(Array.isArray(p.kmz_kml) ? p.kmz_kml : []),
+  ]);
 
   editEnlaces = normalizeArray(p.enlaces || p.links);
   editPdfs = normalizeArray(p.pdfs || []);
@@ -3793,6 +3782,27 @@ async function uploadCollection(list, bucket, folder, progressCallback) {
   return output;
 }
 
+function preserveExistingFileItems(value) {
+  const list = Array.isArray(value) ? value : value ? [value] : [];
+  return list
+    .map((item) => {
+      if (typeof item === "string") {
+        const url = item.trim();
+        return url ? { url, name: url.split("/").pop() || url, existing: true } : null;
+      }
+      if (item && typeof item === "object") {
+        const copy = { ...item };
+        const valueRef = copy.url || copy.path || copy.filePath || copy.storagePath || copy.publicUrl || copy.public_url;
+        if (!valueRef) return null;
+        if (!copy.url) copy.url = valueRef;
+        copy.existing = true;
+        return copy;
+      }
+      return null;
+    })
+    .filter(Boolean);
+}
+
 function classifyPrivateFileItems(items) {
   const pdfs = [];
   const kmzKml = [];
@@ -4593,13 +4603,13 @@ function editarPendiente(id) {
   if (!p) { toast("No se encontró la solicitud."); return; }
   if (String(p.estado || "").toLowerCase() !== "pendiente") { toast("La solicitud ya no está pendiente."); return; }
   pendienteEditando = p;
-  editImagenes = normalizeArray(p.imagenes || p.fotos || []).map((item) => typeof item === "string" ? item : ({ ...item, existing: true }));
-  editFotosPro = normalizeArray(p.fotos_pro || p.imagenes_pro || []).map((item) => typeof item === "string" ? item : ({ ...item, existing: true }));
-  editVideos = normalizeArray(p.videos || []).map((item) => typeof item === "string" ? item : ({ ...item, existing: true }));
-  editArchivos = normalizeArray(p.archivos || []).map((item) => typeof item === "string" ? item : ({ ...item, existing: true }));
-  editEnlaces = normalizeArray(p.enlaces || []);
-  editPdfs = normalizeArray(p.pdfs || []);
-  editKmzKml = normalizeArray(p.kmz_kml || []);
+  editImagenes = preserveExistingFileItems(p.imagenes || p.fotos || []);
+  editFotosPro = preserveExistingFileItems(p.fotos_pro || p.imagenes_pro || []);
+  editVideos = preserveExistingFileItems(p.videos || []);
+  editArchivos = preserveExistingFileItems(p.archivos || []);
+  editEnlaces = Array.isArray(p.enlaces) ? [...p.enlaces] : [];
+  editPdfs = Array.isArray(p.pdfs) ? [...p.pdfs] : [];
+  editKmzKml = Array.isArray(p.kmz_kml) ? [...p.kmz_kml] : [];
   editPortadaVideo = p.portada_url || null;
   const form = document.getElementById("ef");
   if (!form) return;
