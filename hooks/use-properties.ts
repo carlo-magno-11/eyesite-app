@@ -407,8 +407,8 @@ export function useProperties(options?: PropertyCatalogOptions) {
   const [hasMore, setHasMore] = useState(false);
 
   const isCatalogMode = Boolean(options);
-  const search = options?.search?.trim() ?? '';
-  const municipio = options?.municipio?.trim() ?? '';
+  const search = (options?.search?.trim() ?? '').replace(/[^a-zA-Z0-9ÁÉÍÓÚáéíóúÑñüÜ\\s.-]/g, ' ');
+  const municipio = (options?.municipio?.trim() ?? '').replace(/[%_,]/g, ' ');
   const minPrice = normalizeCatalogNumber(options?.minPrice);
   const maxPrice = normalizeCatalogNumber(options?.maxPrice);
   const minSurface = normalizeCatalogNumber(options?.minSurface);
