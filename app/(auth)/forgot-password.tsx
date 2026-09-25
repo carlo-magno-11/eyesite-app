@@ -29,7 +29,8 @@ export default function ForgotPasswordScreen() {
         if (/rate limit|too many|hourly/i.test(error.message)) {
           throw new Error("Se alcanzó el límite de envíos. Espera unos minutos e inténtalo nuevamente.");
         }
-        throw error;
+        // Do not surface provider details that could reveal account state or internals.
+        throw new Error("No pudimos procesar la solicitud. Si la cuenta existe, recibirás un enlace.");
       }
 
       Alert.alert(
