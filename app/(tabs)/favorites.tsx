@@ -8,6 +8,15 @@ import { supabase } from '@/lib/supabase';
 import { useResponsive } from '@/hooks/use-responsive';
 import type { Property } from '@/lib/properties-data';
 
+const FAVORITES_FIELDS = [
+  'id','codigo','titulo','tipo','municipio','ubicacion','direccion',
+  'superficie','unidad_superficie','precio_actual','precio_mercado',
+  'precio','precio_esperado','unidad_precio','rendimiento','moneda',
+  'destacada','fotos','portada_url','portada_tipo','tipo_portada',
+  'video_url','activa','estado','orden','created_at','updated_at',
+  'latitud','longitud',
+].join(',');
+
 export default function FavoritesScreen() {
   const { favs } = useFavorites();
   const [favoriteProperties, setFavoriteProperties] = useState<Property[]>([]);
@@ -23,7 +32,7 @@ export default function FavoritesScreen() {
     setLoading(true);
     const { data, error } = await supabase
       .from('propiedades_publicas')
-      .select('*')
+      .select(FAVORITES_FIELDS)
       .eq('estado', 'activa')
       .in('id', favs);
     if (error) {
