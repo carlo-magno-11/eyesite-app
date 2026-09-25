@@ -475,11 +475,13 @@ export function useProperties(options?: PropertyCatalogOptions) {
         setHasMore(hasNextPage);
         setError(null);
       } catch (e) {
+        if (requestId !== requestGeneration.current) return;
         const message = e instanceof Error ? e.message : 'Error desconocido';
         console.error('❌ EYESITE propiedades:', message);
         setError(message);
         if (!append) setProperties([]);
       } finally {
+        if (requestId !== requestGeneration.current) return;
         if (append) setLoadingMore(false);
         else setLoading(false);
       }
