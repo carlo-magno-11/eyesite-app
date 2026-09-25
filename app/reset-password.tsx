@@ -29,6 +29,13 @@ export default function ResetPasswordScreen() {
       const { error } = await supabase.auth.updateUser({ password });
       if (error) throw error;
 
+      // Recovery creates a valid Supabase session. End that recovery session
+      // before returning to login so a completed reset cannot bypass the
+      // normal email/profile/approval gates through an already-authenticated
+      // client session.
+      const { error: signOutError } = await supabase.auth.signOut();
+      if (signOutError) throw signOutError;
+
       Alert.alert("Contraseña actualizada", "Tu contraseña fue cambiada correctamente.", [
         { text: "Continuar", onPress: () => router.replace("/(auth)/login" as never) },
       ]);
