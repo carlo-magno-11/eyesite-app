@@ -96,3 +96,10 @@ Resultado runtime:
 El Security Advisor sigue mostrando las cuatro tablas CRM con RLS sin políticas directas, pg_net en public, 26 funciones SECURITY DEFINER ejecutables por authenticated y protección de contraseñas filtradas desactivada. Estos avisos restantes requieren decisiones separadas porque cambiar cualquiera de ellos a ciegas puede romper el CRM, el scheduler o el flujo de Auth.
 
 La ejecución de CI asociada al nuevo commit aún no aparece en el conector de GitHub; por ello no se marca como aprobada hasta que exista un run verificable.
+
+
+## Storage legacy follow-up
+
+Runtime inventory confirms que `fotos-propiedades` is the only legacy bucket in the reviewed set with objects: 42 objects (~3.69 MB). The other reviewed legacy buckets currently have zero objects. One active property still references a legacy `fotos-propiedades` video URL, so that bucket cannot be privatized safely until the object is migrated and the property reference is updated.
+
+The bucket `public` flag is owned by Supabase Storage and cannot be changed from the project SQL role used here (`must be owner of table buckets`). No partial storage-policy change was left behind by the failed attempt. The safe next operation is through Supabase Storage/Dashboard/API after confirming consumers; no legacy bucket was made inaccessible blindly.
