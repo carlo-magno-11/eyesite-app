@@ -503,7 +503,7 @@ export default function MapScreen() {
   // On web, flex: 1 competes with the header, radius controls and results list,
   // which can leave the WebView visually short. Give the map an explicit,
   // responsive viewport height on desktop/web while keeping native behavior unchanged.
-  const webMapHeight = Math.max(520, Math.min(windowHeight * 0.68, 760));
+  const webMapHeight = Math.max(620, Math.min(windowHeight * 0.78, 820));
 
   const handleMapMessage = useCallback(
     (rawData: string) => {
@@ -558,7 +558,12 @@ export default function MapScreen() {
         </Text>
       </View>
 
-      <View style={styles.mapWrap}>
+      <View
+        style={[
+          styles.mapWrap,
+          Platform.OS === "web" && { height: webMapHeight },
+        ]}
+      >
         <>
           <LeafletMap
             html={mapHtml}
