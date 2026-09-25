@@ -557,8 +557,8 @@ export default function MapScreen() {
   }, [geoProperties, userLocation]);
 
   const mapHtml = useMemo(
-    () => createMapHtml(nearby, DEFAULT_REGION),
-    [nearby],
+    () => createMapHtml(nearby, userLocation ? { ...DEFAULT_REGION, latitude: userLocation.latitude, longitude: userLocation.longitude } : DEFAULT_REGION),
+    [nearby, userLocation],
   );
 
   // Web: keep the map responsive across laptops, tablets and split-screen.
