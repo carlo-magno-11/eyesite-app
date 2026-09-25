@@ -1,12 +1,12 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useEffect, useRef } from "react";
+import { useEffect, useState } from "react";
 import { Animated, Easing, StyleSheet, Text, View } from "react-native";
 
 export default function EyesiteLaunchSplash() {
-  const pulse = useRef(new Animated.Value(0.88)).current;
-  const glow = useRef(new Animated.Value(0)).current;
-  const logoY = useRef(new Animated.Value(18)).current;
-  const textOpacity = useRef(new Animated.Value(0)).current;
+  const [pulse] = useState(() => new Animated.Value(0.88));
+  const [glow] = useState(() => new Animated.Value(0));
+  const [logoY] = useState(() => new Animated.Value(18));
+  const [textOpacity] = useState(() => new Animated.Value(0));
 
   useEffect(() => {
     const loop = Animated.loop(
