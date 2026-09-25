@@ -257,9 +257,9 @@ export default function CreateProfileScreen() {
 
           <View style={styles.footer}>
             <Text style={styles.footerText}>
-              Tu cuenta permanecerá bajo revisión antes de ser
-              activada.
+              Tu cuenta permanecerá bajo revisión antes de ser activada.
             </Text>
+          </View>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
