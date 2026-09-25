@@ -301,9 +301,6 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     textAlign: 'center',
   },
-  propertiesGrid: {
-    width: '100%',
-  },
   propertiesGridRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
