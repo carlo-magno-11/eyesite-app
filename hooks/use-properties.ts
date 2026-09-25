@@ -532,7 +532,7 @@ export function useProperties(options?: PropertyCatalogOptions) {
         if (refreshTimer) clearTimeout(refreshTimer);
         void supabase.removeChannel(channel);
       };
-    }, []),
+    }, [fetchPropertiesRef]),
   );
 
   return {
