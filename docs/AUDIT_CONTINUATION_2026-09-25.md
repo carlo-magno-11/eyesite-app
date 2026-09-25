@@ -141,3 +141,10 @@ Se auditó el flujo de notificaciones en Web/iOS/Android. `app/notification-sett
 - `app/(auth)/register.tsx`: la contraseña pasa a requerir 8 caracteres, una mayúscula y un número; se añadió guía visual en tiempo real de seguridad 0/3 a 3/3. La aceptación de términos continúa siendo obligatoria antes de enviar el registro.
 - La mejora es solo de experiencia/validación del cliente; la autoridad real de acceso continúa en Supabase/Auth/RLS y en el flujo de aprobación existente.
 - Pendiente de prueba física: arranque iOS/Android/Web, teclado iOS, creación real de cuenta, confirmación de correo y flujo posterior de perfil/aprobación.
+
+
+## Perfil responsive — continuación 2026-09-25
+
+- `app/(auth)/create-profile.tsx` ahora usa `useResponsive()` para padding horizontal y ancho máximo en escritorio, evitando que el formulario se estire excesivamente en Web/tablet.
+- El teclado iOS conserva `KeyboardAvoidingView` con comportamiento `padding`; los campos siguen usando controles nativos compatibles con Android/Web.
+- Se mantuvo el `upsert` de `profiles` limitado al usuario autenticado y no se modificaron rol/estado desde el cliente.
