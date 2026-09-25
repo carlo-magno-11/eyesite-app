@@ -62,7 +62,8 @@ function AuthGate({ children }: { children: React.ReactNode }) {
     // require an account. Account-only actions (favorites, publishing,
     // profile, notifications, requests, etc.) still remain behind AuthGate.
     const inPublicContent =
-      segmentList[0] === "(tabs)" ||
+      (segmentList[0] === "(tabs)" &&
+        ["index", "properties", "map", "contact"].includes(segmentList[1] ?? "")) ||
       segmentList[0] === "property" ||
       segmentList[0] === "about" ||
       segmentList[0] === "privacy";
