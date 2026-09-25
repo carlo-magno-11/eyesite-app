@@ -74,4 +74,4 @@ La ruta nueva de EYESITE ya separa `eyesite-media` público para media publicada
 
 ## Password security
 
-Supabase documenta la protección contra contraseñas filtradas como una función de Auth/Attack Protection; actualmente no está disponible en el plan Free y sí aparece en planes de pago. No se simulará con SQL ni se añadirá lógica propia que pueda crear una falsa sensación de protección. citeturn0search1turn0search3
+Supabase documenta la protección contra contraseñas filtradas como una función de Auth/Attack Protection; actualmente no está disponible en el plan Free y sí aparece en planes de pago. No se simulará con SQL ni se añadirá lógica propia que pueda crear una falsa sensación de protección.
