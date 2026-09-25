@@ -252,3 +252,28 @@ Se encontró un segundo límite real en `send-notification`: el endpoint permit�
 - la Edge Function quedó desplegada como versión 8, con JWT obligatorio.
 
 Esto evita que un envío administrativo de 101–500 usuarios falle por exceder el límite de Expo y mantiene compatibilidad iOS/Android mediante el mismo Expo Push Service.
+
+
+## Escalabilidad — mapa geográfico 2026-09-25
+
+Se corrigió el siguiente cuello de botella detectado en la auditoría: el mapa reutilizaba `useProperties()` y por tanto descargaba todas las propiedades públicas activas, aunque el usuario solo necesitara las de su zona.
+
+Se implementó:
+- RPC `get_public_map_properties(lat, lon, radius, limit)` como `SECURITY INVOKER`.
+- La consulta sigue partiendo exclusivamente de `propiedades_publicas`.
+- Filtro geográfico en PostgreSQL mediante bounding box + distancia Haversine.
+- Respuesta limitada a campos ligeros necesarios para los marcadores.
+- Límite defensivo de 500 resultados.
+- Índice parcial `idx_propiedades_publicas_map_coords` sobre coordenadas de propiedades activas.
+- En móvil, tras obtener ubicación, el mapa consulta un radio de 100 km.
+- Sin ubicación, usa 250 km alrededor de Mérida como zona inicial.
+- En Web, el usuario puede activar geolocalización con el botón y entonces se cambia al radio cercano.
+- El centro visual del mapa ahora acompaña la ubicación del usuario cuando está disponible.
+
+Esto reduce transferencia, memoria y render del mapa a medida que crece el catálogo, sin Google Cloud y sin exponer la tabla privada `propiedades`.
+
+Validación de producción:
+- RPC ejecutado directamente con el centro de Mérida y radio de 250 km.
+- Devuelve únicamente propiedades activas con coordenadas válidas.
+- Actualmente encontró 3 propiedades ubicadas en esa zona.
+- La migración versionada corresponde a `supabase/migrations/20260925210000_scale_public_map_queries.sql`.
