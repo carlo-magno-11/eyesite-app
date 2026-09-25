@@ -112,7 +112,7 @@ export default function PropertiesScreen() {
                 max_price: null,
                 min_surface: null,
                 max_surface: null,
-                municipio: search.trim() || null,
+                municipio: null,
                 tipo: activeFilter === 'all' ? null : activeFilter,
                 objetivo: null,
                 plazo_compra: null,
