@@ -622,7 +622,7 @@ export default function PropertyDetailScreen() {
           {privateDocumentPaths.length > 0 ? (
             <View style={styles.dataSection}>
               <Text style={styles.sectionTitle}>DOCUMENTOS</Text>
-              {Object.entries(signedDocuments).map(([path, url]) => {
+              {privateDocumentPaths.map((path) => {
                 const name = path.split('/').pop() || 'Documento';
                 const lower = name.toLowerCase();
                 const type = lower.endsWith('.pdf') ? 'PDF' : (lower.endsWith('.kmz') || lower.endsWith('.kml')) ? 'MAPA' : 'ARCHIVO';
