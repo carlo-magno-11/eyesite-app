@@ -1571,6 +1571,13 @@ async function renderPendientes() {
               </button>
 
               <button
+                class="bs be2"
+                onclick="editarPendiente('${esc(p.id)}')"
+              >
+                ✏️ Editar
+              </button>
+
+              <button
                 class="bs bap2"
                 onclick="aprobarDirecto('${esc(p.id)}')"
               >
@@ -1625,7 +1632,7 @@ async function verPropiedad(id) {
   }
 
   const editButton = document.getElementById("vedit");
-  if (editButton) editButton.style.display = String(p.estado || "").toLowerCase() === "pendiente" ? "inline-block" : "none";
+  if (editButton) editButton.style.display = "none";
 
   if (approveButton) {
     approveButton.style.display = "none";
