@@ -287,3 +287,5 @@ Validación de producción:
 - La pantalla de propiedades conserva búsqueda, filtros, favoritos, búsquedas guardadas y Realtime; el detalle continúa consultando la vista pública completa mediante `useProperty`.
 - El mapa Web ahora ajusta su altura por clase de viewport: teléfono, tablet y escritorio tienen límites distintos para evitar mapas demasiado pequeños o excesivamente altos. El iframe Leaflet sigue ocupando todo el contenedor y conserva `invalidateSize()` al redimensionar.
 - No se añadió Google Maps ni Google Cloud; el mapa continúa con Leaflet/OpenStreetMap.
+
+- Runtime: se verificó que `propiedades_publicas` es una tabla-cache pública y se añadieron índices parciales para catálogo por `created_at`, `tipo`, `precio_actual` y `superficie`, limitados a propiedades activas. La migración quedó registrada en Supabase con versión `20260925202402` y el archivo del repositorio fue alineado a esa versión.
