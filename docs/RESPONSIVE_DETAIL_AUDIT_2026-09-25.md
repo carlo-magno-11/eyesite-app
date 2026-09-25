@@ -23,3 +23,12 @@ Esto permite que el layout se adapte al ancho disponible conservando separación
 ## Pendiente de validación física
 Probar detalle en:
 375, 430, 768, 1024, 1280, 1440 y 1920 px, además de iPhone y Android reales.
+
+
+## 2026-09-25 — Galería responsive
+
+Se detectó que la galería del detalle mantenía 320 px de alto tanto en teléfonos como en pantallas grandes. Se sustituyó por una altura calculada a partir del ancho disponible, con límites para evitar galerías excesivamente pequeñas o grandes. La portada y el slide de vídeo comparten la misma altura calculada.
+
+Commit: `f49cda371b44b59cf3d065c78cdf9689eeade390`.
+
+Esto mantiene la experiencia nativa y Web en el mismo componente y evita que el detalle quede desproporcionado en escritorio.
