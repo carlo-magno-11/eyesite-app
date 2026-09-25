@@ -84,3 +84,7 @@ No se considera EYESITE listo para merge a `main` ni para binario final hasta co
 - pruebas de publicación/moderación.
 - pruebas de almacenamiento público/privado.
 - pruebas de notificaciones y anuncios.
+
+## Seguimiento de anuncios
+
+La tabla `anuncio_entregas` tiene una restricción única por anuncio y usuario y el scheduler usa `upsert(..., ignoreDuplicates)`. Esto evita duplicar filas, pero el panel todavía llama directamente a `send-notification` para anuncios inmediatos. Antes del cierre final se debe unificar el propietario del envío push para garantizar que un anuncio no se entregue dos veces.
