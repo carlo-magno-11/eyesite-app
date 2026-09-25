@@ -21,7 +21,7 @@ Sentry.init({
   release: `eyesite@${Constants.expoConfig?.version ?? "unknown"}`,
 });
 
-const queryClient = new QueryClient({
+// Expo can return the same last notification response whenever RootLayout dependencies change.\n// Keep response IDs process-wide so deep links/analytics are handled once.\nconst handledNotificationResponseIds = new Set<string>();\n\nconst queryClient = new QueryClient({
   defaultOptions: { queries: { retry: 1, staleTime: 1000 * 60 } },
 });
 
@@ -49,9 +49,9 @@ function AuthGate({ children }: { children: React.ReactNode }) {
     const inTerms = segmentList[0] === "terms";
     const inPending = segmentList[0] === "pending";
     const inDenied = segmentList[0] === "denied";
-    const inVerifyEmail = segmentList[0] === "verify-email";
+    const inVerifyEmail = segmentList[0] === "verify-email";\n    const inResetPassword = segmentList[0] === "reset-password";
     const inCreateProfile = segmentList[0] === "(auth)" && segmentList[1] === "create-profile";
-    const isProtected = !inAuth && !inTerms && !inPending && !inDenied && !inVerifyEmail && !inCreateProfile;
+    const isProtected = !inAuth && !inTerms && !inPending && !inDenied && !inVerifyEmail && !inCreateProfile && !inResetPassword;
     const emailConfirmed = !!session?.user?.email_confirmed_at;
 
     if (!session && isProtected && current !== "(auth)/login") {
@@ -137,7 +137,7 @@ export default Sentry.wrap(function RootLayout() {
         return;
       }
 
-      const data = (response?.notification?.request?.content?.data ?? {}) as Record<string, unknown>;
+      const responseId = response?.notification?.request?.identifier;\n      if (typeof responseId === "string" && handledNotificationResponseIds.has(responseId)) {\n        return;\n      }\n      if (typeof responseId === "string") {\n        handledNotificationResponseIds.add(responseId);\n      }\n\n      const data = (response?.notification?.request?.content?.data ?? {}) as Record<string, unknown>;
       const propertyId = typeof data.property_id === "string" ? data.property_id : null;
       const announcementId = typeof data.announcement_id === "string" ? data.announcement_id : null;
 
