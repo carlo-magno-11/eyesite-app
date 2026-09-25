@@ -170,3 +170,28 @@ Se auditó el flujo de notificaciones en Web/iOS/Android. `app/notification-sett
 - La nueva contraseña recuperada exige la misma política mínima del registro: 8 caracteres, una mayúscula y un número.
 - Se detectó durante la edición un cierre JSX incorrecto en `app/reset-password.tsx`; la modificación defectuosa fue retirada del historial activo mediante retorno controlado de la rama y se reaplicó solo el cambio seguro de política. El archivo actual debe pasar TypeScript/ESLint antes de considerarse cerrado.
 - No se considera suficiente revisar código: falta prueba real de enlace expirado/reutilizado, recuperación en iOS/Android/Web, sesión de recuperación, actualización efectiva y cierre posterior de la sesión.
+
+
+## Auditoría estricta — notificaciones, favoritos, push y navegación — 2026-09-25
+
+Se revisó el circuito completo de centro de notificaciones, preferencias, Realtime, favoritos, analítica comercial y apertura de propiedades desde una notificación.
+
+### Hallazgos y corrección aplicada
+
+- hooks/use-notifications.ts mantiene la carga de notificaciones con filtro por user_id, exige sesión cuyo UUID coincide con el usuario solicitado y usa RLS para el acceso real.
+- marcar_notificacion_leida y marcar_todas_notificaciones_leidas se verificaron en producción: ambas exigen usuario activo y actualizan exclusivamente filas pertenecientes a auth.uid().
+- registrar_anuncio_evento se verificó en producción: exige usuario activo, acepta solo opened o clicked y registra la entrega únicamente para auth.uid().
+- Al abrir una notificación con property_id, la navegación puede recibir un UUID arbitrario, pero la pantalla de detalle no confía en él: vuelve a consultar exclusivamente propiedades_publicas con estado='activa'. Una propiedad retirada, inexistente o no publicada termina en “Propiedad no encontrada” y no expone propiedades directa.
+- Los favoritos tienen RLS de producción select/insert/delete own y requieren private.is_active_user(). La mutación incluye user_id=auth.uid() en las operaciones de cliente; el CRM solo recibe eventos a través de track_property_event y valida que la propiedad siga pública/activa.
+- Se detectó una mejora de defensa en profundidad en registerPushToken(): anteriormente el userId recibido por el llamador también se utilizaba directamente para seleccionar el perfil a actualizar. Aunque RLS ya limitaba el cambio, ahora la función primero obtiene la sesión actual y exige coincidencia exacta entre session.user.id y el identificador de ciclo de vida antes de guardar el token. El UPDATE final usa el UUID obtenido de la sesión, no uno impuesto externamente.
+- Commit de la corrección: 9752aaebbc144e3ba45274d1855a11ae37dd7e59.
+
+### Compatibilidad de plataforma
+
+- Web no intenta registrar push remoto; conserva el centro de notificaciones in-app y Realtime.
+- iOS/Android usan expo-notifications solo fuera de Web/Expo Go; Android crea el canal default.
+- El listener global de respuestas push se crea una sola vez en el layout raíz y se elimina al desmontar. Se evita registrar el listener nativo en Web.
+
+### Estado
+
+La corrección de identidad del token push quedó aplicada en la rama aislada. El commit no mostró todavía una ejecución de GitHub Actions asociada al SHA al momento de esta auditoría, por lo que CI de este cambio queda pendiente de confirmación. No se modifica main ni se considera este bloque físicamente validado hasta ejecutar build/lint/TypeScript y pruebas reales de push en iOS/Android.
