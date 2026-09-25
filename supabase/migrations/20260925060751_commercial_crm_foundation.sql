@@ -1,6 +1,6 @@
 -- EYESITE Commercial CRM foundation
--- Draft for feature/eyesite-commercial-crm.
--- IMPORTANT: this file is intentionally not applied to production yet.
+-- Production migration for feature/eyesite-commercial-crm.
+-- Applied to the EYESITE production Supabase project after transactional validation.
 -- It adds telemetry, saved searches, prospect CRM relations, and admin RPCs.
 
 create extension if not exists pgcrypto;
