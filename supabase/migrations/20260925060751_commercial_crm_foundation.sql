@@ -143,6 +143,7 @@ revoke all on table public.prospectos from anon, authenticated;
 revoke all on table public.prospecto_propiedades from anon, authenticated;
 revoke all on table public.prospecto_actividades from anon, authenticated;
 
+revoke all on table public.saved_searches from anon, authenticated;
 grant select, insert, update, delete on table public.saved_searches to authenticated;
 
 drop policy if exists saved_searches_select_own on public.saved_searches;
