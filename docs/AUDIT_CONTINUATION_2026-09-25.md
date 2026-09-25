@@ -341,3 +341,12 @@ Validación GitHub:
 - Se detectó un problema de escala en Favoritos: la pantalla reutilizaba `useProperties()` sin modo catálogo y, después de introducir paginación, solo podía recibir la primera página del catálogo. Ahora Favoritos consulta directamente los IDs guardados contra `propiedades_publicas`, respeta el orden de favoritos y no queda limitado a 24 propiedades.
 - Las consultas continúan usando `propiedades_publicas`; no se abrió acceso directo a `propiedades`.
 - Los cambios están aislados en `fix/eyesite-platform-security-20260925`. CI de estos últimos commits debe verificarse antes de marcar esta etapa como cerrada.
+
+
+## 2026-09-25 — Estabilización del canal Realtime del catálogo
+
+- Se revisó el patrón de `useFocusEffect` en `hooks/use-properties.ts` y se detectó una optimización clara: el canal `propiedades_cambios` se desmontaba y recreaba cada vez que cambiaban búsqueda, filtros o paginación, porque el efecto dependía de la identidad de `fetchProperties`.
+- Se añadió una referencia estable (`fetchPropertiesRef`) que siempre apunta a la consulta más reciente. El canal Realtime ahora permanece estable mientras la pantalla sigue enfocada y solo se elimina al salir de ella.
+- Los eventos Realtime siguen usando el debounce de 500 ms y ahora invocan la función de consulta vigente, por lo que no se conserva una consulta obsoleta cuando cambian los filtros.
+- Esto reduce suscripciones/desuscripciones y tráfico de control innecesario para usuarios que escriben o filtran rápidamente, sin cambiar el contrato de datos ni la seguridad de `propiedades_publicas`.
+- Commit: `11a2d841948fb25a2fa134da854b8867a4749f81`.
