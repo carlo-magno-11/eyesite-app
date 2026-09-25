@@ -350,3 +350,23 @@ Validación GitHub:
 - Los eventos Realtime siguen usando el debounce de 500 ms y ahora invocan la función de consulta vigente, por lo que no se conserva una consulta obsoleta cuando cambian los filtros.
 - Esto reduce suscripciones/desuscripciones y tráfico de control innecesario para usuarios que escriben o filtran rápidamente, sin cambiar el contrato de datos ni la seguridad de `propiedades_publicas`.
 - Commit: `11a2d841948fb25a2fa134da854b8867a4749f81`.
+
+
+## 2026-09-25 — Optimización de favoritos compartidos y documentos privados bajo demanda
+
+- Se detectó un problema de escala en components/property-card.tsx: cada tarjeta ejecutaba su propia instancia de useFavorites(). En un catálogo de 24 tarjetas eso podía traducirse en múltiples lecturas idénticas de favoritos al enfocar la pantalla.
+- hooks/use-favorites.ts ahora mantiene un estado compartido en memoria para la sesión activa y una única carga coordinada. Las tarjetas siguen siendo componentes independientes, pero comparten el mismo snapshot y las actualizaciones optimistas se propagan a todas.
+- La consulta de favoritos continúa protegida por user_id; además, Supabase ya tiene índices por user_id y por (user_id, property_id), por lo que no fue necesario añadir índices nuevos.
+- En app/property/[id].tsx se eliminó la firma anticipada de todos los documentos privados al abrir una propiedad. Antes se generaba una URL firmada por cada PDF/KMZ/archivo aunque el usuario nunca lo abriera.
+- Ahora el detalle muestra los documentos disponibles y solicita get-property-document únicamente al tocar uno. La URL firmada se conserva en caché durante la vida de la pantalla y se vincula al usuario + propiedad + ruta para evitar reutilizar una URL de otra sesión o propiedad.
+- Esto reduce llamadas Edge Function y generación de URLs firmadas durante la navegación normal, especialmente cuando una propiedad contiene varios documentos.
+- Commit de favoritos compartidos: 2540fd4caeddbed59d3aa606e4912553da9e22c9.
+- Commit de carga diferida de documentos: 59e4f5668557df82a5e5dbd8ce61895cfcb33aef y corrección posterior de renderizado: 64149b65d8831a2d8910b3cd6b1f2226a56cdf4f.
+- La validación CI se mantiene como requisito de cierre; no se considera esta etapa aprobada hasta comprobar TypeScript, lint, tests, export Web y native-config.
+
+## 2026-09-25 — Corrección de CI detectada durante la auditoría
+
+- La primera implementación del estado compartido de favoritos usó .catch() directamente sobre el builder de supabase.rpc(). TypeScript confirmó que el tipo retornado no expone .catch() en esa cadena.
+- Se corrigió inmediatamente usando un async IIFE con try/catch, manteniendo el analytics fuera del camino crítico del favorito.
+- Este hallazgo fue verificado directamente en el log de GitHub Actions del run que falló en TypeScript; no se ocultó ni se dejó pendiente.
+- Commit de corrección: 2540fd4caeddbed59d3aa606e4912553da9e22c9.
