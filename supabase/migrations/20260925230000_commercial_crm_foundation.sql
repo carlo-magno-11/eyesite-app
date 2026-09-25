@@ -149,7 +149,13 @@ drop policy if exists saved_searches_select_own on public.saved_searches;
 create policy saved_searches_select_own
   on public.saved_searches for select
   to authenticated
-  using ((select auth.uid()) = user_id);
+  using (
+    (select auth.uid()) = user_id
+    and exists (
+      select 1 from public.profiles p
+      where p.id = (select auth.uid()) and p.estado = 'activa'
+    )
+  );
 
 drop policy if exists saved_searches_insert_own on public.saved_searches;
 create policy saved_searches_insert_own
@@ -167,14 +173,32 @@ drop policy if exists saved_searches_update_own on public.saved_searches;
 create policy saved_searches_update_own
   on public.saved_searches for update
   to authenticated
-  using ((select auth.uid()) = user_id)
-  with check ((select auth.uid()) = user_id);
+  using (
+    (select auth.uid()) = user_id
+    and exists (
+      select 1 from public.profiles p
+      where p.id = (select auth.uid()) and p.estado = 'activa'
+    )
+  )
+  with check (
+    (select auth.uid()) = user_id
+    and exists (
+      select 1 from public.profiles p
+      where p.id = (select auth.uid()) and p.estado = 'activa'
+    )
+  );
 
 drop policy if exists saved_searches_delete_own on public.saved_searches;
 create policy saved_searches_delete_own
   on public.saved_searches for delete
   to authenticated
-  using ((select auth.uid()) = user_id);
+  using (
+    (select auth.uid()) = user_id
+    and exists (
+      select 1 from public.profiles p
+      where p.id = (select auth.uid()) and p.estado = 'activa'
+    )
+  );
 
 create or replace function public.track_property_event(
   p_property_id uuid,
@@ -209,6 +233,28 @@ begin
     where p.id = p_property_id and p.estado = 'activa' and coalesce(p.activa, true)
   ) then
     raise exception 'Propiedad pública no disponible';
+  end if;
+
+  if lower(trim(p_event_type)) = 'view'
+     and exists (
+       select 1
+       from public.property_events pe
+       where pe.property_id = p_property_id
+         and pe.user_id = v_user_id
+         and pe.event_type = 'view'
+         and pe.created_at > now() - interval '30 seconds'
+     ) then
+    select pe.id
+    into v_id
+    from public.property_events pe
+    where pe.property_id = p_property_id
+      and pe.user_id = v_user_id
+      and pe.event_type = 'view'
+      and pe.created_at > now() - interval '30 seconds'
+    order by pe.created_at desc
+    limit 1;
+
+    return v_id;
   end if;
 
   insert into public.property_events (
