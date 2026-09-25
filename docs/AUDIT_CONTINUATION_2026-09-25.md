@@ -132,3 +132,12 @@ Se revisó `hooks/use-favorites.ts`. La persistencia de favoritos usa RLS sobre 
 ## 2026-09-25 — Notificaciones y ajustes multiplataforma
 
 Se auditó el flujo de notificaciones en Web/iOS/Android. `app/notification-settings.tsx` ahora reutiliza `registerPushToken()` en lugar de duplicar la obtención del token y elimina un fallback de projectId hardcodeado que podía divergir de `app.config.ts`. También se hizo responsive el encabezado/tarjeta de configuración y el listado de anuncios. `app/notifications.tsx` ya mantiene el catálogo de notificaciones responsive y ahora el feed de anuncios usa el mismo límite de contenido en escritorio. Commits: `a1035f25081c52f4ad69106c45bb22531de85273`, `7af142db8f8dd806071d0b233ee83a9bdc4c051c`, `8ae6edfa8e064bed2cec5eb7a6d98867c514e739`.
+
+
+## UX / entrada y registro — 2026-09-25
+
+- Se añadió `components/EyesiteLaunchSplash.tsx`: pantalla de arranque multiplataforma con identidad EYESITE, icono de ojo, pulso suave y transición de entrada. No agrega servicios externos ni depende de Google Cloud.
+- `app/_layout.tsx` ahora usa la nueva experiencia durante la carga inicial de autenticación; se conserva la lógica existente de AuthGate y sus rutas de seguridad.
+- `app/(auth)/register.tsx`: la contraseña pasa a requerir 8 caracteres, una mayúscula y un número; se añadió guía visual en tiempo real de seguridad 0/3 a 3/3. La aceptación de términos continúa siendo obligatoria antes de enviar el registro.
+- La mejora es solo de experiencia/validación del cliente; la autoridad real de acceso continúa en Supabase/Auth/RLS y en el flujo de aprobación existente.
+- Pendiente de prueba física: arranque iOS/Android/Web, teclado iOS, creación real de cuenta, confirmación de correo y flujo posterior de perfil/aprobación.
