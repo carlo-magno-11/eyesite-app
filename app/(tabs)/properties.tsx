@@ -373,6 +373,15 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginTop: 12,
   },
+  loadMoreContainer: {
+    alignItems: 'center',
+    paddingVertical: 18,
+    gap: 6,
+  },
+  loadingMoreText: {
+    color: '#888',
+    fontSize: 11,
+  },
   emptyContainer: {
     alignItems: 'center',
     paddingTop: 60,
