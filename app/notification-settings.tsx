@@ -5,6 +5,7 @@ import { registerPushToken } from "@/hooks/use-notifications";
 import { supabase } from "@/lib/supabase";
 import { router } from "expo-router";
 import { useState } from "react";
+import { useResponsive } from "@/hooks/use-responsive";
 
 export default function NotificationSettingsScreen() {
   const { user, profile } = useAuth();
@@ -15,6 +16,7 @@ export default function NotificationSettingsScreen() {
   const inAppValue = inApp ?? profile?.notificaciones_in_app !== false;
   const adsPushValue = adsPush ?? profile?.anuncios_push !== false;
   const [saving, setSaving] = useState(false);
+  const { horizontalPadding, contentMaxWidth } = useResponsive();
 
   const save = async (field: "notificaciones_push" | "notificaciones_in_app" | "anuncios_push", value: boolean) => {
     if (!user?.id || saving) return;
@@ -31,8 +33,6 @@ export default function NotificationSettingsScreen() {
           return;
         }
         extraUpdate.expo_push_token = token;
-      } else if (!value) {
-        extraUpdate.expo_push_token = null;
       } else if (!value) {
         extraUpdate.expo_push_token = null;
       }
@@ -57,7 +57,7 @@ export default function NotificationSettingsScreen() {
 
   return (
     <ScreenContainer edges={["top", "left", "right"]} containerClassName="bg-background">
-      <View style={s.header}>
+      <View style={[s.header, { paddingHorizontal: horizontalPadding, maxWidth: contentMaxWidth, width: "100%", alignSelf: "center" }]}>
         <Pressable onPress={() => router.back()} style={s.back}>
           <Text style={s.backText}>‹</Text>
         </Pressable>
@@ -67,7 +67,7 @@ export default function NotificationSettingsScreen() {
         </View>
       </View>
 
-      <View style={s.card}>
+      <View style={[s.card, { marginHorizontal: horizontalPadding, maxWidth: contentMaxWidth, width: "100%", alignSelf: "center" }]}>
         <Row
           title="Notificaciones dentro de EYESITE"
           description="Avisos de tu cuenta, propiedades y eventos."
