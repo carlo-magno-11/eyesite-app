@@ -20,31 +20,32 @@ export default function PropertiesScreen() {
   const [maxSurface, setMaxSurface] = useState('');
   const initialFilter = typeof params.filter === 'string' && params.filter ? params.filter : 'all';
   const [activeFilter, setActiveFilter] = useState<string>(initialFilter);
-  const { properties, loading, error, refetch: fetchProperties } = useProperties();
+  const catalogOptions = useMemo(() => ({
+    search,
+    municipio,
+    minPrice: minPrice ? Number(minPrice) : null,
+    maxPrice: maxPrice ? Number(maxPrice) : null,
+    minSurface: minSurface ? Number(minSurface) : null,
+    maxSurface: maxSurface ? Number(maxSurface) : null,
+    tipo: activeFilter === 'all' ? null : activeFilter,
+  }), [search, municipio, minPrice, maxPrice, minSurface, maxSurface, activeFilter]);
+
+  const {
+    properties,
+    loading,
+    loadingMore,
+    hasMore,
+    error,
+    refetch: fetchProperties,
+    loadMore,
+  } = useProperties(catalogOptions);
+
   const { propertyColumns, horizontalPadding, contentMaxWidth, isDesktop } = useResponsive();
   const { user } = useAuth();
   const { save } = useSavedSearches(user?.id);
 
-  const filtered = useMemo(() => {
-    return properties.filter((p) => {
-      const matchesType = activeFilter === 'all' || (p.type || p.tipo || '').toLowerCase() === activeFilter.toLowerCase();
-      const matchesSearch =
-        search.trim() === '' ||
-        (p.title || p.titulo || '').toLowerCase().includes(search.toLowerCase()) ||
-        (p.location || p.municipio || '').toLowerCase().includes(search.toLowerCase()) ||
-        (p.municipality || p.municipio || '').toLowerCase().includes(search.toLowerCase());
-      const price = Number(p.currentPrice ?? p.precio_actual ?? p.precio ?? 0) || 0;
-      const surface = Number(p.surfaceM2 ?? p.superficie ?? 0) || 0;
-      const wantedMunicipio = municipio.trim().toLowerCase();
-      const actualMunicipio = String(p.municipality ?? p.municipio ?? p.location ?? '').toLowerCase();
-      const matchesMunicipio = !wantedMunicipio || actualMunicipio.includes(wantedMunicipio);
-      const matchesMinPrice = !minPrice || price >= Number(minPrice);
-      const matchesMaxPrice = !maxPrice || price <= Number(maxPrice);
-      const matchesMinSurface = !minSurface || surface >= Number(minSurface);
-      const matchesMaxSurface = !maxSurface || surface <= Number(maxSurface);
-      return matchesType && matchesSearch && matchesMunicipio && matchesMinPrice && matchesMaxPrice && matchesMinSurface && matchesMaxSurface;
-    });
-  }, [search, municipio, minPrice, maxPrice, minSurface, maxSurface, activeFilter, properties]);
+  const visibleCountLabel = hasMore ? \`${properties.length}+\` : String(properties.length);
+
 
   return (
     <ScreenContainer edges={['top', 'left', 'right']} containerClassName="bg-background">
@@ -52,7 +53,7 @@ export default function PropertiesScreen() {
       <View style={[styles.content, { paddingHorizontal: horizontalPadding, maxWidth: contentMaxWidth }, isDesktop && styles.contentCentered]}>
         <View style={styles.header}>
         <Text style={styles.headerTitle}>OPORTUNIDADES</Text>
-        <Text style={styles.headerCount}>{filtered.length} propiedades</Text>
+        <Text style={styles.headerCount}>{visibleCountLabel} propiedades</Text>
       </View>
 
         </View>
@@ -168,10 +169,12 @@ export default function PropertiesScreen() {
         </View>
       ) : (
         <FlatList
-          data={filtered}
+          data={properties}
           keyExtractor={(item) => item.id}
           refreshing={loading}
           onRefresh={fetchProperties}
+          onEndReached={loadMore}
+          onEndReachedThreshold={0.65}
           key={`properties-grid-${propertyColumns}`}
           numColumns={propertyColumns}
           columnWrapperStyle={propertyColumns > 1 ? styles.columnWrapper : undefined}
@@ -187,6 +190,12 @@ export default function PropertiesScreen() {
             >
               <PropertyCard property={item} />
             </View>}
+          ListFooterComponent={loadingMore ? (
+            <View style={styles.loadMoreContainer}>
+              <ActivityIndicator color="#C9A84C" size="small" />
+              <Text style={styles.loadingMoreText}>Cargando más propiedades...</Text>
+            </View>
+          ) : null}
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
               <Text style={styles.emptyIcon}>🔍</Text>
