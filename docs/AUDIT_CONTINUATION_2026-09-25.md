@@ -214,3 +214,29 @@ Se completó el endurecimiento del circuito de recuperación en la rama aislada 
 - Verificación CI del SHA `abe96bfc7b4e91df77550b2e40795c75ed662637`: `quality=success`, `native-config=success`.
 
 El código queda cerrado a nivel estático. Siguen pendientes las pruebas físicas de enlaces válidos, expirados/reutilizados y recuperación real en iOS, Android y Web.
+
+
+## Escalabilidad — scheduler y comunicaciones 2026-09-25
+
+Se realizó una revisión específica para crecimiento a muchos usuarios y propiedades. La ejecución ya era asíncrona (Edge Function + pg_cron + pg_net), pero había dos problemas de escala que no convenía dejar para después:
+
+- El scheduler podía solaparse si una ejecución tardaba más que el intervalo de un minuto. Se añadió un lease de 90 segundos en `eyesite_scheduler_lock`, reclamado/liberado exclusivamente por el rol `service_role`. Si otra ejecución entra mientras el lease está vigente, termina rápidamente con `scheduler_locked`. El lease evita que un fallo deje el scheduler bloqueado indefinidamente.
+- Los anuncios publicados se recorrían cada minuto y podían volver a ejecutar el `upsert` de todas las entregas. Se añadió `anuncios.entregas_generadas_at` e índice parcial; la generación de destinatarios se hace una sola vez por anuncio y después el scheduler procesa únicamente entregas pendientes/error.
+- La generación de entregas se hace en lotes de 500 para no construir una sola petición SQL enorme.
+- El envío a Expo se ajustó al límite documentado actualmente de 100 mensajes por petición y se dejó preparado para concurrencia controlada de hasta 3 lotes, en lugar de una ráfaga ilimitada. Expo recomienda limitar conexiones concurrentes y documenta el máximo de 100 mensajes por petición.
+- El procesamiento de entregas consulta anuncios y perfiles en bloque para evitar una consulta de perfil/anuncio por cada fila. Las actualizaciones individuales restantes tienen concurrencia acotada para no abrir cientos de conexiones simultáneas.
+- El cron de producción sigue activo cada minuto y, después del despliegue, las ejecuciones recientes registradas por `cron.job_run_details` continúan en estado `succeeded`. No se modificó el intervalo de un minuto porque el nuevo lease y el procesamiento por lotes permiten absorber crecimiento sin crear ejecuciones superpuestas.
+
+### Cambios de código/BD
+
+- Edge Function: `supabase/functions/process-scheduled-communications/index.ts`
+- Migración: `supabase/migrations/20260925203000_scale_scheduled_communications.sql`
+- Despliegue de Edge Function: versión 3, estado ACTIVE.
+- Commit de implementación: `37bcd31bff13ce2c5f6efd815d6169e3b52bc5f0`.
+- Commit de migración: `0da81f2f648793042c2a32e98f543889a00c6ed9`.
+- Validación directa del lock: primera reclamación `true`, segunda reclamación simultánea `false`, liberación `true`.
+- Se ejecutó además una invocación manual mediante el mismo mecanismo de `pg_net` usado por producción; el endpoint respondió HTTP 200 y el cron continuó registrando ejecuciones exitosas.
+
+### Riesgo todavía abierto
+
+El siguiente escalón de escala es el catálogo/mapa: `useProperties()` actualmente descarga todas las filas públicas activas y el mapa calcula distancias en el cliente. Con cientos o miles de propiedades esto aumenta memoria, transferencia y tiempo de render. La siguiente mejora debe ser consulta por páginas para catálogo y consulta geográfica por región/viewport para mapa, manteniendo siempre `propiedades_publicas` como frontera de lectura y sin introducir Google Cloud.
