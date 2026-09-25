@@ -123,9 +123,24 @@ export default function HomeScreen() {
               <ActivityIndicator color="#C9A84C" size="large" />
             </View>
           ) : (
-            highlightedProperties.map((property) => (
-              <PropertyCard key={property.id} property={property} />
-            ))
+            <View style={[
+              styles.propertiesGrid,
+              isDesktop && styles.propertiesGridDesktop,
+              !isDesktop && !isLargeDesktop && styles.propertiesGridPhoneTablet,
+            ]}>
+              {highlightedProperties.map((property) => (
+                <View
+                  key={property.id}
+                  style={[
+                    styles.propertyGridItem,
+                    isDesktop && styles.propertyGridItemDesktop,
+                    !isDesktop && styles.propertyGridItemPhoneTablet,
+                  ]}
+                >
+                  <PropertyCard property={property} />
+                </View>
+              ))}
+            </View>
           )}
         </View>
       </ScrollView>
@@ -285,6 +300,27 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontWeight: '500',
     textAlign: 'center',
+  },
+  propertiesGrid: {
+    width: '100%',
+  },
+  propertiesGridDesktop: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    columnGap: 16,
+    rowGap: 16,
+  },
+  propertiesGridPhoneTablet: {
+    flexDirection: 'column',
+  },
+  propertyGridItem: {
+    minWidth: 0,
+  },
+  propertyGridItemDesktop: {
+    width: 'calc(33.333% - 11px)' as any,
+  },
+  propertyGridItemPhoneTablet: {
+    width: '100%',
   },
   loadingContainer: {
     paddingVertical: 40,
