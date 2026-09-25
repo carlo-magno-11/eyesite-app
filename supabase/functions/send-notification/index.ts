@@ -252,6 +252,20 @@ Deno.serve(async (req) => {
       }));
 
     if (!messages.length) {
+      if (announcementId) {
+        const deliveryNow = new Date().toISOString();
+        await adminClient
+          .from("anuncio_entregas")
+          .update({
+            push_status: "not_configured",
+            push_attempts: 0,
+            push_next_retry_at: null,
+            push_error: null,
+            updated_at: deliveryNow,
+          })
+          .eq("anuncio_id", announcementId)
+          .eq("push_status", "pending");
+      }
       return new Response(JSON.stringify({ ok: true, sent: 0, invalid_tokens: 0 }), { headers: H });
     }
 
