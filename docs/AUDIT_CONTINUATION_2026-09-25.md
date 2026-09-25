@@ -310,7 +310,7 @@ Se revisó el flujo de lectura del catálogo pensando en múltiples usuarios y u
 - Se redujo el payload de cada página: el listado ya no solicita PDFs, KMZ/KML, JSON pesados, arrays de videos ni `fotos_pro`. Se mantienen únicamente los datos necesarios para tarjetas, filtros, ubicación y portada/fallback.
 - El detalle de propiedad continúa solicitando el registro completo únicamente cuando el usuario entra a una propiedad.
 - El canal Realtime de `propiedades_cambios` ahora agrupa cambios consecutivos durante 500 ms antes de volver a consultar el catálogo. Esto evita una ráfaga de lecturas cuando el administrador publica o edita varios campos seguidos.
-- Se verificó que la base dispone de `pg_trgm` para una futura optimización de búsquedas de texto. No se creó un índice nuevo todavía: primero se debe medir el patrón real de consultas para evitar índices innecesarios.
+- La instalación de `pg_trgm` se revisó y **no está instalada actualmente** en el proyecto. Se descartó una migración de índices trigramas porque habría fallado en producción. No se instala una extensión solo por anticipar crecimiento; primero se medirá el patrón real y, si hace falta, se evaluará habilitarla mediante el mecanismo soportado por Supabase.
 - El asesor de rendimiento reporta varios índices sin uso histórico. No se eliminan automáticamente: algunos pueden estar preparados para crecimiento futuro y eliminarlos ahora sería una optimización prematura.
 
 Estado: cambio de cliente aplicado en rama aislada; requiere CI y prueba Web/iOS/Android antes de considerarlo cerrado.
