@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
+import { Alert, Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import { router } from "expo-router";
 import { supabase } from "@/lib/supabase";
 
@@ -22,7 +22,12 @@ export default function VerifyEmailScreen() {
       const { error } = await supabase.auth.resend({
         type: "signup",
         email,
-        options: { emailRedirectTo: "eyesite://auth/callback" },
+        options: {
+          emailRedirectTo:
+            Platform.OS === "web"
+              ? "https://auth.eyesite.mx/auth/callback"
+              : "eyesite://auth/callback",
+        },
       });
       if (error) throw error;
       Alert.alert("Correo enviado", "Revisa " + email + " y también la carpeta de spam.");
