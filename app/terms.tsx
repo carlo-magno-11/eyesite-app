@@ -168,7 +168,7 @@ export default function TermsScreen() {
             </View>
           </View>
         </Modal>
-
+        </View>
       </ScrollView>
     </ScreenContainer>
   );
