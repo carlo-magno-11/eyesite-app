@@ -127,3 +127,8 @@ No se cambió la fuente de datos, Leaflet, OpenStreetMap ni el flujo de navegaci
 ## 2026-09-25 — Favoritos multiplataforma
 
 Se revisó `hooks/use-favorites.ts`. La persistencia de favoritos usa RLS sobre `favoritos` y el seguimiento comercial se realiza mediante `track_property_event`, por lo que no se abrió acceso directo a tablas CRM. Se corrigió un detalle de compatibilidad: `expo-haptics` ya no se ejecuta en Web; la vibración queda limitada a iOS/Android. Commit: `d96e9885dad873ad7dd7967d3b21005b77142bd2`.
+
+
+## 2026-09-25 — Notificaciones y ajustes multiplataforma
+
+Se auditó el flujo de notificaciones en Web/iOS/Android. `app/notification-settings.tsx` ahora reutiliza `registerPushToken()` en lugar de duplicar la obtención del token y elimina un fallback de projectId hardcodeado que podía divergir de `app.config.ts`. También se hizo responsive el encabezado/tarjeta de configuración y el listado de anuncios. `app/notifications.tsx` ya mantiene el catálogo de notificaciones responsive y ahora el feed de anuncios usa el mismo límite de contenido en escritorio. Commits: `a1035f25081c52f4ad69106c45bb22531de85273`, `7af142db8f8dd806071d0b233ee83a9bdc4c051c`, `8ae6edfa8e064bed2cec5eb7a6d98867c514e739`.
