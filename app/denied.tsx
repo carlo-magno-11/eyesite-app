@@ -1,4 +1,6 @@
 import { View, Text, Pressable, StyleSheet, Linking } from 'react-native';
+import { ScreenContainer } from '@/components/screen-container';
+import { useResponsive } from '@/hooks/use-responsive';
 import { CONTACT } from '@/constants/contact';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -6,6 +8,7 @@ const DEFAULT_PHONE = CONTACT.whatsappNumber;
 
 export default function DeniedScreen() {
   const { user } = useAuth();
+  const { horizontalPadding, contentMaxWidth } = useResponsive();
   const openWhatsApp = () => {
     const msg = CONTACT.whatsappMessageDenied + (user?.email || '');
     Linking.openURL(`https://wa.me/${DEFAULT_PHONE}?text=${encodeURIComponent(msg)}`).catch((e) =>
@@ -14,7 +17,7 @@ export default function DeniedScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <ScreenContainer edges={["top", "bottom"]} containerClassName="bg-background"><View style={[styles.container, { paddingHorizontal: horizontalPadding, maxWidth: contentMaxWidth, width: "100%", alignSelf: "center" }]}>
       <Text style={styles.icon}>🚫</Text>
       <Text style={styles.title}>Cuenta denegada</Text>
       <Text style={styles.body}>
@@ -25,7 +28,7 @@ export default function DeniedScreen() {
         <Text style={styles.btnText}>APELAR POR WHATSAPP</Text>
       </Pressable>
       <Text style={styles.help}>{CONTACT.whatsappNumberDisplay}</Text>
-    </View>
+    </View></ScreenContainer>
   );
 }
 
