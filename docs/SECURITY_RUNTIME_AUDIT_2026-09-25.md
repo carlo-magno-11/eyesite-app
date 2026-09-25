@@ -112,3 +112,14 @@ Se confirmó mediante la documentación actual de Supabase que un bucket marcado
 Se eliminó una policy duplicada (`allow_public_read`) de `storage.objects`; `fotos-propiedades` conserva su lectura pública porque todavía existe una referencia activa a un video legacy. Los buckets legacy vacíos siguen pendientes de privatización desde Storage/Dashboard porque el rol SQL disponible no es propietario de `storage.buckets`. No se realizó una modificación incompleta que pudiera aparentar protección mientras el bucket continuara público.
 
 La fuente actual de catálogo público sigue siendo `propiedades_publicas` con `SELECT` únicamente para `anon` y `authenticated`.
+
+
+## 2026-09-25 — Corrección de publicación de anuncios del panel
+
+La auditoría cruzó el código de public/admin.js con los privilegios reales de producción y encontró una inconsistencia funcional: el panel crea y actualiza filas de anuncios directamente, pero el rol authenticated solo tenía SELECT. Las políticas RLS ya exigían private.is_admin() para INSERT y UPDATE, por lo que faltaban únicamente los privilegios SQL necesarios para que un administrador pudiera ejecutar esas operaciones.
+
+Se aplicó y versionó supabase/migrations/20260925100000_grant_admin_announcement_write_privileges.sql, que concede únicamente INSERT, UPDATE a authenticated; no se concede nada a anon y RLS continúa siendo la barrera de autorización. Producción quedó verificada con INSERT, SELECT y UPDATE para authenticated sobre anuncios.
+
+No se abrió acceso de escritura a usuarios normales: la política anuncios_admin_insert y anuncios_admin_update sigue condicionada a private.is_admin().
+
+Queda pendiente la prueba funcional real desde el panel (crear anuncio inmediato, programado, editar/desactivar y verificar entrega) antes de cerrar el bloque de anuncios.
