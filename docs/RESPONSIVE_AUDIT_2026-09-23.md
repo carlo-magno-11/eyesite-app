@@ -272,4 +272,4 @@ Sigue pendiente la validación funcional física de la versión actual en iPhone
 
 ## 2026-09-24 — Optimización del Realtime del detalle
 
-El detalle de una propiedad continúa escuchando exclusivamente el feed público `propiedades_cambios`, pero ahora filtra el canal por `propiedad_id`. Esto evita que una modificación administrativa de otra propiedad provoque una consulta REST innecesaria del detalle actualmente abierto. La lectura continúa pasando únicamente por `propiedades_publicas`.
+El detalle de una propiedad continúa escuchando exclusivamente el feed público `propiedades_cambios`, pero ahora filtra el canal por `property_id`. Esto evita que una modificación administrativa de otra propiedad provoque una consulta REST innecesaria del detalle actualmente abierto. La lectura continúa pasando únicamente por `propiedades_publicas`.
