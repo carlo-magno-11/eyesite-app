@@ -124,12 +124,16 @@ export default function PropertiesScreen() {
             }
 
             try {
+              const criteriaParts = [
+                activeFilter !== 'all' ? `tipo ${activeFilter}` : '',
+                municipio.trim() ? municipio.trim() : '',
+                minPrice ? `desde ${Number(minPrice).toLocaleString('es-MX')}` : '',
+                maxPrice ? `hasta ${Number(maxPrice).toLocaleString('es-MX')}` : '',
+                minSurface ? `desde ${Number(minSurface).toLocaleString('es-MX')} m²` : '',
+                maxSurface ? `hasta ${Number(maxSurface).toLocaleString('es-MX')} m²` : '',
+              ].filter(Boolean);
               await save({
-                nombre: search.trim()
-                  ? `Búsqueda: ${search.trim()}`
-                  : activeFilter === 'all'
-                    ? 'Todas las propiedades'
-                    : `Propiedades: ${activeFilter}`,
+                nombre: criteriaParts.length ? `Búsqueda: ${criteriaParts.join(' · ')}` : 'Todas las propiedades',
                 min_price: minPrice ? Number(minPrice) : null,
                 max_price: maxPrice ? Number(maxPrice) : null,
                 min_surface: minSurface ? Number(minSurface) : null,
