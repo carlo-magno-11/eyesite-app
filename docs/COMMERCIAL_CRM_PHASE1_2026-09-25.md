@@ -23,6 +23,8 @@ Se construye únicamente la base comercial prioritaria:
 ## Cambios realizados
 
 ### Supabase
+- Se añadió automatización de alertas de coincidencia: una propiedad activa que coincide con una búsqueda guardada genera una notificación idempotente dentro de EYESITE.
+- Durante la validación de esta fase se detectó y corrigió un bug preexistente en `emit_propiedad_cambio()`: la función usaba nombres de columnas/valores antiguos de `propiedades_cambios`. Se corrigió sin modificar datos existentes y se volvió a probar dentro de transacción.
 - Migración `20260925060751_commercial_crm_foundation.sql` aplicada al proyecto Supabase de producción después de validación transaccional.
 - Es un cambio aditivo: no modifica ni elimina datos existentes.
 - `property_events`
@@ -70,8 +72,10 @@ La migración todavía no se ejecuta en la base de producción.
 3. Se probó en transacción el registro de un evento y la creación de un prospecto usando un usuario activo real; se hizo rollback.
 4. Se probó en transacción el listado y actualización administrativa de un prospecto; se hizo rollback.
 5. La migración fue aplicada a producción después de esas validaciones.
-6. Se verificó la presencia de las cinco tablas nuevas.
-7. Security Advisor no reportó un problema nuevo distinto de los avisos esperables por tablas CRM sin acceso directo y funciones SECURITY DEFINER protegidas por `is_admin()`; permanecen los avisos previos de `pg_net` en public y leaked-password protection.
+6. Se probó la automatización de coincidencias de búsquedas guardadas dentro de una transacción: se generó una notificación de prueba y se hizo rollback.
+7. Se corrigió el trigger preexistente de `propiedades_cambios` y se verificó que una actualización de propiedad genera un registro `update` correctamente.
+8. Se verificó la presencia de las cinco tablas nuevas.
+9. Security Advisor no reportó un problema nuevo distinto de los avisos esperables por tablas CRM sin acceso directo y funciones SECURITY DEFINER protegidas por `is_admin()`; permanecen los avisos previos de `pg_net` en public y leaked-password protection.
 
 ## Pruebas todavía pendientes
 
