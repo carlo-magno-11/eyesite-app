@@ -10,6 +10,7 @@ import { ScreenContainer } from '@/components/screen-container';
 import { useProperty } from '@/hooks/use-properties';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
+import { useCommercial } from '@/hooks/use-commercial';
 
 const WHATSAPP = '+52 9813674060';
 const PHONE = '+52 9813674060';
@@ -20,10 +21,16 @@ export default function PropertyDetailScreen() {
   const contentWidth = Math.min(windowWidth, 1200);
   const { property, loading } = useProperty(id);
   const { session } = useAuth();
+  const { trackPropertyEvent, registerProspectInterest } = useCommercial();
   const { isFav, toggleFav } = useFavorites();
   const [activeImage, setActiveImage] = useState(0);
   const [imageLoading, setImageLoading] = useState(true);
   const [signedDocuments, setSignedDocuments] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    if (!property?.id || !session?.user?.id) return;
+    void trackPropertyEvent(property.id, 'view');
+  }, [property?.id, session?.user?.id, trackPropertyEvent]);
 
   useEffect(() => {
     let cancelled = false;
@@ -282,6 +289,16 @@ export default function PropertyDetailScreen() {
  };
 
   const handleWhatsApp = () => {
+    if (property?.id) {
+      void trackPropertyEvent(property.id, 'whatsapp_click', {
+        property_title: title,
+      });
+      void registerProspectInterest(property.id, 'whatsapp', {
+        property_title: title,
+        channel: 'whatsapp',
+      });
+    }
+
     const msg = encodeURIComponent(
       `Hola, me interesa la propiedad: ${property.title || property.titulo} en ${property.location || property.municipio}. ¿Podría darme más información?`
     );
@@ -295,6 +312,9 @@ export default function PropertyDetailScreen() {
   const handleShareProperty =
   async () => {
     try {
+      if (property?.id) {
+        void trackPropertyEvent(property.id, 'share');
+      }
       const appLink =
         `https://www.eyesite.mx/property/${property.id}`;
 
