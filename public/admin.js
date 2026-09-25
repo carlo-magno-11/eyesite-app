@@ -3842,13 +3842,16 @@ function collectPropertyForm(mode, statusOverride = null) {
 
   const tipo = valueOf(`${mode}_tipo`) || "terreno";
 
+  const sourceDetalles =
+    mode === "edit"
+      ? propiedadEditando?.detalles
+      : mode === "pending"
+        ? pendienteEditando?.detalles
+        : null;
+
   const detalles =
-    (mode === "edit" && propiedadEditando?.detalles) ||
-    (mode === "pending" && pendienteEditando?.detalles) &&
-    typeof propiedadEditando.detalles === "object"
-      ? {
-          ...propiedadEditando.detalles,
-        }
+    sourceDetalles && typeof sourceDetalles === "object"
+      ? { ...sourceDetalles }
       : {};
 
   for (const k of [
