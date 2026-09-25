@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { View, Text, TextInput, Pressable, StyleSheet, Alert, ActivityIndicator } from "react-native";
+import { View, Text, TextInput, Pressable, StyleSheet, Alert, ActivityIndicator, Platform } from "react-native";
 import { router } from "expo-router";
 import { supabase } from "@/lib/supabase";
 
@@ -22,7 +22,10 @@ export default function ForgotPasswordScreen() {
     setLoading(true);
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(cleanEmail, {
-        redirectTo: "eyesite://auth/callback?type=recovery",
+        redirectTo:
+          Platform.OS === "web"
+            ? "https://auth.eyesite.mx/auth/callback?type=recovery"
+            : "eyesite://auth/callback?type=recovery",
       });
 
       if (error) {
