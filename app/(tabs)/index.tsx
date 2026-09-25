@@ -21,7 +21,7 @@ export default function HomeScreen() {
   const { properties, loading } = useProperties();
   const { user, session } = useAuth();
   const { unread } = useNotifications(user?.id);
-  const { horizontalPadding, contentMaxWidth, isDesktop, isLargeDesktop } = useResponsive();
+  const { horizontalPadding, contentMaxWidth, isDesktop, isLargeDesktop, propertyColumns } = useResponsive();
   const featuredProperties = properties.filter((p) => p.featured || p.destacada);
   // Si todavía no hay propiedades marcadas como destacadas, mostramos las
   // primeras oportunidades reales para evitar una sección vacía en producción.
@@ -125,16 +125,16 @@ export default function HomeScreen() {
           ) : (
             <View style={[
               styles.propertiesGrid,
-              isDesktop && styles.propertiesGridDesktop,
-              !isDesktop && !isLargeDesktop && styles.propertiesGridPhoneTablet,
+              propertyColumns > 1 && styles.propertiesGridRow,
+              propertyColumns === 3 && styles.propertiesGridThree,
             ]}>
               {highlightedProperties.map((property) => (
                 <View
                   key={property.id}
                   style={[
                     styles.propertyGridItem,
-                    isDesktop && styles.propertyGridItemDesktop,
-                    !isDesktop && styles.propertyGridItemPhoneTablet,
+                    propertyColumns > 1 && styles.propertyGridItemMulti,
+                    propertyColumns === 3 && styles.propertyGridItemThree,
                   ]}
                 >
                   <PropertyCard property={property} />
@@ -304,23 +304,25 @@ const styles = StyleSheet.create({
   propertiesGrid: {
     width: '100%',
   },
-  propertiesGridDesktop: {
+  propertiesGridRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     columnGap: 16,
     rowGap: 16,
   },
-  propertiesGridPhoneTablet: {
-    flexDirection: 'column',
+  propertiesGrid: {
+    width: '100%',
   },
   propertyGridItem: {
+    width: '100%',
     minWidth: 0,
   },
-  propertyGridItemDesktop: {
-    width: 'calc(33.333% - 11px)' as any,
+  propertyGridItemMulti: {
+    flex: 1,
   },
-  propertyGridItemPhoneTablet: {
-    width: '100%',
+  propertyGridItemThree: {
+    flexBasis: '31.5%',
+    maxWidth: '31.5%',
   },
   loadingContainer: {
     paddingVertical: 40,
