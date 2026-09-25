@@ -2,89 +2,83 @@
 
 ## Rama de trabajo
 
-- Base auditada: `feature/eyesite-commercial-crm`
-- Rama de reparación aislada: `fix/eyesite-platform-security-20260925`
-- `main` no se modifica en esta etapa.
+- Base auditada: `feature/eyesite-commercial-crm`.
+- Rama de reparación: `fix/eyesite-platform-security-20260925`.
+- `main` permanece sin modificaciones.
 
-## Hallazgos verificados
+## Correcciones verificadas
 
-### 1. Realtime de detalle de propiedad — corregido
+### 1. Realtime de detalle de propiedad
 
-La migración vigente de EYESITE usa `propiedades_cambios.property_id` y acciones en minúsculas. El feed general ya estaba corregido, pero `useProperty()` todavía filtraba el canal por el nombre histórico `propiedad_id`.
+`hooks/use-properties.ts` usa la vista pública `propiedades_publicas` y el feed `propiedades_cambios` con `property_id=eq.<id>`. La limpieza del canal usa la generación de canal para evitar listeners obsoletos.
 
-Esto podía impedir que el detalle se actualizara inmediatamente después de una modificación administrativa.
+### 2. Mapa Web responsive
 
-Corrección:
-- `hooks/use-properties.ts`: `filter: property_id=eq.<id>`.
+`app/(tabs)/map.tsx` usa una altura Web calculada con el viewport: mínimo 420px, máximo 680px y 62% de la altura disponible. Esto evita que el mapa domine pantallas de escritorio y mantiene una superficie útil en tablets.
 
-### 2. Mapa Web — tamaño responsive — corregido
+No se introduce Google Maps ni Google Cloud.
 
-La documentación de la rama indicaba un mapa Web de 68% del viewport, con mínimo de 520px y máximo de 760px, pero el código había quedado en 58% / 420px / 720px.
+### 3. Compatibilidad Web del mapa
 
-Corrección:
-- `app/(tabs)/map.tsx`: Web vuelve a 68% del viewport, mínimo 520px y máximo 760px.
-- iOS/Android conservan el comportamiento flex.
-- No se introduce Google Maps ni Google Cloud.
+`components/leaflet-map.web.tsx` separa Web mediante iframe + `postMessage`; iOS/Android conservan `react-native-webview`. Ambos usan Leaflet/OpenStreetMap.
 
-### 3. Compatibilidad Web del mapa — ya presente y verificada
+### 4. `send-notification` — validación de entrada
 
-La rama avanzada ya contiene `components/leaflet-map.web.tsx`, que usa un iframe HTML para Web, mientras la implementación base usa `react-native-webview` para nativo.
+Se validan JWT/sesión administrativa, límites de payload, UUID, destinatarios, tamaños de texto, `data` JSON y máximo de 500 destinatarios.
 
-Esto mantiene separado el transporte del mapa por plataforma:
-- iOS/Android: WebView nativo.
-- Web: iframe + `postMessage`.
-- Leaflet/OpenStreetMap en ambos casos.
+### 5. Anuncios — idempotencia de entrega push
 
-La implementación de WebView oficial está orientada a plataformas nativas, por lo que mantener una implementación Web específica evita depender de un componente nativo en navegador.
+Se corrigió el hueco entre anuncios inmediatos y el scheduler:
 
-### 4. `send-notification` — endurecimiento de entrada — corregido
+- Los anuncios inmediatos del panel ahora envían `announcement_id` a `send-notification`.
+- `send-notification` verifica que el anuncio exista, esté publicado y activo.
+- Antes del push se crea/asegura una fila por `anuncio_id + user_id` en `anuncio_entregas`.
+- Cada ticket de Expo actualiza esa fila a `sent`, `error` o `not_configured`.
+- El scheduler procesa únicamente entregas pendientes/error, por lo que una entrega inmediata marcada como `sent` no vuelve a enviarse.
+- La restricción única `unique(anuncio_id,user_id)` sigue siendo la barrera de duplicación por destinatario.
 
-La autorización administrativa ya estaba correctamente protegida. Se añadió validación explícita para:
-- UUID de `user_id`, `user_ids`, `property_id` y `announcement_id`.
-- máximo de 500 destinatarios.
-- límite de payload HTTP de 64 KB.
-- `titulo` hasta 120 caracteres.
-- `mensaje` hasta 4000 caracteres.
-- `tipo` hasta 64 caracteres.
-- `event_key` hasta 160 caracteres.
-- `in_app` estrictamente booleano.
-- `data` como objeto JSON, no array, con máximo de 16 KB y serialización válida.
-- límite final después de resolver favoritos/destinatarios.
+Archivos modificados:
+- `public/admin.js`
+- `supabase/functions/send-notification/index.ts`
 
-## Seguridad que permanece pendiente de validación
+### 6. Límite JWT del scheduler — documentado en código
 
-1. Revisar físicamente todos los cuerpos `SECURITY DEFINER` y sus `search_path`.
-2. Mapear consumidores de buckets públicos históricos antes de modificar/eliminar esos buckets.
-3. Verificar configuración real de Supabase para protección de contraseñas filtradas.
-4. Revisar dependencia/configuración de `pg_net`.
-5. Verificar configuración real de Edge Functions y JWT/cron en el proyecto Supabase.
-6. Ejecutar Advisor y pruebas físicas después de aplicar las migraciones correspondientes.
-7. Probar el flujo completo de medios: envío → edición → promoción → aprobación → vista pública → mapa.
-8. Probar anuncios/notificaciones en iOS, Android y Web, incluyendo programados, inmediatos, preferencias y reintentos.
+Se añadió `supabase/config.toml` con:
 
-## Hallazgo funcional adicional para la siguiente reparación
+`[functions.process-scheduled-communications]`
+`verify_jwt = false`
 
-El panel administrativo publica anuncios inmediatos y actualmente invoca `send-notification` por separado, mientras `process-scheduled-communications` mantiene también el sistema de `anuncio_entregas`.
+La función no queda abierta: exige el encabezado secreto propio `x-eyesite-cron-secret` y lo compara mediante `get_eyesite_scheduler_secret`. Esto hace explícita la frontera para invocación por cron/scheduler.
 
-Debe cerrarse este contrato para que un anuncio inmediato no pueda recibir una segunda entrega cuando el scheduler procese el mismo anuncio. No se modifica todavía en este documento hasta completar la corrección idempotente por destinatario.
+## Seguridad todavía pendiente de validación
+
+1. Revisar cuerpos de todas las funciones `SECURITY DEFINER`, especialmente autorización y `search_path`.
+2. Mapear consumidores de buckets públicos históricos antes de cambiar privacidad/eliminación.
+3. Verificar en el proyecto Supabase la protección contra contraseñas filtradas.
+4. Revisar configuración/uso de `pg_net`.
+5. Confirmar en Supabase que el scheduler usa el secreto correcto y que la función no se invoca desde clientes.
+6. Ejecutar Security Advisor después de las correcciones.
+7. Probar flujo completo de medios: envío → edición → promoción → aprobación → vista pública → mapa.
+8. Probar anuncios/notificaciones en iOS, Android y Web, incluyendo inmediatos, programados, preferencias, tokens inválidos y reintentos.
 
 ## Gate de salida
 
-No se considera EYESITE listo para merge a `main` ni para binario final hasta completar:
+No se considera listo para merge a `main` ni para binario final hasta completar:
+
 - TypeScript.
 - lint.
 - tests.
 - Expo Doctor.
 - export Web.
-- prueba física Web responsive.
+- prueba Web responsive.
 - prueba física Android.
 - prueba física iOS.
 - pruebas de AuthGate.
 - pruebas de Realtime.
 - pruebas de publicación/moderación.
 - pruebas de almacenamiento público/privado.
-- pruebas de notificaciones y anuncios.
+- pruebas de notificaciones/anuncios.
 
-## Seguimiento de anuncios
+## Nota de trazabilidad
 
-La tabla `anuncio_entregas` tiene una restricción única por anuncio y usuario y el scheduler usa `upsert(..., ignoreDuplicates)`. Esto evita duplicar filas, pero el panel todavía llama directamente a `send-notification` para anuncios inmediatos. Antes del cierre final se debe unificar el propietario del envío push para garantizar que un anuncio no se entregue dos veces.
+Los documentos históricos pueden mencionar `propiedad_id` o alturas anteriores del mapa. El contrato vigente es `propiedades_cambios.property_id` y la altura Web actual 420–680px / 62% del viewport.
