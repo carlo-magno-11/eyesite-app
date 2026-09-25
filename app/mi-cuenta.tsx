@@ -103,6 +103,12 @@ function AccountForm({ user, profile }: ProfileFormProps) {
       route: "/my-requests",
     },
     {
+      icon: "search-outline" as const,
+      title: "MIS BÚSQUEDAS",
+      text: "Búsquedas guardadas y futuras alertas",
+      route: "/saved-searches",
+    },
+    {
       icon: "notifications-outline" as const,
       title: "NOTIFICACIONES",
       text: "Mensajes y anuncios de EYESITE",
