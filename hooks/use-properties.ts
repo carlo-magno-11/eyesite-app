@@ -2,6 +2,7 @@ import {
   useState,
   useCallback,
   useEffect,
+  useRef,
 } from 'react';
 import { useFocusEffect } from 'expo-router';
 
@@ -405,9 +406,10 @@ export function useProperties(options?: PropertyCatalogOptions) {
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(false);
+  const requestGeneration = useRef(0);
 
   const isCatalogMode = Boolean(options);
-  const search = (options?.search?.trim() ?? '').replace(/[^a-zA-Z0-9ÁÉÍÓÚáéíóúÑñüÜ\\s.-]/g, ' ');
+  const search = (options?.search?.trim() ?? '').replace(/[^a-zA-Z0-9ÁÉÍÓÚáéíóúÑñüÜ\s.-]/g, ' ');
   const municipio = (options?.municipio?.trim() ?? '').replace(/[%_,]/g, ' ');
   const minPrice = normalizeCatalogNumber(options?.minPrice);
   const maxPrice = normalizeCatalogNumber(options?.maxPrice);
@@ -429,13 +431,14 @@ export function useProperties(options?: PropertyCatalogOptions) {
 
   const fetchPage = useCallback(
     async (from: number, append: boolean) => {
+      const requestId = ++requestGeneration.current;
       try {
         if (append) setLoadingMore(true);
         else setLoading(true);
 
         let query = supabase
           .from('propiedades_publicas')
-          .select(isCatalogMode ? CATALOG_FIELDS : '*', { count: 'exact' })
+          .select(isCatalogMode ? CATALOG_FIELDS : '*')
           .eq('estado', 'activa')
           .order('created_at', { ascending: false });
 
@@ -454,15 +457,18 @@ export function useProperties(options?: PropertyCatalogOptions) {
           if (minSurface !== null) query = query.gte('superficie', minSurface);
           if (maxSurface !== null) query = query.lte('superficie', maxSurface);
 
-          query = query.range(from, from + pageSize - 1);
+          query = query.range(from, from + pageSize);
         }
 
-        const { data, error: err, count } = await query;
+        const { data, error: err } = await query;
         if (err) throw err;
 
-        const mapped = (data ?? []).map(mapProperty);
+        const rawRows = data ?? [];
+        if (requestId !== requestGeneration.current) return;
+        const hasNextPage = isCatalogMode && rawRows.length > pageSize;
+        const mapped = rawRows.slice(0, pageSize).map(mapProperty);
         setProperties((current) => (append ? [...current, ...mapped] : mapped));
-        setHasMore(isCatalogMode ? from + mapped.length < (count ?? 0) : false);
+        setHasMore(hasNextPage);
         setError(null);
       } catch (e) {
         const message = e instanceof Error ? e.message : 'Error desconocido';
