@@ -54,22 +54,22 @@ export default function VerifyEmailScreen() {
   return (
     <View style={styles.container}>
       <Text style={styles.logo}>EYESITE</Text>
-      <Text style={styles.title}>VERIFICA TU CORREO</Text>
+      <Text style={styles.title}>{t("verifyEmailTitle")}</Text>
       <Text style={styles.text}>
         Antes de continuar, confirma tu correo electrónico.
       </Text>
-      <Text style={styles.email}>{email || "Tu correo registrado"}</Text>
+      <Text style={styles.email}>{email || t("registeredEmail")}</Text>
       <Pressable
         onPress={resend}
         disabled={sending}
         style={[styles.button, sending && styles.disabled]}
       >
         <Text style={styles.buttonText}>
-          {sending ? "ENVIANDO..." : "REENVIAR VERIFICACIÓN"}
+          {sending ? "ENVIANDO..." : "{t("resendVerification")}"}
         </Text>
       </Pressable>
       <Pressable onPress={logout} style={styles.secondary}>
-        <Text style={styles.secondaryText}>VOLVER A INICIAR SESIÓN</Text>
+        <Text style={styles.secondaryText}>{t("backToSignIn")}</Text>
       </Pressable>
     </View>
   );
