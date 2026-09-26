@@ -1,5 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { Platform } from "react-native";
 
 export type Language = "es" | "en";
@@ -40,6 +40,20 @@ const dictionaries = {
     signInError: "No se pudo iniciar sesión",
     unexpectedError: "Error inesperado",
     tryAgain: "Ocurrió un problema. Inténtalo nuevamente.",
+    tooManyAttempts: "Demasiados intentos",
+    tooManyAttemptsDescription: "Supabase detectó demasiados intentos de inicio de sesión. Espera un momento antes de volver a intentarlo.",
+    incorrectCredentials: "Datos incorrectos",
+    incorrectCredentialsDescription: "El correo o la contraseña no son correctos.",
+    emailNotConfirmed: "Correo sin confirmar",
+    emailNotConfirmedDescription: "Confirma tu correo electrónico antes de iniciar sesión.",
+    signInFailedDescription: "Ocurrió un problema al iniciar sesión. Inténtalo nuevamente.",
+    unexpectedSignInDescription: "No fue posible iniciar sesión. Inténtalo nuevamente.",
+    signingIn: "INICIANDO SESIÓN...",
+    signIn: "INICIAR SESIÓN",
+    passwordPlaceholder: "Tu contraseña",
+    noAccount: "¿Todavía no tienes una cuenta?",
+    createAccountUpper: "CREAR CUENTA",
+    protectedData: "Tus datos están protegidos.",
   },
   en: {
     language: "Language",
@@ -73,6 +87,20 @@ const dictionaries = {
     signInError: "Could not sign in",
     unexpectedError: "Unexpected error",
     tryAgain: "Something went wrong. Please try again.",
+    tooManyAttempts: "Too many attempts",
+    tooManyAttemptsDescription: "Supabase detected too many sign-in attempts. Please wait a moment before trying again.",
+    incorrectCredentials: "Incorrect credentials",
+    incorrectCredentialsDescription: "The email or password is incorrect.",
+    emailNotConfirmed: "Email not confirmed",
+    emailNotConfirmedDescription: "Confirm your email address before signing in.",
+    signInFailedDescription: "Something went wrong while signing in. Please try again.",
+    unexpectedSignInDescription: "We could not sign you in. Please try again.",
+    signingIn: "SIGNING IN...",
+    signIn: "SIGN IN",
+    passwordPlaceholder: "Your password",
+    noAccount: "Don’t have an account yet?",
+    createAccountUpper: "CREATE ACCOUNT",
+    protectedData: "Your data is protected.",
   },
 } as const;
 
@@ -113,7 +141,7 @@ type I18nContextValue = {
 
 const I18nContext = createContext<I18nContextValue | null>(null);
 
-export function I18nProvider({ children }: { children: React.ReactNode }) {
+export function I18nProvider({ children }: { children: ReactNode }) {
   const [language, setLanguageState] = useState<Language>(detectLanguage());
 
   useEffect(() => {
