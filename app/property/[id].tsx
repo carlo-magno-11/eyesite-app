@@ -570,6 +570,37 @@ export default function PropertyDetailScreen() {
           {/* Video del terreno: ahora vive en el carrusel (slide 2, V6.3) —
               el video se reproduce inline con poster, no como sección aparte */}
 
+          {(hasDimensions || constructionM2 > 0) ? (
+            <View style={styles.terrainSection}>
+              <View style={styles.sectionHeadingRow}>
+                <View>
+                  <Text style={styles.sectionEyebrow}>{t("terrainAnalysis")}</Text>
+                  <Text style={styles.sectionHeading}>{t("terrainShape")}</Text>
+                </View>
+                <Text style={styles.sectionHeadingHint}>{t("terrainVisualGuide")}</Text>
+              </View>
+              {hasDimensions ? (
+                <View style={styles.terrainCard}>
+                  <View style={styles.terrainDiagramWrap}>
+                    <View style={[styles.terrainPlot, { aspectRatio: terrainRatio }]}>
+                      <View style={styles.terrainPlotFill} />
+                      <Text style={styles.terrainPlotLabel}>{formatSurface(surfaceM2, surfaceUnit)}</Text>
+                      <Text style={styles.terrainFrontLabel}>{frente} m</Text>
+                      <Text style={styles.terrainDepthLabel}>{fondo} m</Text>
+                    </View>
+                  </View>
+                  <Text style={styles.terrainLegendText}>{t("terrainDimensionsHint")}</Text>
+                </View>
+              ) : null}
+              {constructionM2 > 0 ? (
+                <View style={styles.constructionInsight}>
+                  <Text style={styles.constructionInsightTitle}>{t("construction")}</Text>
+                  <Text style={styles.constructionInsightText}>{formatSurface(constructionM2, 'm²')} {t("constructionOnProperty")}</Text>
+                </View>
+              ) : null}
+            </View>
+          ) : null}
+
           {/* Descripción */}
           <View style={styles.descSection}>
             <Text style={styles.descTitle}>{t("description")}</Text>
@@ -614,9 +645,22 @@ export default function PropertyDetailScreen() {
             )}
           </View>
 
-          {renderDynamicSection('CARACTERÍSTICAS', characteristicEntries)}
-          {renderDynamicSection('DETALLES', detailEntries)}
-          {renderDynamicSection('SERVICIOS CERCANOS', nearbyServiceEntries)}
+          {hasCoordinates ? (
+            <View style={styles.locationInsight}>
+              <View style={styles.locationInsightIcon}><IconSymbol name="location.fill" size={18} color="#C9A84C" /></View>
+              <View style={styles.locationInsightBody}>
+                <Text style={styles.locationInsightTitle}>{t("mapLocationTitle")}</Text>
+                <Text style={styles.locationInsightText}>{t("mapLocationDescription")}</Text>
+              </View>
+              <Pressable onPress={() => router.push('/(tabs)/map' as never)} style={styles.mapOpenButton}>
+                <Text style={styles.mapOpenButtonText}>{t("openMap")}</Text>
+              </Pressable>
+            </View>
+          ) : null}
+
+          {renderDynamicSection(t("characteristics"), characteristicEntries)}
+          {renderDynamicSection(t("details"), detailEntries)}
+          {renderDynamicSection(t("nearbyServices"), nearbyServiceEntries)}
 
           {(property.estatus_legal || property.certeza_legal) ? (
             <View style={styles.legalNote}>
@@ -627,7 +671,7 @@ export default function PropertyDetailScreen() {
                   <Text style={styles.legalText}>Estatus: {property.estatus_legal}</Text>
                 ) : null}
                 {property.certeza_legal ? (
-                  <Text style={styles.legalText}>{t("legalStatusLabel")}: {property.estatus_legal}</Text>
+                  <Text style={styles.legalText}>{t("legalCertainty")}</Text>
                 ) : null}
               </View>
             </View>
