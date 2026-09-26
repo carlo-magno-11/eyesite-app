@@ -22,7 +22,6 @@ import { useI18n } from '@/lib/i18n';
 export default function LoginScreen() {
   const { isDesktop } = useResponsive();
   const { t } = useI18n();
-  const { t } = useI18n();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -201,7 +200,7 @@ export default function LoginScreen() {
                   <TextInput
                     value={password}
                     onChangeText={setPassword}
-                    placeholder="{t("passwordPlaceholder")}"
+                    placeholder={t("passwordPlaceholder")}
                     placeholderTextColor="#666"
                     secureTextEntry={!showPassword}
                     autoCapitalize="none"
