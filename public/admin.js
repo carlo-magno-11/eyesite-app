@@ -3814,6 +3814,70 @@ function preserveExistingFileItems(value) {
     .filter(Boolean);
 }
 
+
+function assertPublicPropertyMedia(payload) {
+  const userStoragePath =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\//i;
+
+  const fields = [
+    "fotos",
+    "imagenes",
+    "fotos_pro",
+    "videos",
+    "video_url",
+    "portada_url",
+  ];
+
+  const refs = [];
+
+  const collect = (field, value) => {
+    if (Array.isArray(value)) {
+      value.forEach((item) => collect(field, item));
+      return;
+    }
+
+    if (value && typeof value === "object") {
+      collect(
+        field,
+        value.url ||
+          value.publicUrl ||
+          value.public_url ||
+          value.path ||
+          value.filePath ||
+          value.storagePath ||
+          "",
+      );
+      return;
+    }
+
+    if (typeof value === "string" && value.trim()) {
+      refs.push({ field, value: value.trim() });
+    }
+  };
+
+  for (const field of fields) {
+    collect(field, payload?.[field]);
+  }
+
+  const invalid = refs.filter(({ value }) => {
+    const normalized = value.toLowerCase();
+
+    return (
+      normalized.startsWith("eyesite-staging/") ||
+      normalized.startsWith("eyesite-private/") ||
+      normalized.includes("/storage/v1/object/public/eyesite-staging/") ||
+      normalized.includes("/storage/v1/object/public/eyesite-private/") ||
+      userStoragePath.test(value)
+    );
+  });
+
+  if (invalid.length) {
+    throw new Error(
+      "El medio de esta propiedad todavía pertenece a almacenamiento no publicado. Promueve o reemplaza el medio antes de guardar.",
+    );
+  }
+}
+
 function classifyPrivateFileItems(items) {
   const pdfs = [];
   const kmzKml = [];
@@ -4535,6 +4599,8 @@ async function saveEdit() {
           pdfs: [...new Set([...editPdfs, ...classifyPrivateFileItems(files).pdfs])],
           kmz_kml: [...new Set([...editKmzKml, ...classifyPrivateFileItems(files).kmzKml])],
         };
+
+        assertPublicPropertyMedia(payload);
 
         const { error } = await s.rpc("admin_update_property", {
           p_property_id: propiedadEditando.id,
