@@ -3,11 +3,13 @@ import { ScreenContainer } from '@/components/screen-container';
 import { useResponsive } from '@/hooks/use-responsive';
 import { CONTACT } from '@/constants/contact';
 import { useAuth } from '@/hooks/useAuth';
+import { useI18n } from '@/lib/i18n';
 
 const DEFAULT_PHONE = CONTACT.whatsappNumber;
 
 export default function PendingScreen() {
   const { user } = useAuth();
+  const { t } = useI18n();
   const { horizontalPadding, contentMaxWidth } = useResponsive();
   const openWhatsApp = () => {
     const msg = CONTACT.whatsappMessagePending + (user?.email || '');
@@ -21,8 +23,7 @@ export default function PendingScreen() {
       <Text style={styles.icon}>⏳</Text>
       <Text style={styles.title}>{t("accountUnderReview")}</Text>
       <Text style={styles.body}>
-        Recibimos tu registro. Nuestro equipo está validando tu cuenta. Te notificaremos en
-        cuanto sea aprobada.
+        {t("accountUnderReviewDescription")}
       </Text>
       <Pressable onPress={openWhatsApp} style={({ pressed }) => [styles.btn, pressed && { opacity: 0.85 }]}>
         <Text style={styles.btnText}>{t("contactWhatsapp")}</Text>
