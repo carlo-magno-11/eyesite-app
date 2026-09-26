@@ -9,6 +9,7 @@ import { useProperties } from '@/hooks/use-properties';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useAuth } from '@/hooks/useAuth';
 import { useSavedSearches } from '@/hooks/use-commercial';
+import { useI18n } from '@/lib/i18n';
 
 export default function PropertiesScreen() {
   const params = useLocalSearchParams<{ filter?: string; q?: string }>();
@@ -51,6 +52,7 @@ export default function PropertiesScreen() {
 
   const { propertyColumns, horizontalPadding, contentMaxWidth, isDesktop } = useResponsive();
   const { user } = useAuth();
+  const { t } = useI18n();
   const { save } = useSavedSearches(user?.id);
 
   const visibleCountLabel = hasMore ? `${properties.length}+` : String(properties.length);
@@ -126,14 +128,14 @@ export default function PropertiesScreen() {
       </View>
 
       <View style={[styles.sortWrapper, { paddingHorizontal: horizontalPadding, maxWidth: contentMaxWidth }, isDesktop && styles.contentCentered]}>
-        <Text style={styles.sortLabel}>ORDENAR</Text>
+        <Text style={styles.sortLabel}>{t('catalogSortLabel')}</Text>
         <View style={styles.sortChips}>
           {[
-            ['recent', 'Más recientes'],
-            ['priceAsc', 'Precio menor'],
-            ['priceDesc', 'Precio mayor'],
-            ['surfaceDesc', 'Mayor superficie'],
-            ['featured', 'Destacadas'],
+            ['recent', t('sortRecent')],
+            ['priceAsc', t('sortPriceAsc')],
+            ['priceDesc', t('sortPriceDesc')],
+            ['surfaceDesc', t('sortSurfaceDesc')],
+            ['featured', t('sortFeatured')],
           ].map(([value, label]) => (
             <Pressable
               key={value}
