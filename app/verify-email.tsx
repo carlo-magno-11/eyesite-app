@@ -2,8 +2,10 @@ import { useEffect, useState } from "react";
 import { Alert, Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import { router } from "expo-router";
 import { supabase } from "@/lib/supabase";
+import { useI18n } from "@/lib/i18n";
 
 export default function VerifyEmailScreen() {
+  const { t } = useI18n();
   const [email, setEmail] = useState("");
   const [sending, setSending] = useState(false);
 
