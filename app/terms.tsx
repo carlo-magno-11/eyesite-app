@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
 import { ScreenContainer } from '@/components/screen-container';
 import { useResponsive } from '@/hooks/use-responsive';
+import { useI18n } from '@/lib/i18n';
 
 const TEXTOS: Record<string, string> = {
   servicio: `{t("termsTitle")} EYESI+E\n\n1. Plataforma para búsqueda inmobiliaria en Yucatán.\n2. La información de propiedades es referencial, debe verificarse con asesor.\n3. EYESI+E no garantiza disponibilidad inmediata.\n4. El usuario se compromete a datos veraces.\n\nContacto WhatsApp: 999 746 2162`,
@@ -21,6 +22,7 @@ const TERMS_ITEMS = [
 export default function TermsScreen() {
   const { user } = useAuth();
   const { isDesktop, horizontalPadding, contentMaxWidth } = useResponsive();
+  const { t } = useI18n();
   const [accepted, setAccepted] = useState<Record<string, boolean>>({});
   const [leido, setLeido] = useState<Record<string, boolean>>({});
   const [modal, setModal] = useState<string | null>(null);
