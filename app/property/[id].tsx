@@ -263,6 +263,9 @@ export default function PropertyDetailScreen() {
 
  const frente = Number(property.frente ?? 0);
  const fondo = Number(property.fondo ?? 0);
+ const hasDimensions = frente > 0 && fondo > 0;
+ const terrainRatio = hasDimensions ? Math.min(3.2, Math.max(0.45, frente / fondo)) : 1;
+ const hasCoordinates = Number.isFinite(Number(property.latitud)) && Number.isFinite(Number(property.longitud));
 
  const detailEntries = Object.entries(property.detalles || {})
   .filter(([_, value]) => value !== null && value !== undefined && String(value).trim() !== '');
@@ -486,19 +489,43 @@ export default function PropertyDetailScreen() {
 
         {/* Contenido */}
         <View style={[styles.content, { width: contentWidth, alignSelf: 'center' }]}>
-          {/* Tipo */}
-          <View style={styles.typeTag}>
-            <Text style={styles.typeTagText}>{(property.type || property.tipo || 'PROPIEDAD').toUpperCase()}</Text>
-          </View>
-
-          {/* Título y ubicación */}
-          <Text style={styles.title}>{property.title || property.titulo}</Text>
+          <View style={styles.heroHeader}>
+            <View style={styles.heroHeaderTop}>
+              <View style={styles.typeTag}>
+                <Text style={styles.typeTagText}>{(property.type || property.tipo || 'PROPIEDAD').toUpperCase()}</Text>
+              </View>
+              {property.destacada ? (
+                <View style={styles.featuredBadge}><Text style={styles.featuredBadgeText}>DESTACADA</Text></View>
+              ) : null}
+            </View>
+            <Text style={styles.title}>{property.title || property.titulo}</Text>
           <View style={styles.locationRow}>
             <IconSymbol name="location.fill" size={14} color="#C9A84C" />
             <Text style={styles.location}>{property.location || property.municipio}</Text>
           </View>
 
-          {/* Métricas principales */}
+          <View style={styles.heroPriceRow}>
+            <View style={styles.heroPriceBlock}>
+              <Text style={styles.heroPriceLabel}>{t("currentPrice")}</Text>
+              <Text style={styles.heroPrice}>{formatPrice(currentPrice, priceUnit)}</Text>
+            </View>
+            {marketPrice > 0 ? (
+              <View style={styles.marketMiniCard}>
+                <Text style={styles.marketMiniLabel}>{t("marketValue")}</Text>
+                <Text style={styles.marketMiniValue}>{formatPrice(marketPrice, priceUnit)}</Text>
+              </View>
+            ) : null}
+          </View>
+          </View>
+
+          <View style={styles.decisionGrid}>
+            <View style={styles.decisionCard}><Text style={styles.decisionIcon}>▣</Text><Text style={styles.decisionLabel}>{t("surface")}</Text><Text style={styles.decisionValue}>{formatSurface(surfaceM2, surfaceUnit)}</Text></View>
+            <View style={styles.decisionCard}><Text style={styles.decisionIcon}>↔</Text><Text style={styles.decisionLabel}>{t("front")}</Text><Text style={styles.decisionValue}>{frente > 0 ? `${frente} m` : "—"}</Text></View>
+            <View style={styles.decisionCard}><Text style={styles.decisionIcon}>↕</Text><Text style={styles.decisionLabel}>{t("depth")}</Text><Text style={styles.decisionValue}>{fondo > 0 ? `${fondo} m` : "—"}</Text></View>
+            <View style={styles.decisionCard}><Text style={styles.decisionIcon}>↗</Text><Text style={styles.decisionLabel}>{t("returnRate")}</Text><Text style={[styles.decisionValue, styles.decisionValueGold]}>+{property.returnRate}%</Text></View>
+          </View>
+
+          {/* Métricas secundarias */}
           <View style={styles.metricsGrid}>
             <View style={styles.metricCard}>
               <Text style={styles.metricLabel}>{t("currentPrice")}</Text>
