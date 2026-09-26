@@ -4919,6 +4919,69 @@ async function eliminarPropiedad(id) {
    MODAL PENDIENTE
    ============================================================ */
 
+async function resolvePendingMediaReference(value, request) {
+  if (typeof value !== "string") return value;
+  const clean = value.trim();
+  if (!clean) return clean;
+
+  // Las solicitudes nuevas guardan medios en el staging privado.
+  // El administrador necesita una URL firmada temporal para poder
+  // previsualizarlos antes de aprobar la solicitud.
+  const stagingPrefix = `${request?.user_id || ""}/`;
+  if (
+    request?.user_id &&
+    clean.startsWith(stagingPrefix) &&
+    !/^https?:\/\//i.test(clean)
+  ) {
+    const { data, error } = await s.storage
+      .from("eyesite-staging")
+      .createSignedUrl(clean, 3600);
+
+    if (error || !data?.signedUrl) {
+      console.warn("[pending media] no se pudo firmar:", clean, error);
+      return clean;
+    }
+
+    return data.signedUrl;
+  }
+
+  return clean;
+}
+
+async function hydratePendingMedia(request) {
+  const clone = { ...request };
+
+  for (const field of ["fotos", "fotos_pro", "videos", "imagenes"]) {
+    const value = clone[field];
+    if (Array.isArray(value)) {
+      clone[field] = await Promise.all(
+        value.map(async (item) => {
+          if (typeof item === "string") {
+            return await resolvePendingMediaReference(item, request);
+          }
+
+          if (item && typeof item === "object") {
+            const copy = { ...item };
+            const key = copy.url ? "url" : copy.publicUrl ? "publicUrl" : copy.path ? "path" : null;
+            if (key) copy[key] = await resolvePendingMediaReference(copy[key], request);
+            return copy;
+          }
+
+          return item;
+        }),
+      );
+    }
+  }
+
+  for (const field of ["video_url", "portada_url"]) {
+    if (typeof clone[field] === "string") {
+      clone[field] = await resolvePendingMediaReference(clone[field], request);
+    }
+  }
+
+  return clone;
+}
+
 async function verPendiente(id) {
   const p = pendientes.find((item) => String(item.id) === String(id));
 
@@ -4928,9 +4991,9 @@ async function verPendiente(id) {
     return;
   }
 
-  pendienteViendo = p;
+  pendienteViendo = await hydratePendingMedia(p);
 
-  renderViewProperty(p, document.getElementById("vf"));
+  renderViewProperty(pendienteViendo, document.getElementById("vf"));
 
   const subtitle = document.getElementById("vmsub");
 
