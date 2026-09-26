@@ -27,14 +27,6 @@ export default function PropertiesScreen() {
 
   const initialFilter = typeof params.filter === 'string' && params.filter ? params.filter : 'all';
   const [activeFilter, setActiveFilter] = useState<string>(initialFilter);
-  useEffect(() => {
-    if (typeof params.filter === 'string' && params.filter) {
-      setActiveFilter(params.filter);
-    }
-    if (typeof params.q === 'string') {
-      setSearch(params.q);
-    }
-  }, [params.filter, params.q]);
   const catalogOptions = useMemo(() => ({
     search: catalogSearch,
     municipio,
