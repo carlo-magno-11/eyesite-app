@@ -6,9 +6,11 @@ import { supabase } from "@/lib/supabase";
 import { router } from "expo-router";
 import { useState } from "react";
 import { useResponsive } from "@/hooks/use-responsive";
+import { useI18n } from "@/lib/i18n";
 
 export default function NotificationSettingsScreen() {
   const { user, profile } = useAuth();
+  const { t } = useI18n();
   const [push, setPush] = useState<boolean | null>(null);
   const [inApp, setInApp] = useState<boolean | null>(null);
   const [adsPush, setAdsPush] = useState<boolean | null>(null);
@@ -62,29 +64,29 @@ export default function NotificationSettingsScreen() {
           <Text style={s.backText}>‹</Text>
         </Pressable>
         <View style={{ flex: 1 }}>
-          <Text style={s.title}>NOTIFICACIONES</Text>
-          <Text style={s.subtitle}>Controla cómo quieres recibir comunicaciones de EYESITE.</Text>
+          <Text style={s.title}>{t("notificationsSettingsTitle")}</Text>
+          <Text style={s.subtitle}>{t("notificationsSettingsSubtitle")}</Text>
         </View>
       </View>
 
       <View style={[s.card, { marginHorizontal: horizontalPadding, maxWidth: contentMaxWidth, width: "100%", alignSelf: "center" }]}>
         <Row
-          title="Notificaciones dentro de EYESITE"
-          description="Avisos de tu cuenta, propiedades y eventos."
+          title={t("inAppNotifications")}
+          description={t("inAppNotificationsDescription")}
           value={inAppValue}
           disabled={saving}
           onChange={(v) => void save("notificaciones_in_app", v)}
         />
         <Row
-          title="Notificaciones push"
-          description="Avisos que llegan al teléfono aunque EYESITE esté cerrada."
+          title={t("pushNotifications")}
+          description={t("pushNotificationsDescription")}
           value={pushValue}
           disabled={saving}
           onChange={(v) => void save("notificaciones_push", v)}
         />
         <Row
-          title="Anuncios de EYESITE"
-          description="Permite recibir por push novedades y anuncios generales."
+          title={t("eyesiteAnnouncements")}
+          description={t("eyesiteAnnouncementsDescription")}
           value={adsPushValue}
           disabled={saving}
           onChange={(v) => void save("anuncios_push", v)}
