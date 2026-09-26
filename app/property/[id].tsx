@@ -652,7 +652,7 @@ export default function PropertyDetailScreen() {
                 <Text style={styles.locationInsightTitle}>{t("mapLocationTitle")}</Text>
                 <Text style={styles.locationInsightText}>{t("mapLocationDescription")}</Text>
               </View>
-              <Pressable onPress={() => router.push('/(tabs)/map' as never)} style={styles.mapOpenButton}>
+              <Pressable onPress={() => router.push({ pathname: '/(tabs)/map', params: { propertyId: String(property.id) } } as never)} style={styles.mapOpenButton}>
                 <Text style={styles.mapOpenButtonText}>{t("openMap")}</Text>
               </Pressable>
             </View>
