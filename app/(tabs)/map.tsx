@@ -422,7 +422,7 @@ export default function MapScreen() {
       if (requestId !== mapRequestGeneration.current) return;
       console.error("[EYESITE] map properties error", error);
       setProperties([]);
-      setMapError(error instanceof Error ? error.message : "No se pudieron cargar las propiedades del mapa.");
+      setMapError(error instanceof Error ? error.message : t("mapLoadError"));
     } finally {
       if (requestId === mapRequestGeneration.current) setLoading(false);
     }
