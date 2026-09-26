@@ -2,8 +2,10 @@ import { useState } from "react";
 import { Alert, ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { router } from "expo-router";
 import { supabase } from "@/lib/supabase";
+import { useI18n } from "@/lib/i18n";
 
 export default function ResetPasswordScreen() {
+  const { t } = useI18n();
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [saving, setSaving] = useState(false);
@@ -56,7 +58,7 @@ export default function ResetPasswordScreen() {
       <TextInput
         value={password}
         onChangeText={setPassword}
-        placeholder="{t("newPasswordPlaceholder")}"
+        placeholder={t("newPasswordPlaceholder")}
         placeholderTextColor="#777"
         secureTextEntry
         autoCapitalize="none"
@@ -66,7 +68,7 @@ export default function ResetPasswordScreen() {
       <TextInput
         value={confirm}
         onChangeText={setConfirm}
-        placeholder="{t("confirmPasswordPlaceholder")}"
+        placeholder={t("confirmPasswordPlaceholder")}
         placeholderTextColor="#777"
         secureTextEntry
         autoCapitalize="none"
