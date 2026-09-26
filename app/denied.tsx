@@ -19,13 +19,13 @@ export default function DeniedScreen() {
   return (
     <ScreenContainer edges={["top", "bottom"]} containerClassName="bg-background"><View style={[styles.container, { paddingHorizontal: horizontalPadding, maxWidth: contentMaxWidth, width: "100%", alignSelf: "center" }]}>
       <Text style={styles.icon}>🚫</Text>
-      <Text style={styles.title}>Cuenta denegada</Text>
+      <Text style={styles.title}>{t("accountDenied")}</Text>
       <Text style={styles.body}>
         Lamentablemente tu cuenta no pudo ser aprobada. Si crees que es un error, contáctanos por
         WhatsApp y lo revisamos.
       </Text>
       <Pressable onPress={openWhatsApp} style={({ pressed }) => [styles.btn, pressed && { opacity: 0.85 }]}>
-        <Text style={styles.btnText}>APELAR POR WHATSAPP</Text>
+        <Text style={styles.btnText}>{t("appealWhatsapp")}</Text>
       </Pressable>
       <Text style={styles.help}>{CONTACT.whatsappNumberDisplay}</Text>
     </View></ScreenContainer>
