@@ -426,7 +426,7 @@ export default function MapScreen() {
     } finally {
       if (requestId === mapRequestGeneration.current) setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     const center = userLocation ?? {
@@ -521,7 +521,7 @@ export default function MapScreen() {
     } finally {
       setLocating(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     if (Platform.OS === "web") return;
