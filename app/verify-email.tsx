@@ -67,7 +67,7 @@ export default function VerifyEmailScreen() {
         style={[styles.button, sending && styles.disabled]}
       >
         <Text style={styles.buttonText}>
-          {sending ? "ENVIANDO..." : "{t("resendVerification")}"}
+          {sending ? "ENVIANDO..." : t("resendVerification")}
         </Text>
       </Pressable>
       <Pressable onPress={logout} style={styles.secondary}>
