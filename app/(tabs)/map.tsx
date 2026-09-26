@@ -480,10 +480,6 @@ export default function MapScreen() {
   }, [t]);
 
   useEffect(() => {
-    const center = userLocation ?? {
-      latitude: DEFAULT_REGION.latitude,
-      longitude: DEFAULT_REGION.longitude,
-    };
     const timer = setTimeout(() => {
       void fetchMapProperties(
         { latitude: YUCATAN_MAP_CENTER.latitude, longitude: YUCATAN_MAP_CENTER.longitude },
@@ -520,7 +516,7 @@ export default function MapScreen() {
       if (refreshTimer) clearTimeout(refreshTimer);
       void supabase.removeChannel(channel);
     };
-  }, [fetchMapProperties, userLocation]);
+  }, [fetchMapProperties]);
 
   const requestLocation = useCallback(async () => {
     setLocating(true);
