@@ -4,11 +4,13 @@ import { router } from "expo-router";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 import { useResponsive } from "@/hooks/use-responsive";
+import { useI18n } from "@/lib/i18n";
 import { ScreenContainer } from "@/components/screen-container";
 
 export default function MyPropertiesScreen() {
   const { user } = useAuth();
   const { horizontalPadding, contentMaxWidth } = useResponsive();
+  const { t, language } = useI18n();
   const [items, setItems] = useState<any[]>([]);
   const [loadingData, setLoadingData] = useState(false);
   const loading = Boolean(user) && loadingData;
@@ -59,14 +61,14 @@ export default function MyPropertiesScreen() {
         showsVerticalScrollIndicator={false}
       >
         <Pressable onPress={() => router.back()}>
-          <Text style={s.back}>‹ Volver</Text>
+          <Text style={s.back}>{t("back")}</Text>
         </Pressable>
-        <Text style={s.title}>MIS TERRENOS</Text>
+        <Text style={s.title}>{t("myProperties")}</Text>
 
         {loading ? (
           <ActivityIndicator color="#C9A84C" />
         ) : items.length === 0 ? (
-          <Text style={s.empty}>Todavía no tienes terrenos publicados.</Text>
+          <Text style={s.empty}>{t("noPublishedProperties")}</Text>
         ) : (
           items.map((p) => (
             <Pressable
@@ -74,18 +76,18 @@ export default function MyPropertiesScreen() {
               style={s.card}
               onPress={() => router.push(("/property/" + p.id) as never)}
             >
-              <Text style={s.name}>{p.titulo || "Sin título"}</Text>
+              <Text style={s.name}>{p.titulo || t("noTitle")}</Text>
               <Text style={s.meta}>
-                {p.tipo || "Terreno"} · {p.municipio || "—"}
+                {p.tipo || t("land")} · {p.municipio || t("noLocationDash")}
               </Text>
               <Text style={s.price}>
                 {p.precio_actual != null
-                  ? "$" + Number(p.precio_actual).toLocaleString("es-MX")
-                  : "Precio no disponible"}
+                  ? "$" + Number(p.precio_actual).toLocaleString(language === "en" ? "en-US" : "es-MX")
+                  : t("priceUnavailable")}
               </Text>
               <Text style={s.status}>
                 {p.estado || "—"}
-                {p.activa === false ? " · inactiva" : ""}
+                {p.activa === false ? " · " + t("inactive") : ""}
               </Text>
             </Pressable>
           ))
