@@ -182,7 +182,7 @@ export default function PropertyDetailScreen() {
       <ScreenContainer containerClassName="bg-background">
         <View style={styles.notFound}>
           <ActivityIndicator color="#C9A84C" size="large" />
-          <Text style={styles.notFoundText}>{b}</Text>
+          <Text style={styles.notFoundText}>{t("loadingProperty")}</Text>
         </View>
       </ScreenContainer>
     );
@@ -192,9 +192,9 @@ export default function PropertyDetailScreen() {
     return (
       <ScreenContainer containerClassName="bg-background">
         <View style={styles.notFound}>
-          <Text style={styles.notFoundText}>{b}</Text>
+          <Text style={styles.notFoundText}>{t("propertyNotFound")}</Text>
           <Pressable onPress={() => router.back()} style={styles.backBtn}>
-            <Text style={styles.backBtnText}>{b}</Text>
+            <Text style={styles.backBtnText}>{t("back")}</Text>
           </Pressable>
         </View>
       </ScreenContainer>
@@ -353,8 +353,8 @@ export default function PropertyDetailScreen() {
     }
   };
 
-  const returnDiff = (marketPrice) > 0
-    ? Math.round((((marketPrice) - (currentPrice)) / (marketPrice)) * 100)
+  const returnDiff = marketPrice > 0
+    ? Math.round(((marketPrice - currentPrice) / marketPrice) * 100)
     : 0;
 
   const closeVideoModal = () => {
@@ -368,7 +368,7 @@ export default function PropertyDetailScreen() {
 
   return (
     <View style={styles.container}>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 120 }}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: Math.max(120, 96 + insets.bottom) }}>
         {/* Galería V6.3: orden fijo — portada (foto) → video (con poster) → resto. Sin negro. */}
         <View style={[styles.galleryContainer, { width: contentWidth, height: galleryHeight, alignSelf: 'center' }]}>
           <FlatList
@@ -501,7 +501,7 @@ export default function PropertyDetailScreen() {
           {/* Métricas principales */}
           <View style={styles.metricsGrid}>
             <View style={styles.metricCard}>
-              <Text style={styles.metricLabel}>{b}</Text>
+              <Text style={styles.metricLabel}>{t("currentPrice")}</Text>
               <Text style={styles.metricValue}>
                {formatPrice(
                 currentPrice,
@@ -510,18 +510,18 @@ export default function PropertyDetailScreen() {
              </Text>
             </View>
             <View style={styles.metricCard}>
-              <Text style={styles.metricLabel}>{b}</Text>
+              <Text style={styles.metricLabel}>{t("currentMarketPrice")}</Text>
               <Text style={[styles.metricValue, styles.metricValueMuted]}>
                 {formatPrice(marketPrice, priceUnit)}
               </Text>
             </View>
             <View style={styles.metricCard}>
-              <Text style={styles.metricLabel}>{b}</Text>
+              <Text style={styles.metricLabel}>{t("surface")}</Text>
               <Text style={styles.metricValue}>{formatSurface(surfaceM2, surfaceUnit)}</Text>
             </View>
             {constructionM2 > 0 && (
               <View style={styles.metricCard}>
-                <Text style={styles.metricLabel}>{b}</Text>
+                <Text style={styles.metricLabel}>{t("construction")}</Text>
                 <Text style={styles.metricValue}>{formatSurface(constructionM2, 'm²')}</Text>
               </View>
             )}
@@ -530,9 +530,9 @@ export default function PropertyDetailScreen() {
           {/* Rendimiento destacado */}
           <View style={[styles.returnCard, { borderColor: returnColor + '55' }]}>
             <View>
-              <Text style={styles.returnCardLabel}>{b}</Text>
+              <Text style={styles.returnCardLabel}>{t("returnAtPurchase")}</Text>
               <Text style={styles.returnCardSub}>
-                {returnDiff > 0 ? `${returnDiff}% por debajo del mercado` : 'Al precio de mercado'}
+                {returnDiff > 0 ? `${returnDiff}% ${t("belowMarket")}` : t("atMarketPrice")}
               </Text>
             </View>
             <Text style={[styles.returnCardValue, { color: returnColor }]}>
@@ -545,20 +545,20 @@ export default function PropertyDetailScreen() {
 
           {/* Descripción */}
           <View style={styles.descSection}>
-            <Text style={styles.descTitle}>{b}</Text>
-            <Text style={styles.descText}>{property.description || property.descripcion || 'Sin descripción disponible'}</Text>
+            <Text style={styles.descTitle}>{t("description")}</Text>
+            <Text style={styles.descText}>{property.description || property.descripcion || t("noDescription")}</Text>
           </View>
 
           {property.descripcion_pro ? (
             <View style={styles.descSection}>
-              <Text style={styles.descTitle}>{b}</Text>
+              <Text style={styles.descTitle}>{t("professionalInfo")}</Text>
               <Text style={styles.descText}>{property.descripcion_pro}</Text>
             </View>
           ) : null}
 
           {(property.direccion || property.ubicacion) && (
             <View style={styles.descSection}>
-              <Text style={styles.descTitle}>{b}</Text>
+              <Text style={styles.descTitle}>{t("location")}</Text>
               {property.direccion ? <Text style={styles.descText}>{property.direccion}</Text> : null}
               {property.ubicacion && property.ubicacion !== location ? (
                 <Text style={styles.secondaryText}>{property.ubicacion}</Text>
@@ -569,19 +569,19 @@ export default function PropertyDetailScreen() {
           <View style={styles.metricsGrid}>
             {frente > 0 && (
               <View style={styles.metricCard}>
-                <Text style={styles.metricLabel}>{b}</Text>
+                <Text style={styles.metricLabel}>{t("front")}</Text>
                 <Text style={styles.metricValue}>{frente} m</Text>
               </View>
             )}
             {fondo > 0 && (
               <View style={styles.metricCard}>
-                <Text style={styles.metricLabel}>{b}</Text>
+                <Text style={styles.metricLabel}>{t("depth")}</Text>
                 <Text style={styles.metricValue}>{fondo} m</Text>
               </View>
             )}
             {expectedPrice > 0 && (
               <View style={styles.metricCard}>
-                <Text style={styles.metricLabel}>{b}</Text>
+                <Text style={styles.metricLabel}>{t("expectedPrice")}</Text>
                 <Text style={styles.metricValue}>{formatPrice(expectedPrice, priceUnit)}</Text>
               </View>
             )}
@@ -595,12 +595,12 @@ export default function PropertyDetailScreen() {
             <View style={styles.legalNote}>
               <Text style={styles.legalIcon}>⚖️</Text>
               <View style={styles.legalContent}>
-                <Text style={styles.legalTitle}>{b}</Text>
+                <Text style={styles.legalTitle}>{t("legalStatus")}</Text>
                 {property.estatus_legal ? (
                   <Text style={styles.legalText}>Estatus: {property.estatus_legal}</Text>
                 ) : null}
                 {property.certeza_legal ? (
-                  <Text style={styles.legalText}>{b}</Text>
+                  <Text style={styles.legalText}>{t("legalStatusLabel")}: {property.estatus_legal}</Text>
                 ) : null}
               </View>
             </View>
@@ -608,12 +608,12 @@ export default function PropertyDetailScreen() {
 
           {property.tour_360 ? (
             <View style={styles.dataSection}>
-              <Text style={styles.sectionTitle}>{b}</Text>
+              <Text style={styles.sectionTitle}>{t("tour360")}</Text>
               <Pressable
                 onPress={() => Linking.openURL(property.tour_360 as string)}
                 style={styles.linkCard}
               >
-                <Text style={styles.linkLabel}>{b}</Text>
+                <Text style={styles.linkLabel}>{t("openTour360")}</Text>
                 <Text style={styles.linkUrl}>{property.tour_360}</Text>
               </Pressable>
             </View>
@@ -621,7 +621,7 @@ export default function PropertyDetailScreen() {
 
           {privateDocumentPaths.length > 0 ? (
             <View style={styles.dataSection}>
-              <Text style={styles.sectionTitle}>{b}</Text>
+              <Text style={styles.sectionTitle}>{t("documents")}</Text>
               {privateDocumentPaths.map((path) => {
                 const name = path.split('/').pop() || 'Documento';
                 const lower = name.toLowerCase();
@@ -638,7 +638,7 @@ export default function PropertyDetailScreen() {
 
           {property.enlaces && Array.isArray(property.enlaces) && property.enlaces.length > 0 ? (
             <View style={styles.dataSection}>
-              <Text style={styles.sectionTitle}>{b}</Text>
+              <Text style={styles.sectionTitle}>{t("links")}</Text>
               {property.enlaces.map((link: any, index: number) => {
                 const url = typeof link === 'string' ? link : link?.url || link?.href;
                 const label = typeof link === 'string' ? link : link?.label || link?.titulo || url;
@@ -663,13 +663,13 @@ export default function PropertyDetailScreen() {
           style={({ pressed }) => [styles.callBtn, pressed && { opacity: 0.8 }]}
         >
           <IconSymbol name="phone.fill" size={18} color="#C9A84C" />
-          <Text style={styles.callBtnText}>{b}</Text>
+          <Text style={styles.callBtnText}>{t("call")}</Text>
         </Pressable>
         <Pressable
           onPress={handleWhatsApp}
           style={({ pressed }) => [styles.whatsappBtn, pressed && { opacity: 0.85 }]}
         >
-          <Text style={styles.whatsappBtnText}>{b}</Text>
+          <Text style={styles.whatsappBtnText}>{t("scheduleCall")}</Text>
         </Pressable>
       </View>
 
