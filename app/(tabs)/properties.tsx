@@ -20,6 +20,7 @@ export default function PropertiesScreen() {
   const [maxPrice, setMaxPrice] = useState('');
   const [minSurface, setMinSurface] = useState('');
   const [maxSurface, setMaxSurface] = useState('');
+  const [sort, setSort] = useState<'recent' | 'priceAsc' | 'priceDesc' | 'surfaceDesc' | 'featured'>('recent');
   useEffect(() => {
     const timer = setTimeout(() => setCatalogSearch(search), 300);
     return () => clearTimeout(timer);
@@ -35,7 +36,8 @@ export default function PropertiesScreen() {
     minSurface: minSurface ? Number(minSurface) : null,
     maxSurface: maxSurface ? Number(maxSurface) : null,
     tipo: activeFilter === 'all' ? null : activeFilter,
-  }), [catalogSearch, municipio, minPrice, maxPrice, minSurface, maxSurface, activeFilter]);
+    sort,
+  }), [catalogSearch, municipio, minPrice, maxPrice, minSurface, maxSurface, activeFilter, sort]);
 
   const {
     properties,
@@ -121,6 +123,31 @@ export default function PropertiesScreen() {
             </Pressable>
           )}
         />
+      </View>
+
+      <View style={[styles.sortWrapper, { paddingHorizontal: horizontalPadding, maxWidth: contentMaxWidth }, isDesktop && styles.contentCentered]}>
+        <Text style={styles.sortLabel}>ORDENAR</Text>
+        <View style={styles.sortChips}>
+          {[
+            ['recent', 'Más recientes'],
+            ['priceAsc', 'Precio menor'],
+            ['priceDesc', 'Precio mayor'],
+            ['surfaceDesc', 'Mayor superficie'],
+            ['featured', 'Destacadas'],
+          ].map(([value, label]) => (
+            <Pressable
+              key={value}
+              onPress={() => setSort(value as typeof sort)}
+              style={({ pressed }) => [
+                styles.sortChip,
+                sort === value && styles.sortChipActive,
+                pressed && { opacity: 0.7 },
+              ]}
+            >
+              <Text style={[styles.sortChipText, sort === value && styles.sortChipTextActive]}>{label}</Text>
+            </Pressable>
+          ))}
+        </View>
       </View>
 
       <View style={[styles.savedSearchRow, { paddingHorizontal: horizontalPadding, maxWidth: contentMaxWidth }, isDesktop && styles.contentCentered]}>
@@ -336,6 +363,43 @@ const styles = StyleSheet.create({
   },
   singleItem: {
     width: '100%',
+  },
+  sortWrapper: {
+    width: '100%',
+    alignSelf: 'center',
+    paddingBottom: 10,
+  },
+  sortLabel: {
+    color: '#777',
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 1,
+    marginBottom: 7,
+  },
+  sortChips: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 7,
+  },
+  sortChip: {
+    paddingHorizontal: 11,
+    paddingVertical: 7,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#2A2A2A',
+    backgroundColor: '#141414',
+  },
+  sortChipActive: {
+    borderColor: '#C9A84C',
+    backgroundColor: '#C9A84C',
+  },
+  sortChipText: {
+    color: '#9A9A9A',
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  sortChipTextActive: {
+    color: '#0D0D0D',
   },
   savedSearchRow: {
     width: '100%',
