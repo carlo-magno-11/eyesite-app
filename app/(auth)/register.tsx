@@ -19,10 +19,13 @@ import { Ionicons } from "@expo/vector-icons";
 import { supabase } from "@/lib/supabase";
 import AuthBackground from "@/components/AuthBackground";
 import { useResponsive } from "@/hooks/use-responsive";
+import { useI18n } from "@/lib/i18n";
 
 export default function RegisterScreen() {
   const router = useRouter();
   const { isDesktop } = useResponsive();
+  const { t } = useI18n();
+  const { t } = useI18n();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -53,8 +56,8 @@ export default function RegisterScreen() {
     if (loading) return;
     if (!legalAccepted) {
       Alert.alert(
-        "Términos obligatorios",
-        "Debes leer y aceptar los términos antes de crear tu cuenta.",
+        t("requiredTerms"),
+        t("requiredTermsDescription"),
       );
       setShowTerms(true);
       return;
@@ -65,8 +68,8 @@ export default function RegisterScreen() {
     // Validar correo
     if (!cleanEmail) {
       return Alert.alert(
-        "Correo requerido",
-        "Ingresa tu correo electrónico para continuar.",
+        t("requiredEmail"),
+        t("enterEmail"),
       );
     }
 
@@ -74,8 +77,8 @@ export default function RegisterScreen() {
 
     if (!emailIsValid) {
       return Alert.alert(
-        "Correo no válido",
-        "Ingresa una dirección de correo electrónico válida.",
+        t("invalidEmailAddress"),
+        t("invalidEmailAddress"),
       );
     }
 
@@ -85,28 +88,28 @@ export default function RegisterScreen() {
     const cleanPresupuesto = presupuesto.trim();
 
     if (!cleanNombre) {
-      return Alert.alert("Nombre requerido", "Ingresa tu nombre completo.");
+      return Alert.alert(t("requiredName"), t("enterFullName"));
     }
     if (cleanTelefono.length < 10) {
-      return Alert.alert("Teléfono inválido", "Ingresa un teléfono válido de al menos 10 dígitos.");
+      return Alert.alert(t("invalidPhone"), t("validPhone"));
     }
     if (!cleanCiudad) {
-      return Alert.alert("Ciudad requerida", "Ingresa tu ciudad o zona de interés.");
+      return Alert.alert(t("requiredCity"), t("enterCity"));
     }
 
     // Validar contraseña
     if (password.length < 8 || !passwordChecks.number || !passwordChecks.upper) {
       return Alert.alert(
-        "Contraseña muy corta",
-        "La contraseña debe tener al menos 8 caracteres, con al menos una mayúscula y un número.",
+        t("weakPassword"),
+        t("passwordRequirements"),
       );
     }
 
     // Confirmar contraseña
     if (password !== confirmPassword) {
       return Alert.alert(
-        "Las contraseñas no coinciden",
-        "Verifica que ambas contraseñas sean iguales.",
+        t("passwordsMismatch"),
+        t("passwordsMismatchDescription"),
       );
     }
 
@@ -143,15 +146,15 @@ export default function RegisterScreen() {
           /already registered|already exists|user already/i.test(error.message)
         ) {
           Alert.alert(
-            "Correo ya registrado",
-            "Este correo ya tiene una cuenta. Puedes iniciar sesión o recuperar tu contraseña.",
+            t("emailRegistered"),
+            t("emailRegisteredDescription"),
             [
               {
                 text: "Iniciar sesión",
                 onPress: () => router.replace("/(auth)/login" as never),
               },
               {
-                text: "Cancelar",
+                text: t("cancel"),
                 style: "cancel",
               },
             ],
@@ -159,7 +162,7 @@ export default function RegisterScreen() {
           return;
         }
 
-        Alert.alert("No se pudo crear la cuenta", error.message);
+        Alert.alert(t("accountCreateFailed"), error.message);
 
         return;
       }
@@ -177,19 +180,19 @@ export default function RegisterScreen() {
       }
 
       Alert.alert(
-        "Cuenta creada",
-        "Tu cuenta fue creada correctamente. Ahora puedes iniciar sesión.",
+        t("accountCreated"),
+        t("accountCreatedDescription"),
         [
           {
-            text: "Continuar",
+            text: t("continue"),
             onPress: () => router.replace("/(auth)/login" as never),
           },
         ],
       );
     } catch {
       Alert.alert(
-        "Error",
-        "Ocurrió un problema inesperado. Inténtalo nuevamente.",
+        t("unexpectedProblem"),
+        t("unexpectedProblemDescription"),
       );
     } finally {
       setLoading(false);
@@ -232,16 +235,16 @@ export default function RegisterScreen() {
           <View style={[styles.container, isDesktop && styles.desktopContainer]}>
             {/* ENCABEZADO */}
             <View style={styles.header}>
-              <Text style={styles.brand}>CREAR CUENTA</Text>
+              <Text style={styles.brand}>{t("registerAccount")}</Text>
 
               <Text style={styles.subtitle}>
-                Regístrate para empezar a buscar propiedades
+                {t("registerSubtitle")}
               </Text>
             </View>
 
             {/* CORREO */}
             <View style={styles.field}>
-              <Text style={styles.label}>CORREO ELECTRÓNICO</Text>
+              <Text style={styles.label}>{t("email")}</Text>
 
               <View style={styles.inputWrap}>
                 <Ionicons
@@ -268,40 +271,40 @@ export default function RegisterScreen() {
 
             {/* DATOS DEL PERFIL */}
             <View style={styles.field}>
-              <Text style={styles.label}>NOMBRE COMPLETO</Text>
+              <Text style={styles.label}>{t("fullName")}</Text>
               <View style={styles.inputWrap}>
                 <Ionicons name="person-outline" size={20} color="#888" style={styles.inputIcon} />
-                <TextInput value={nombre} onChangeText={setNombre} placeholder="Tu nombre completo" placeholderTextColor="#666" autoCapitalize="words" autoCorrect={false} style={styles.input} />
+                <TextInput value={nombre} onChangeText={setNombre} placeholder="{t("fullNamePlaceholder")}" placeholderTextColor="#666" autoCapitalize="words" autoCorrect={false} style={styles.input} />
               </View>
             </View>
 
             <View style={styles.field}>
-              <Text style={styles.label}>TELÉFONO / WHATSAPP</Text>
+              <Text style={styles.label}>{t("phoneWhatsapp")}</Text>
               <View style={styles.inputWrap}>
                 <Ionicons name="call-outline" size={20} color="#888" style={styles.inputIcon} />
-                <TextInput value={telefono} onChangeText={setTelefono} placeholder="10 dígitos" placeholderTextColor="#666" keyboardType="phone-pad" style={styles.input} />
+                <TextInput value={telefono} onChangeText={setTelefono} placeholder="{t("phonePlaceholder")}" placeholderTextColor="#666" keyboardType="phone-pad" style={styles.input} />
               </View>
             </View>
 
             <View style={styles.field}>
-              <Text style={styles.label}>CIUDAD / ZONA</Text>
+              <Text style={styles.label}>{t("cityZone")}</Text>
               <View style={styles.inputWrap}>
                 <Ionicons name="location-outline" size={20} color="#888" style={styles.inputIcon} />
-                <TextInput value={ciudad} onChangeText={setCiudad} placeholder="Ciudad o zona de interés" placeholderTextColor="#666" autoCapitalize="words" autoCorrect={false} style={styles.input} />
+                <TextInput value={ciudad} onChangeText={setCiudad} placeholder="{t("cityPlaceholder")}" placeholderTextColor="#666" autoCapitalize="words" autoCorrect={false} style={styles.input} />
               </View>
             </View>
 
             <View style={styles.field}>
-              <Text style={styles.label}>PRESUPUESTO <Text style={styles.optional}>(OPCIONAL)</Text></Text>
+              <Text style={styles.label}>{t("budgetOptional")} <Text style={styles.optional}>({t("optional")})</Text></Text>
               <View style={styles.inputWrap}>
                 <Ionicons name="cash-outline" size={20} color="#888" style={styles.inputIcon} />
-                <TextInput value={presupuesto} onChangeText={setPresupuesto} placeholder="Ej. $2,500,000" placeholderTextColor="#666" keyboardType="default" style={styles.input} />
+                <TextInput value={presupuesto} onChangeText={setPresupuesto} placeholder="{t("budgetPlaceholder")}" placeholderTextColor="#666" keyboardType="default" style={styles.input} />
               </View>
             </View>
 
-            {/* CONTRASEÑA */}
+            {/* {t("password")} */}
             <View style={styles.field}>
-              <Text style={styles.label}>CONTRASEÑA</Text>
+              <Text style={styles.label}>{t("password")}</Text>
 
               <View style={styles.inputWrap}>
                 <Ionicons
@@ -314,7 +317,7 @@ export default function RegisterScreen() {
                 <TextInput
                   value={password}
                   onChangeText={setPassword}
-                  placeholder="Mínimo 8 caracteres"
+                  placeholder="{t("passwordMin")}"
                   placeholderTextColor="#666"
                   secureTextEntry={!showPassword}
                   autoCapitalize="none"
@@ -339,22 +342,22 @@ export default function RegisterScreen() {
               {(passwordFocused || password.length > 0) && (
                 <View style={styles.passwordGuide}>
                   <View style={styles.passwordGuideHeader}>
-                    <Text style={styles.passwordGuideTitle}>SEGURIDAD: {passwordLabel.toUpperCase()}</Text>
+                    <Text style={styles.passwordGuideTitle}>{t("security")}: {passwordLabel.toUpperCase()}</Text>
                     <Text style={styles.passwordGuideScore}>{passwordScore}/3</Text>
                   </View>
                   <View style={styles.passwordBarTrack}>
                     <View style={[styles.passwordBar, { width: passwordScore === 0 ? "8%" : passwordScore === 1 ? "33%" : passwordScore === 2 ? "66%" : "100%" }]} />
                   </View>
-                  <Text style={styles.passwordRule}>• {passwordChecks.length ? "✓" : "○"} 8 caracteres o más</Text>
-                  <Text style={styles.passwordRule}>• {passwordChecks.upper ? "✓" : "○"} Una mayúscula</Text>
-                  <Text style={styles.passwordRule}>• {passwordChecks.number ? "✓" : "○"} Un número</Text>
+                  <Text style={styles.passwordRule}>• {passwordChecks.length ? "✓" : "○"} {t("charactersMore")}</Text>
+                  <Text style={styles.passwordRule}>• {passwordChecks.upper ? "✓" : "○"} {t("oneUpper")}</Text>
+                  <Text style={styles.passwordRule}>• {passwordChecks.number ? "✓" : "○"} {t("oneNumber")}</Text>
                 </View>
               )}
             </View>
 
-            {/* CONFIRMAR CONTRASEÑA */}
+            {/* CONFIRMAR {t("password")} */}
             <View style={styles.field}>
-              <Text style={styles.label}>CONFIRMAR CONTRASEÑA</Text>
+              <Text style={styles.label}>CONFIRMAR {t("password")}</Text>
 
               <View style={styles.inputWrap}>
                 <Ionicons
@@ -367,7 +370,7 @@ export default function RegisterScreen() {
                 <TextInput
                   value={confirmPassword}
                   onChangeText={setConfirmPassword}
-                  placeholder="Repite tu contraseña"
+                  placeholder="{t("repeatPassword")}"
                   placeholderTextColor="#666"
                   secureTextEntry={!showConfirmPassword}
                   autoCapitalize="none"
@@ -411,7 +414,7 @@ export default function RegisterScreen() {
                 </Text>
               </Pressable>
               <Pressable onPress={() => setShowTerms(true)}>
-                <Text style={styles.legalLink}>LEER INFORMACIÓN COMPLETA</Text>
+                <Text style={styles.legalLink}>{t("readFullInfo")}</Text>
               </Pressable>
             </View>
             <Modal visible={showTerms} animationType="slide" transparent>
@@ -440,7 +443,7 @@ export default function RegisterScreen() {
                     style={styles.acceptTermsBtn}
                   >
                     <Text style={styles.acceptTermsText}>
-                      HE LEÍDO Y ACEPTO
+                      {t("acceptTerms")}
                     </Text>
                   </Pressable>
                   <Pressable
@@ -464,16 +467,16 @@ export default function RegisterScreen() {
                 <View style={styles.loadingRow}>
                   <ActivityIndicator color="#0E0E0E" />
 
-                  <Text style={styles.buttonText}>CREANDO CUENTA...</Text>
+                  <Text style={styles.buttonText}>{t("creatingAccount")}</Text>
                 </View>
               ) : (
-                <Text style={styles.buttonText}>REGISTRARME</Text>
+                <Text style={styles.buttonText}>{t("signUp")}</Text>
               )}
             </TouchableOpacity>
 
             {/* LOGIN */}
             <View style={styles.footerContainer}>
-              <Text style={styles.footer}>¿Ya tienes una cuenta? </Text>
+              <Text style={styles.footer}>{t("alreadyAccount")} </Text>
 
               <Link href="/(auth)/login" asChild>
                 <Pressable>
