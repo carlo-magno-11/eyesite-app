@@ -577,9 +577,11 @@ export default function MapScreen() {
 
   // Web: keep the map responsive across laptops, tablets and split-screen.
   // The map shares the page with a header and a short result list.
+  // En web el mapa debe ocupar el espacio vertical disponible y no quedar
+  // reducido por una altura fija pequeña. El footer permanece compacto debajo.
   const webMapHeight = Math.max(
-    320,
-    Math.min(Math.round(windowHeight * 0.55), 620),
+    500,
+    Math.min(Math.round(windowHeight * 0.70), 860),
   );
 
   const handleMapMessage = useCallback(
@@ -768,7 +770,7 @@ const styles = StyleSheet.create({
   },
 
   mapWrap: {
-    flex: Platform.OS === "web" ? 0 : 1,
+    flex: 1,
     minHeight: 360,
     marginHorizontal: 12,
     borderRadius: 16,
