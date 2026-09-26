@@ -4,11 +4,13 @@ import { router } from "expo-router";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 import { useResponsive } from "@/hooks/use-responsive";
+import { useI18n } from "@/lib/i18n";
 import { ScreenContainer } from "@/components/screen-container";
 
 export default function MyRequestsScreen() {
   const { user } = useAuth();
   const { horizontalPadding, contentMaxWidth } = useResponsive();
+  const { t, language } = useI18n();
   const [items, setItems] = useState<any[]>([]);
   const [loadingData, setLoadingData] = useState(false);
   const loading = Boolean(user) && loadingData;
@@ -59,30 +61,30 @@ export default function MyRequestsScreen() {
         showsVerticalScrollIndicator={false}
       >
         <Pressable onPress={() => router.back()}>
-          <Text style={s.back}>‹ Volver</Text>
+          <Text style={s.back}>{t("back")}</Text>
         </Pressable>
-        <Text style={s.title}>MIS SOLICITUDES</Text>
+        <Text style={s.title}>{t("myRequests")}</Text>
 
         {loading ? (
           <ActivityIndicator color="#C9A84C" />
         ) : items.length === 0 ? (
-          <Text style={s.empty}>No tienes solicitudes todavía.</Text>
+          <Text style={s.empty}>{t("noRequests")}</Text>
         ) : (
           items.map((p) => (
             <View key={p.id} style={s.card}>
-              <Text style={s.name}>{p.titulo || "Sin título"}</Text>
+              <Text style={s.name}>{p.titulo || t("noTitle")}</Text>
               <Text style={s.meta}>
-                {p.tipo || "Terreno"} · {p.municipio || "—"}
+                {p.tipo || t("land")} · {p.municipio || t("noLocationDash")}
               </Text>
-              <Text style={s.status}>Estado: {p.estado || "—"}</Text>
+              <Text style={s.status}>{t("requestStatus")}: {p.estado || t("noLocationDash")}</Text>
               {p.motivo_rechazo ? (
-                <Text style={s.reason}>Motivo: {p.motivo_rechazo}</Text>
+                <Text style={s.reason}>{t("rejectionReason")}: {p.motivo_rechazo}</Text>
               ) : null}
               {p.propiedad_id && p.estado === "aprobada" ? (
                 <Pressable
                   onPress={() => router.push(("/property/" + p.propiedad_id) as never)}
                 >
-                  <Text style={s.link}>VER PUBLICACIÓN ›</Text>
+                  <Text style={s.link}>{t("viewPublication")}</Text>
                 </Pressable>
               ) : null}
             </View>
