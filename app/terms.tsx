@@ -7,16 +7,10 @@ import { ScreenContainer } from '@/components/screen-container';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useI18n } from '@/lib/i18n';
 
-const TEXTOS: Record<string, string> = {
-  servicio: `{t("termsTitle")} EYESI+E\n\n1. Plataforma para búsqueda inmobiliaria en Yucatán.\n2. La información de propiedades es referencial, debe verificarse con asesor.\n3. EYESI+E no garantiza disponibilidad inmediata.\n4. El usuario se compromete a datos veraces.\n\nContacto WhatsApp: 999 746 2162`,
-  privacidad: `AVISO DE PRIVACIDAD\n\nTus datos (email, nombre, preferencias) se usarán únicamente para contactarte sobre propiedades y listings relevantes, cumpliendo la Ley de Protección de Datos.\nNo vendemos tu info. Baja al WhatsApp 999 746 2162.`,
-  datos: `TRATAMIENTO DE DATOS PARA CONTACTO\n\nAutorizas que un asesor de EYESI+E te contacte por WhatsApp, llamada o email para mostrar propiedades y agendar visitas.`
-};
-
 const TERMS_ITEMS = [
-  { key: 'servicio', label: 'Acepto los Términos y Condiciones de EYESI+E' },
-  { key: 'privacidad', label: 'Acepto el Aviso de Privacidad' },
-  { key: 'datos', label: 'Autorizo el tratamiento de mis datos personales para contacto' },
+  { key: 'servicio', labelKey: 'termServiceLabel' as const },
+  { key: 'privacidad', labelKey: 'termPrivacyLabel' as const },
+  { key: 'datos', labelKey: 'termDataLabel' as const },
 ];
 
 export default function TermsScreen() {
@@ -109,8 +103,8 @@ export default function TermsScreen() {
     });
 
     Alert.alert(
-      'No se pudieron guardar los términos',
-      e?.message || 'No pudimos guardar tu aceptación. Inténtalo nuevamente.',
+      t("termsSaveError"),
+      e?.message || t("termsSaveErrorDescription"),
     );
   } finally {
     setSaving(false);
@@ -128,7 +122,7 @@ export default function TermsScreen() {
             <View key={item.key} style={styles.row}>
               <Pressable onPress={() => abrirModal(item.key)} style={{flex:1}}>
                 <Text style={styles.label}>
-                  {item.label}
+                  {t(item.labelKey)}
                   {!leido[item.key] && <Text style={{color:'#C9A84C'}}> ({t("readInfo")})</Text>}
                 </Text>
               </Pressable>
@@ -149,17 +143,17 @@ export default function TermsScreen() {
         >
           {saving? <ActivityIndicator color="#0D0D0D" /> : <Text style={styles.btnText}>{t("acceptContinue")}</Text>}
         </Pressable>
-        <Text style={styles.hint}>{allAccepted? '{t("allReadAccepted")}' : 'Debes leer ({t("readInfo")}) y aceptar los 3 puntos'}</Text>
+        <Text style={styles.hint}>{allAccepted ? t("termsHintAccepted") : t("termsHintPending")}</Text>
 
         {/* MODAL DE LECTURA */}
         <Modal visible={!!modal} animationType="slide" transparent>
           <View style={styles.modalOverlay}>
             <View style={styles.modalContent}>
               <Text style={styles.modalTitle}>
-                {modal === 'servicio'? 'Términos y Condiciones' : modal === 'privacidad'? 'Aviso de Privacidad' : 'Tratamiento de Datos'}
+                {modal === 'servicio' ? t("termServiceTitle") : modal === 'privacidad' ? t("termPrivacyTitle") : t("termDataTitle")}
               </Text>
               <ScrollView style={{maxHeight:380, marginVertical:12}}>
-                <Text style={styles.modalText}>{modal? TEXTOS[modal] : ''}</Text>
+                <Text style={styles.modalText}>{modal === 'servicio' ? t("termsServiceText") : modal === 'privacidad' ? t("termsPrivacyText") : t("termsDataText")}</Text>
               </ScrollView>
               <Pressable onPress={confirmarLectura} style={styles.modalBtn}>
                 <Text style={styles.modalBtnText}>{t("readAndConfirm")}</Text>
