@@ -1015,7 +1015,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   terrainPlotFill: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: '#C9A84C0D',
   },
   terrainPlotLabel: { color: '#C9A84C', fontSize: 16, fontWeight: '900' },
