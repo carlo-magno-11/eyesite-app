@@ -70,6 +70,12 @@ const dictionaries = {
     mapPublishedOnly: "Solo propiedades EYESITE publicadas y activas.",
     viewProperty: "Ver propiedad",
     kmFromYou: "de ti",
+    favoritesTitle: "FAVORITOS",
+    favoritesCount: "guardadas",
+    loadingFavorites: "Cargando favoritos...",
+    noFavorites: "Sin favoritos aún",
+    noFavoritesDescription: "Guarda las propiedades que más te interesen tocando el ícono de corazón en cada propiedad.",
+    findYourLegacy: "ENCUENTRA TU LEGADO",
   },
   en: {
     language: "Language",
@@ -133,6 +139,12 @@ const dictionaries = {
     mapPublishedOnly: "Only published and active EYESITE properties.",
     viewProperty: "View property",
     kmFromYou: "from you",
+    favoritesTitle: "FAVORITES",
+    favoritesCount: "saved",
+    loadingFavorites: "Loading favorites...",
+    noFavorites: "No favorites yet",
+    noFavoritesDescription: "Save the properties you are most interested in by tapping the heart icon on each property.",
+    findYourLegacy: "FIND YOUR LEGACY",
   },
 } as const;
 
