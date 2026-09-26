@@ -404,6 +404,21 @@ function normalizeCatalogNumber(value?: number | null) {
   return typeof value === 'number' && Number.isFinite(value) ? value : null;
 }
 
+/**
+ * The PostgREST .or() filter uses raw syntax, so user-entered text must not
+ * contain reserved delimiters. Keep search intentionally conservative:
+ * letters/numbers/whitespace plus accents and hyphens are enough for EYESITE
+ * titles, municipalities and locations.
+ */
+export function sanitizeCatalogSearchTerm(value?: string | null) {
+  return (value ?? '')
+    .normalize('NFC')
+    .trim()
+    .replace(/[^\p{L}\p{N}\s-]/gu, ' ')
+    .replace(/\s+/g, ' ')
+    .slice(0, 80);
+}
+
 export function useProperties(options?: PropertyCatalogOptions) {
   const [properties, setProperties] = useState<Property[]>([]);
   const [loading, setLoading] = useState(true);
@@ -413,8 +428,8 @@ export function useProperties(options?: PropertyCatalogOptions) {
   const requestGeneration = useRef(0);
 
   const isCatalogMode = Boolean(options);
-  const search = (options?.search?.trim() ?? '').replace(/[^a-zA-Z0-9ÁÉÍÓÚáéíóúÑñüÜ\s.-]/g, ' ');
-  const municipio = (options?.municipio?.trim() ?? '').replace(/[%_,]/g, ' ');
+  const search = sanitizeCatalogSearchTerm(options?.search);
+  const municipio = sanitizeCatalogSearchTerm(options?.municipio);
   const minPrice = normalizeCatalogNumber(options?.minPrice);
   const maxPrice = normalizeCatalogNumber(options?.maxPrice);
   const minSurface = normalizeCatalogNumber(options?.minSurface);
@@ -461,7 +476,7 @@ export function useProperties(options?: PropertyCatalogOptions) {
           if (minSurface !== null) query = query.gte('superficie', minSurface);
           if (maxSurface !== null) query = query.lte('superficie', maxSurface);
 
-          query = query.range(from, from + pageSize);
+          query = query.range(from, from + pageSize - 1);
         }
 
         const { data, error: err } = await query;
@@ -469,7 +484,7 @@ export function useProperties(options?: PropertyCatalogOptions) {
 
         const rawRows = data ?? [];
         if (requestId !== requestGeneration.current) return;
-        const hasNextPage = isCatalogMode && rawRows.length > pageSize;
+        const hasNextPage = isCatalogMode && rawRows.length === pageSize;
         const mapped = rawRows.slice(0, pageSize).map(mapProperty);
         setProperties((current) => (append ? [...current, ...mapped] : mapped));
         setHasMore(hasNextPage);
