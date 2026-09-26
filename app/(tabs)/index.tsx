@@ -1,4 +1,5 @@
-import { View, Text, ScrollView, Pressable, StyleSheet, ActivityIndicator } from 'react-native';
+import { useState } from 'react';
+import { View, Text, ScrollView, Pressable, StyleSheet, ActivityIndicator, TextInput } from 'react-native';
 import { Image } from 'expo-image';
 import { ScreenContainer } from '@/components/screen-container';
 import { PropertyCard } from '@/components/property-card';
@@ -9,6 +10,7 @@ import { useNotifications } from '@/hooks/use-notifications';
 import { useResponsive } from '@/hooks/use-responsive';
 import { Ionicons } from '@expo/vector-icons';
 import { rankPropertyMatches } from '@/lib/commercial';
+import { useI18n } from '@/lib/i18n';
 
 const CATEGORIES = [
   { key: 'terreno', label: 'Terrenos', icon: '🌿' },
@@ -19,6 +21,8 @@ const CATEGORIES = [
 ];
 
 export default function HomeScreen() {
+  const { t } = useI18n();
+  const [homeSearch, setHomeSearch] = useState('');
   const { properties, loading } = useProperties();
   const { user, session, profile } = useAuth();
   const { unread } = useNotifications(user?.id);
@@ -105,6 +109,47 @@ export default function HomeScreen() {
               <Text style={styles.heroButtonText}>VER OPORTUNIDADES</Text>
             </Pressable>
           </View>
+        </View>
+
+        {/* Búsqueda principal */}
+        <View style={[styles.searchSection, { paddingHorizontal: horizontalPadding, maxWidth: contentMaxWidth }, isDesktop && styles.centeredContent]}>
+          <Text style={styles.searchTitle}>{t('homeSearchTitle')}</Text>
+          <View style={styles.searchBar}>
+            <Ionicons name="search-outline" size={19} color="#9A9A9A" />
+            <TextInput
+              value={homeSearch}
+              onChangeText={setHomeSearch}
+              placeholder={t('homeSearchPlaceholder')}
+              placeholderTextColor="#777"
+              style={styles.searchInput}
+              returnKeyType="search"
+              onSubmitEditing={() => {
+                const query = homeSearch.trim();
+                router.push(
+                  query
+                    ? { pathname: '/(tabs)/properties', params: { q: query } } as any
+                    : '/(tabs)/properties' as any,
+                );
+              }}
+              accessibilityLabel={t('homeSearchPlaceholder')}
+            />
+            <Pressable
+              onPress={() => {
+                const query = homeSearch.trim();
+                router.push(
+                  query
+                    ? { pathname: '/(tabs)/properties', params: { q: query } } as any
+                    : '/(tabs)/properties' as any,
+                );
+              }}
+              style={({ pressed }) => [styles.searchButton, pressed && { opacity: 0.8 }]}
+              accessibilityRole="button"
+              accessibilityLabel={t('searchProperties')}
+            >
+              <Ionicons name="arrow-forward" size={18} color="#0D0D0D" />
+            </Pressable>
+          </View>
+          <Text style={styles.searchHint}>{t('homeSearchHint')}</Text>
         </View>
 
         {/* Categorías */}
@@ -303,6 +348,48 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     fontSize: 12,
     letterSpacing: 1,
+  },
+  searchSection: {
+    marginTop: 2,
+    marginBottom: 10,
+  },
+  searchTitle: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '800',
+    letterSpacing: 0.8,
+    marginBottom: 9,
+  },
+  searchBar: {
+    minHeight: 50,
+    borderRadius: 12,
+    backgroundColor: '#141414',
+    borderWidth: 1,
+    borderColor: '#2A2A2A',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingLeft: 14,
+    paddingRight: 5,
+    gap: 9,
+  },
+  searchInput: {
+    flex: 1,
+    color: '#F5F5F5',
+    fontSize: 14,
+    paddingVertical: 10,
+  },
+  searchButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    backgroundColor: '#C9A84C',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  searchHint: {
+    color: '#777',
+    fontSize: 11,
+    marginTop: 7,
   },
   section: {
     marginVertical: 20,
