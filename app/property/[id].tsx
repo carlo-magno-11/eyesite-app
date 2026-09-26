@@ -629,7 +629,7 @@ export default function PropertyDetailScreen() {
                 return (
                   <Pressable key={path} onPress={() => void openPrivateDocument(path)} style={styles.linkCard} disabled={loadingDocument === path}>
                     <Text style={styles.linkLabel}>{type} · {name}</Text>
-                    <Text style={styles.linkUrl}>{loadingDocument === path ? t(""preparingDocument"") : t(""openDocument"")}</Text>
+                    <Text style={styles.linkUrl}>{loadingDocument === path ? t("preparingDocument") : t("openDocument")}</Text>
                   </Pressable>
                 );
               })}
