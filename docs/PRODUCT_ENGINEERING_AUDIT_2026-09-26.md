@@ -96,3 +96,22 @@ No considerar EYESITE terminada hasta que:
 - mapa tenga datos reales suficientes o un estado UX correcto para propiedades sin coordenadas.
 - privacidad y términos estén accesibles públicamente.
 - se realice una prueba física de iOS y una revisión de Android/Web.
+
+
+## 2026-09-26 — Product expansion started
+
+### Map product direction
+- The primary map experience is now designed around a statewide **Yucatán overview**, not automatic proximity.
+- The initial map center/zoom is statewide; device location is optional and is only requested after the user chooses the location control.
+- When location is enabled, the map can switch to a focused personal view, show the user's position, sort the visible EYESITE properties by distance, and return to the statewide view.
+- The map query now requests a wider Yucatán coverage radius and filters coordinates to the Yucatán geographic bounds.
+- No property coordinates are invented. Current production data has 10 active properties, 3 with coordinates and 7 without; those seven remain a data-completeness task for the admin workflow.
+- The map continues to use Leaflet/OpenStreetMap and does not introduce Google Maps or Google Cloud.
+
+### Product search foundation
+- Home now has a primary property search entry point.
+- Search sends the user into the existing catalog search pipeline, which already searches title, type, code, municipality, location and address with sanitized PostgREST search input.
+- The next product layer is deterministic sorting/filtering and a compact mobile filter surface, followed by saved-search alerts and stronger property-detail conversion actions.
+
+### Engineering gate
+- The latest workflow must be checked again after the current commits; no green status is claimed until GitHub Actions reports it.
