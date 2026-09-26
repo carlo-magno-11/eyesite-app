@@ -1,8 +1,10 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useEffect, useState } from "react";
 import { Animated, Easing, StyleSheet, Text, View } from "react-native";
+import { useI18n } from "@/lib/i18n";
 
 export default function EyesiteLaunchSplash() {
+  const { t } = useI18n();
   const [pulse] = useState(() => new Animated.Value(0.88));
   const [glow] = useState(() => new Animated.Value(0));
   const [logoY] = useState(() => new Animated.Value(18));
@@ -34,14 +36,14 @@ export default function EyesiteLaunchSplash() {
   const glowOpacity = glow.interpolate({ inputRange: [0, 1], outputRange: [0.12, 0.34] });
 
   return (
-    <View style={styles.root} accessibilityRole="progressbar" accessibilityLabel="EYESITE está iniciando">
+    <View style={styles.root} accessibilityRole="progressbar" accessibilityLabel={t("appStarting")}>
       <Animated.View style={[styles.glow, { opacity: glowOpacity, transform: [{ scale: pulse }] }]} />
       <Animated.View style={[styles.logo, { transform: [{ translateY: logoY }, { scale: pulse }] }]}>
         <Ionicons name="eye-outline" size={66} color="#C9A84C" />
       </Animated.View>
       <Animated.View style={{ opacity: textOpacity, alignItems: "center" }}>
         <Text style={styles.brand}>EYESITE</Text>
-        <Text style={styles.tagline}>PROPIEDADES · CONFIANZA · VISIÓN</Text>
+        <Text style={styles.tagline}>{t("tagline")}</Text>
       </Animated.View>
       <View style={styles.loaderTrack}>
         <Animated.View style={[styles.loader, { opacity: textOpacity }]} />
