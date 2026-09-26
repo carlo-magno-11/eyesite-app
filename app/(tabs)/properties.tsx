@@ -11,8 +11,8 @@ import { useAuth } from '@/hooks/useAuth';
 import { useSavedSearches } from '@/hooks/use-commercial';
 
 export default function PropertiesScreen() {
-  const params = useLocalSearchParams<{ filter?: string }>();
-  const [search, setSearch] = useState('');
+  const params = useLocalSearchParams<{ filter?: string; q?: string }>();
+  const [search, setSearch] = useState(initialQuery);
   const [catalogSearch, setCatalogSearch] = useState('');
   const [municipio, setMunicipio] = useState('');
   const [minPrice, setMinPrice] = useState('');
@@ -25,7 +25,16 @@ export default function PropertiesScreen() {
   }, [search]);
 
   const initialFilter = typeof params.filter === 'string' && params.filter ? params.filter : 'all';
+  const initialQuery = typeof params.q === 'string' ? params.q : '';
   const [activeFilter, setActiveFilter] = useState<string>(initialFilter);
+  useEffect(() => {
+    if (typeof params.filter === 'string' && params.filter) {
+      setActiveFilter(params.filter);
+    }
+    if (typeof params.q === 'string') {
+      setSearch(params.q);
+    }
+  }, [params.filter, params.q]);
   const catalogOptions = useMemo(() => ({
     search: catalogSearch,
     municipio,
