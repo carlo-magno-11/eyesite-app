@@ -589,7 +589,11 @@ export default function MapScreen() {
         Number.isFinite(latitude) &&
         Number.isFinite(longitude) &&
         Math.abs(latitude) <= 90 &&
-        Math.abs(longitude) <= 180
+        Math.abs(longitude) <= 180 &&
+        latitude >= YUCATAN_BOUNDS.south &&
+        latitude <= YUCATAN_BOUNDS.north &&
+        longitude >= YUCATAN_BOUNDS.west &&
+        longitude <= YUCATAN_BOUNDS.east
       );
     });
   }, [properties]);
@@ -636,6 +640,8 @@ export default function MapScreen() {
   // The map shares the page with a header and a short result list.
   // En web el mapa debe ocupar el espacio vertical disponible y no quedar
   // reducido por una altura fija pequeña. El footer permanece compacto debajo.
+  const unlocatedCount = Math.max(properties.length - geoProperties.length, 0);
+
   const webMapHeight = Math.max(
     500,
     Math.min(Math.round(windowHeight * 0.70), 860),
@@ -748,6 +754,12 @@ export default function MapScreen() {
         <Text style={styles.footerNote}>
           {t("mapPublishedOnly")}
         </Text>
+
+        {unlocatedCount > 0 && (
+          <Text style={styles.unlocatedNote}>
+            {unlocatedCount} {t("mapUnlocated")}
+          </Text>
+        )}
 
         {nearby.slice(0, 4).map((item) => {
           const distance =
