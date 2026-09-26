@@ -925,6 +925,13 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
 
+  unlocatedNote: {
+    color: "#C9A84C",
+    fontSize: 10,
+    fontWeight: "700",
+    marginBottom: 4,
+  },
+
   resultRow: {
     flexDirection: "row",
     alignItems: "center",
