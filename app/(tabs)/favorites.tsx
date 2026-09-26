@@ -7,6 +7,7 @@ import { mapProperty } from '@/hooks/use-properties';
 import { supabase } from '@/lib/supabase';
 import { useResponsive } from '@/hooks/use-responsive';
 import type { Property } from '@/lib/properties-data';
+import { useI18n } from '@/lib/i18n';
 
 const FAVORITES_FIELDS = [
   'id','codigo','titulo','tipo','municipio','ubicacion','direccion',
@@ -22,6 +23,7 @@ export default function FavoritesScreen() {
   const [favoriteProperties, setFavoriteProperties] = useState<Property[]>([]);
   const [loading, setLoading] = useState(true);
   const { propertyColumns, horizontalPadding, contentMaxWidth } = useResponsive();
+  const { t } = useI18n();
 
   const fetchFavoriteProperties = useCallback(async () => {
     if (!favs.length) {
@@ -56,14 +58,14 @@ export default function FavoritesScreen() {
   return (
     <ScreenContainer edges={['top', 'left', 'right']} containerClassName="bg-background">
       <View style={[styles.header, { paddingHorizontal: horizontalPadding, maxWidth: contentMaxWidth, width: '100%', alignSelf: 'center' }]}>
-        <Text style={styles.headerTitle}>FAVORITOS</Text>
-        <Text style={styles.headerCount}>{favoriteProperties.length} guardadas</Text>
+        <Text style={styles.headerTitle}>{t("favoritesTitle")}</Text>
+        <Text style={styles.headerCount}>{favoriteProperties.length} {t("favoritesCount")}</Text>
       </View>
 
       {loading && favoriteProperties.length === 0 ? (
         <View style={styles.emptyContainer}>
           <ActivityIndicator color="#C9A84C" size="large" />
-          <Text style={styles.emptyText}>Cargando favoritos...</Text>
+          <Text style={styles.emptyText}>{t("loadingFavorites")}</Text>
         </View>
       ) : (
         <FlatList
@@ -84,11 +86,11 @@ export default function FavoritesScreen() {
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
               <Text style={styles.emptyIcon}>🏡</Text>
-              <Text style={styles.emptyTitle}>Sin favoritos aún</Text>
+              <Text style={styles.emptyTitle}>{t("noFavorites")}</Text>
               <Text style={styles.emptyText}>
-                Guarda las propiedades que más te interesen tocando el ícono de corazón en cada propiedad.
+                {t("noFavoritesDescription")}
               </Text>
-              <Text style={styles.emptyHint}>FIND YOUR LEGACY</Text>
+              <Text style={styles.emptyHint}>{t("findYourLegacy")}</Text>
             </View>
           }
         />
