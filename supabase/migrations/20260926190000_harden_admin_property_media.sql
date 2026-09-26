@@ -1,41 +1,73 @@
 -- EYESITE — Server-side validation for public property media on admin create/update
--- Branch-only hardening. Public catalog media must originate from eyesite-media.
+-- Branch-only hardening. New public catalog media must originate from eyesite-media.
+-- Existing legacy refs may be preserved during unrelated edits, but cannot be introduced
+-- into a property as new media.
 
-create or replace function private.assert_public_property_media_payload(p_payload jsonb)
+create or replace function private.assert_public_property_media_payload(
+  p_payload jsonb,
+  p_existing_media jsonb default null
+)
 returns void
 language plpgsql
 security definer
 set search_path = private, public, pg_temp
 as $function$
 declare
+  v_field text;
   v_value jsonb;
   v_item text;
+  v_existing text;
+  v_allowed_existing boolean;
 begin
   if p_payload is null or jsonb_typeof(p_payload) <> 'object' then
     raise exception 'Payload inválido';
   end if;
 
-  foreach v_value in array array[
-    p_payload->'portada_url',
-    p_payload->'video_url'
-  ]::jsonb[]
+  -- Scalar public-media fields.
+  foreach v_field in array array['portada_url', 'video_url']
   loop
-    if v_value is not null and jsonb_typeof(v_value) <> 'null' then
-      if jsonb_typeof(v_value) <> 'string'
-         or (v_value #>> '{}') !~* '^https://xhvpvpvtkdgnnxdwdrkn\.supabase\.co/storage/v1/object/public/eyesite-media/.+$'
-      then
-        raise exception 'La referencia de media pública no pertenece al bucket eyesite-media';
-      end if;
+    if not (p_payload ? v_field) then
+      continue;
     end if;
+
+    v_value := p_payload -> v_field;
+
+    if v_value is null or jsonb_typeof(v_value) = 'null' then
+      continue;
+    end if;
+
+    if jsonb_typeof(v_value) <> 'string' then
+      raise exception 'La referencia de media pública debe ser texto';
+    end if;
+
+    v_item := v_value #>> '{}';
+
+    if v_item ~* '^https://xhvpvpvtkdgnnxdwdrkn\\.supabase\\.co/storage/v1/object/public/eyesite-media/.+$' then
+      continue;
+    end if;
+
+    v_existing := case v_field
+      when 'portada_url' then p_existing_media->>'portada_url'
+      when 'video_url' then p_existing_media->>'video_url'
+      else null
+    end;
+
+    if p_existing_media is not null and v_existing is not null and v_item = v_existing then
+      continue;
+    end if;
+
+    raise exception 'La referencia de media pública no pertenece al bucket eyesite-media';
   end loop;
 
-  foreach v_value in array array[
-    p_payload->'fotos',
-    p_payload->'fotos_pro',
-    p_payload->'imagenes',
-    p_payload->'videos'
-  ]::jsonb[]
+  -- Array public-media fields.
+  foreach v_field in array array['fotos', 'fotos_pro', 'imagenes', 'videos']
   loop
+    if not (p_payload ? v_field) then
+      continue;
+    end if;
+
+    v_value := p_payload -> v_field;
+
     if v_value is null or jsonb_typeof(v_value) = 'null' then
       continue;
     end if;
@@ -44,9 +76,72 @@ begin
       raise exception 'La colección de media pública debe ser un arreglo';
     end if;
 
-    for v_item in select value from jsonb_array_elements_text(v_value)
+    if v_field = 'imagenes' then
+      -- New/updated imagenes must be public bucket URLs. Existing object-shaped
+      -- records may be preserved only when their exact URL already exists.
+      for v_item in
+        select case
+          when jsonb_typeof(value) = 'string' then value #>> '{}'
+          when jsonb_typeof(value) = 'object' then coalesce(
+            value->>'url',
+            value->>'publicUrl',
+            value->>'public_url',
+            value->>'path',
+            value->>'filePath',
+            value->>'storagePath'
+          )
+          else null
+        end
+        from jsonb_array_elements(v_value)
+      loop
+        if v_item is null or btrim(v_item) = '' then
+          raise exception 'Una referencia de media pública no es válida';
+        end if;
+
+        if v_item ~* '^https://xhvpvpvtkdgnnxdwdrkn\\.supabase\\.co/storage/v1/object/public/eyesite-media/.+$' then
+          continue;
+        end if;
+
+        v_allowed_existing := false;
+
+        if p_existing_media is not null and jsonb_typeof(p_existing_media->'imagenes') = 'array' then
+          v_allowed_existing :=
+            (p_existing_media->'imagenes' ? v_item)
+            or (p_existing_media->'imagenes' @> jsonb_build_array(jsonb_build_object('url', v_item)))
+            or (p_existing_media->'imagenes' @> jsonb_build_array(jsonb_build_object('publicUrl', v_item)))
+            or (p_existing_media->'imagenes' @> jsonb_build_array(jsonb_build_object('public_url', v_item)))
+            or (p_existing_media->'imagenes' @> jsonb_build_array(jsonb_build_object('path', v_item)))
+            or (p_existing_media->'imagenes' @> jsonb_build_array(jsonb_build_object('filePath', v_item)))
+            or (p_existing_media->'imagenes' @> jsonb_build_array(jsonb_build_object('storagePath', v_item)));
+        end if;
+
+        if not v_allowed_existing then
+          raise exception 'Una referencia de media pública no pertenece al bucket eyesite-media';
+        end if;
+      end loop;
+
+      continue;
+    end if;
+
+    for v_item in
+      select value #>> '{}'
+      from jsonb_array_elements(v_value)
     loop
-      if v_item !~* '^https://xhvpvpvtkdgnnxdwdrkn\.supabase\.co/storage/v1/object/public/eyesite-media/.+$' then
+      if v_item is null or btrim(v_item) = '' then
+        raise exception 'Una referencia de media pública no es válida';
+      end if;
+
+      if v_item ~* '^https://xhvpvpvtkdgnnxdwdrkn\\.supabase\\.co/storage/v1/object/public/eyesite-media/.+$' then
+        continue;
+      end if;
+
+      v_allowed_existing := false;
+
+      if p_existing_media is not null and jsonb_typeof(p_existing_media->v_field) = 'array' then
+        v_allowed_existing := p_existing_media->v_field ? v_item;
+      end if;
+
+      if not v_allowed_existing then
         raise exception 'Una referencia de media pública no pertenece al bucket eyesite-media';
       end if;
     end loop;
@@ -54,7 +149,7 @@ begin
 end;
 $function$;
 
-revoke all on function private.assert_public_property_media_payload(jsonb) from public, anon, authenticated;
+revoke all on function private.assert_public_property_media_payload(jsonb,jsonb) from public, anon, authenticated;
 
 create or replace function public.admin_create_property(p_payload jsonb)
 returns jsonb
@@ -76,7 +171,7 @@ begin
     raise exception 'Payload inválido';
   end if;
 
-  perform private.assert_public_property_media_payload(p_payload);
+  perform private.assert_public_property_media_payload(p_payload, null);
 
   if nullif(trim(p_payload->>'user_id'), '') is not null then
     begin v_user_id := (p_payload->>'user_id')::uuid;
@@ -164,7 +259,7 @@ begin
   if p_payload ? 'portada_url' or p_payload ? 'video_url'
      or p_payload ? 'fotos' or p_payload ? 'fotos_pro'
      or p_payload ? 'imagenes' or p_payload ? 'videos' then
-    perform private.assert_public_property_media_payload(p_payload);
+    perform private.assert_public_property_media_payload(p_payload, to_jsonb(v_old));
   end if;
 
   for v_key in select jsonb_object_keys(p_payload)
