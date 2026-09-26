@@ -464,7 +464,7 @@ export function useProperties(options?: PropertyCatalogOptions) {
         if (isCatalogMode && options) {
           if (search) {
             query = query.or(
-              `titulo.ilike.%${search}%,municipio.ilike.%${search}%,ubicacion.ilike.%${search}%`,
+              `titulo.ilike.%${search}%,tipo.ilike.%${search}%,codigo.ilike.%${search}%,municipio.ilike.%${search}%,ubicacion.ilike.%${search}%,direccion.ilike.%${search}%`,
             );
           }
 
