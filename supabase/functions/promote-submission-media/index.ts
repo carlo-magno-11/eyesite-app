@@ -860,7 +860,7 @@ function mediaValues(
         values.push([
           `imagenes[${index}]`,
           normaliseReference(
-            item.path ?? item.url ?? item.publicUrl,
+            item.url ?? item.publicUrl ?? item.path,
           ),
         ]);
       }
