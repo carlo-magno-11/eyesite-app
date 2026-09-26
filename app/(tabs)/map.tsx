@@ -29,7 +29,22 @@ type Region = {
   longitude: number;
   latitudeDelta: number;
   longitudeDelta: number;
+  zoom: number;
 };
+
+const YUCATAN_BOUNDS = {
+  south: 19.35,
+  west: -90.55,
+  north: 21.82,
+  east: -87.28,
+};
+
+const YUCATAN_MAP_CENTER = {
+  latitude: 20.6,
+  longitude: -88.91,
+};
+
+const YUCATAN_QUERY_RADIUS_KM = 300;
 
 type MapProperty = {
   id: string;
@@ -52,10 +67,10 @@ type NearbyProperty = MapProperty & {
 };
 
 const DEFAULT_REGION: Region = {
-  latitude: 20.9674,
-  longitude: -89.5926,
-  latitudeDelta: 0.8,
-  longitudeDelta: 0.8,
+  ...YUCATAN_MAP_CENTER,
+  latitudeDelta: 2.55,
+  longitudeDelta: 3.35,
+  zoom: 7,
 };
 
 
@@ -116,7 +131,11 @@ function escapeHtml(value: unknown) {
     .replace(/'/g, "&#039;");
 }
 
-function createMapHtml(properties: NearbyProperty[], initialRegion: Region) {
+function createMapHtml(
+  properties: NearbyProperty[],
+  initialRegion: Region,
+  userLocation: UserCoords | null,
+) {
   const safeProperties = properties.map((property) => ({
     id: escapeHtml(property.id),
     title: escapeHtml(getPropertyTitle(property)),
@@ -130,6 +149,10 @@ function createMapHtml(properties: NearbyProperty[], initialRegion: Region) {
         : null,
   }));
 
+  const userLocationJson = userLocation
+    ? JSON.stringify(userLocation)
+    : "null";
+
   const propertiesJson = JSON.stringify(safeProperties)
     .replace(/</g, "\\u003c")
     .replace(/>/g, "\\u003e")
@@ -141,6 +164,7 @@ function createMapHtml(properties: NearbyProperty[], initialRegion: Region) {
     longitude: initialRegion.longitude,
     latitudeDelta: initialRegion.latitudeDelta,
     longitudeDelta: initialRegion.longitudeDelta,
+    zoom: initialRegion.zoom,
   });
 
   return `
@@ -245,13 +269,14 @@ function createMapHtml(properties: NearbyProperty[], initialRegion: Region) {
 <script>
   const PROPERTIES = ${propertiesJson};
   const INITIAL_REGION = ${initialJson};
+  const USER_LOCATION = ${userLocationJson};
 
   const map = L.map('map', {
     zoomControl: true,
     attributionControl: true,
   }).setView(
     [INITIAL_REGION.latitude, INITIAL_REGION.longitude],
-    8
+    INITIAL_REGION.zoom
   );
 
   L.tileLayer(
@@ -261,6 +286,12 @@ function createMapHtml(properties: NearbyProperty[], initialRegion: Region) {
       attribution: '&copy; OpenStreetMap contributors',
     }
   ).addTo(map);
+
+  map.setMaxBounds([
+    [19.35, -90.55],
+    [21.82, -87.28],
+  ]);
+  map.options.maxBoundsViscosity = 0.85;
 
   function sendToApp(payload) {
     const message = JSON.stringify(payload);
@@ -299,6 +330,25 @@ function createMapHtml(properties: NearbyProperty[], initialRegion: Region) {
   });
 
   const markers = [];
+
+  if (
+    USER_LOCATION &&
+    Number.isFinite(USER_LOCATION.latitude) &&
+    Number.isFinite(USER_LOCATION.longitude)
+  ) {
+    L.circleMarker(
+      [USER_LOCATION.latitude, USER_LOCATION.longitude],
+      {
+        radius: 8,
+        color: '#111',
+        weight: 3,
+        fillColor: '#4A90E2',
+        fillOpacity: 1,
+      }
+    )
+      .addTo(map)
+      .bindTooltip('Tu ubicación', { direction: 'top', offset: [0, -8] });
+  }
 
   PROPERTIES.forEach((property) => {
     if (
@@ -381,7 +431,8 @@ function createMapHtml(properties: NearbyProperty[], initialRegion: Region) {
   setTimeout(refreshMapSize, 0);
   setTimeout(refreshMapSize, 250);
 
-  // Keep Yucatán as the initial view. Users choose the area by panning and zooming.
+  // The default view is the whole state of Yucatán. User location is optional
+  // and never replaces the initial statewide view.
 </script>
 </body>
 </html>
@@ -434,7 +485,10 @@ export default function MapScreen() {
       longitude: DEFAULT_REGION.longitude,
     };
     const timer = setTimeout(() => {
-      void fetchMapProperties(center, userLocation ? 100 : 250);
+      void fetchMapProperties(
+        { latitude: YUCATAN_MAP_CENTER.latitude, longitude: YUCATAN_MAP_CENTER.longitude },
+        YUCATAN_QUERY_RADIUS_KM,
+      );
     }, 0);
 
     let refreshTimer: ReturnType<typeof setTimeout> | null = null;
@@ -452,7 +506,10 @@ export default function MapScreen() {
           if (refreshTimer) clearTimeout(refreshTimer);
           refreshTimer = setTimeout(() => {
             refreshTimer = null;
-            void fetchMapProperties(center, userLocation ? 100 : 250);
+            void fetchMapProperties(
+              { latitude: YUCATAN_MAP_CENTER.latitude, longitude: YUCATAN_MAP_CENTER.longitude },
+              YUCATAN_QUERY_RADIUS_KM,
+            );
           }, 500);
         },
       )
@@ -523,16 +580,6 @@ export default function MapScreen() {
     }
   }, [t]);
 
-  useEffect(() => {
-    if (Platform.OS === "web") return;
-
-    const timer = setTimeout(() => {
-      requestLocation();
-    }, 250);
-
-    return () => clearTimeout(timer);
-  }, [requestLocation]);
-
   const geoProperties = useMemo(() => {
     return (properties ?? []).filter((property: any) => {
       const latitude = getLatitude(property);
@@ -567,7 +614,21 @@ export default function MapScreen() {
   }, [geoProperties, userLocation]);
 
   const mapHtml = useMemo(
-    () => createMapHtml(nearby, userLocation ? { ...DEFAULT_REGION, latitude: userLocation.latitude, longitude: userLocation.longitude } : DEFAULT_REGION),
+    () =>
+      createMapHtml(
+        nearby,
+        userLocation
+          ? {
+              ...DEFAULT_REGION,
+              latitude: userLocation.latitude,
+              longitude: userLocation.longitude,
+              latitudeDelta: 0.18,
+              longitudeDelta: 0.18,
+              zoom: 11,
+            }
+          : DEFAULT_REGION,
+        userLocation,
+      ),
     [nearby, userLocation],
   );
 
@@ -615,7 +676,16 @@ export default function MapScreen() {
           </Text>
         </View>
 
-        {(
+        <View style={styles.headerActions}>
+          {userLocation && (
+            <Pressable
+              onPress={() => setUserLocation(null)}
+              style={styles.resetMapButton}
+            >
+              <Text style={styles.resetMapButtonText}>{t("mapAllYucatan")}</Text>
+            </Pressable>
+          )}
+
           <Pressable
             onPress={requestLocation}
             style={styles.locationButton}
@@ -627,7 +697,7 @@ export default function MapScreen() {
               <Text style={styles.locationButtonText}>⌖</Text>
             )}
           </Pressable>
-        )}
+        </View>
       </View>
 
       <View style={styles.mapHintRow}>
@@ -737,6 +807,27 @@ const styles = StyleSheet.create({
     color: "#9A9A9A",
     fontSize: 12,
     marginTop: 4,
+  },
+
+  headerActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+
+  resetMapButton: {
+    minHeight: 38,
+    paddingHorizontal: 10,
+    borderRadius: 19,
+    borderWidth: 1,
+    borderColor: "#C9A84C",
+    justifyContent: "center",
+  },
+
+  resetMapButtonText: {
+    color: "#C9A84C",
+    fontSize: 10,
+    fontWeight: "800",
   },
 
   locationButton: {
