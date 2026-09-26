@@ -790,85 +790,81 @@ async function promoteOne(
   };
 }
 
+function publicStoragePathFromUrl(
+  value: string,
+  supabaseUrl: string,
+): string | null {
+  try {
+    const parsed = new URL(value);
+    const base = new URL(supabaseUrl);
+    if (parsed.origin !== base.origin) return null;
+
+    const prefix = "/storage/v1/object/public/";
+    if (!parsed.pathname.startsWith(prefix)) return null;
+
+    const remainder = decodeURIComponent(
+      parsed.pathname.slice(prefix.length),
+    );
+    const bucketPrefix = `${PUBLIC_BUCKET}/`;
+    if (!remainder.startsWith(bucketPrefix)) return null;
+
+    const path = normalisePath(
+      remainder.slice(bucketPrefix.length),
+    );
+
+    return hasUnsafePath(path) ? null : `${PUBLIC_BUCKET}/${path}`;
+  } catch {
+    return null;
+  }
+}
+
 function mediaValues(
   request: Record<string, unknown>,
+  supabaseUrl: string,
 ) {
-  const values: Array<
-    [string, unknown]
-  > = [];
+  const values: Array<[string, unknown]> = [];
 
-  for (
-    const field of [
-      "fotos",
-      "fotos_pro",
-      "videos",
-    ]
-  ) {
+  const normaliseReference = (value: unknown) => {
+    if (typeof value !== "string") return value;
+    const publicPath = publicStoragePathFromUrl(value.trim(), supabaseUrl);
+    return publicPath ?? value;
+  };
+
+  for (const field of ["fotos", "fotos_pro", "videos"]) {
     const entries = request[field];
-
     if (Array.isArray(entries)) {
-      entries.forEach(
-        (entry, index) =>
-          values.push([
-            `${field}[${index}]`,
-            entry,
-          ]),
+      entries.forEach((entry, index) =>
+        values.push([
+          `${field}[${index}]`,
+          normaliseReference(entry),
+        ]),
       );
     }
   }
 
-  for (
-    const field of [
-      "video_url",
-      "portada_url",
-    ]
-  ) {
-    if (
-      typeof request[field] ===
-      "string"
-    ) {
-      values.push([
-        field,
-        request[field],
-      ]);
+  for (const field of ["video_url", "portada_url"]) {
+    if (typeof request[field] === "string") {
+      values.push([field, normaliseReference(request[field])]);
     }
   }
 
-  if (
-    Array.isArray(
-      request.imagenes,
-    )
-  ) {
-    request.imagenes.forEach(
-      (entry, index) => {
-        if (
-          typeof entry ===
-          "string"
-        ) {
-          values.push([
-            `imagenes[${index}]`,
-            entry,
-          ]);
-        } else if (
-          entry &&
-          typeof entry ===
-            "object"
-        ) {
-          const item =
-            entry as Record<
-              string,
-              unknown
-            >;
-
-          values.push([
-            `imagenes[${index}]`,
-            item.path ??
-              item.url ??
-              item.publicUrl,
-          ]);
-        }
-      },
-    );
+  if (Array.isArray(request.imagenes)) {
+    request.imagenes.forEach((entry, index) => {
+      if (typeof entry === "string") {
+        values.push([
+          `imagenes[${index}]`,
+          normaliseReference(entry),
+        ]);
+      } else if (entry && typeof entry === "object") {
+        const item = entry as Record<string, unknown>;
+        values.push([
+          `imagenes[${index}]`,
+          normaliseReference(
+            item.path ?? item.url ?? item.publicUrl,
+          ),
+        ]);
+      }
+    });
   }
 
   return values;
@@ -1163,6 +1159,7 @@ Deno.serve(
             string,
             unknown
           >,
+          supabaseUrl,
         );
 
       /*
