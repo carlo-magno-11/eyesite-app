@@ -135,6 +135,7 @@ function createMapHtml(
   properties: NearbyProperty[],
   initialRegion: Region,
   userLocation: UserCoords | null,
+  focusPropertyId: string | null,
 ) {
   const safeProperties = properties.map((property) => ({
     id: escapeHtml(property.id),
@@ -158,6 +159,8 @@ function createMapHtml(
     .replace(/>/g, "\\u003e")
     .replace(/&/g, "\\u0026")
     .replace(/<\/script/gi, "<\\/script");
+
+  const focusPropertyIdJson = JSON.stringify(focusPropertyId);
 
   const initialJson = JSON.stringify({
     latitude: initialRegion.latitude,
@@ -270,6 +273,7 @@ function createMapHtml(
   const PROPERTIES = ${propertiesJson};
   const INITIAL_REGION = ${initialJson};
   const USER_LOCATION = ${userLocationJson};
+  const FOCUS_PROPERTY_ID = ${focusPropertyIdJson};
 
   const map = L.map('map', {
     zoomControl: true,
@@ -423,6 +427,19 @@ function createMapHtml(
     });
   }
 
+  if (FOCUS_PROPERTY_ID) {
+    const focused = PROPERTIES.find((property) => String(property.id) === String(FOCUS_PROPERTY_ID));
+    if (focused && Number.isFinite(focused.latitude) && Number.isFinite(focused.longitude)) {
+      setTimeout(() => {
+        map.setView([focused.latitude, focused.longitude], 14, { animate: true });
+        const markerIndex = PROPERTIES.findIndex((property) => String(property.id) === String(FOCUS_PROPERTY_ID));
+        if (markerIndex >= 0 && markers[markerIndex]) {
+          markers[markerIndex].openPopup();
+        }
+      }, 120);
+    }
+  }
+
   // Leaflet keeps internal pixel dimensions. Recalculate them when the
   // responsive WebView/iframe changes size (browser resize, orientation,
   // split-screen, tablet rotation, etc.).
@@ -443,6 +460,8 @@ export default function MapScreen() {
   const router = useRouter();
   const { t } = useI18n();
   const { height: windowHeight } = useWindowDimensions();
+  const { propertyId: focusPropertyIdParam } = useLocalSearchParams<{ propertyId?: string }>();
+  const focusPropertyId = typeof focusPropertyIdParam === "string" ? focusPropertyIdParam : null;
 
   const { trackPropertyEvent } = useCommercial();
   const [properties, setProperties] = useState<MapProperty[]>([]);
@@ -628,8 +647,9 @@ export default function MapScreen() {
             }
           : DEFAULT_REGION,
         userLocation,
+        focusPropertyId,
       ),
-    [nearby, userLocation],
+    [nearby, userLocation, focusPropertyId],
   );
 
   // Web: keep the map responsive across laptops, tablets and split-screen.
