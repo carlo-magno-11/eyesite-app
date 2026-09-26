@@ -479,12 +479,14 @@ export default function PropertyDetailScreen() {
             </View>
           )}
 
-          {/* Badge de rendimiento */}
-          <View style={[styles.returnBadge, { backgroundColor: returnColor + '33', borderColor: returnColor }]}>
-            <Text style={[styles.returnBadgeText, { color: returnColor }]}>
-              +{property.returnRate}% rendimiento
-            </Text>
-          </View>
+          {/* Badge de rendimiento: solo aparece cuando existe un rendimiento real. */}
+          {Number(property.returnRate) > 0 ? (
+            <View style={[styles.returnBadge, { backgroundColor: returnColor + '33', borderColor: returnColor }]}>
+              <Text style={[styles.returnBadgeText, { color: returnColor }]}>
+                +{property.returnRate}% rendimiento
+              </Text>
+            </View>
+          ) : null}
         </View>
 
         {/* Contenido */}
