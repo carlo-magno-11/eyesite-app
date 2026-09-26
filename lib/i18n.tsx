@@ -93,10 +93,6 @@ function detectLanguage(): Language {
   }
 }
 
-export function getStoredLanguage(): Language {
-  return DEFAULT_LANGUAGE;
-}
-
 export async function loadLanguage(): Promise<Language> {
   try {
     const stored = await AsyncStorage.getItem(STORAGE_KEY);
@@ -118,7 +114,7 @@ type I18nContextValue = {
 const I18nContext = createContext<I18nContextValue | null>(null);
 
 export function I18nProvider({ children }: { children: React.ReactNode }) {
-  const [language, setLanguageState] = useState<Language>(DEFAULT_LANGUAGE);
+  const [language, setLanguageState] = useState<Language>(detectLanguage());
 
   useEffect(() => {
     void loadLanguage().then(setLanguageState);
