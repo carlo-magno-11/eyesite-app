@@ -25,7 +25,6 @@ export default function RegisterScreen() {
   const router = useRouter();
   const { isDesktop } = useResponsive();
   const { t } = useI18n();
-  const { t } = useI18n();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -274,7 +273,7 @@ export default function RegisterScreen() {
               <Text style={styles.label}>{t("fullName")}</Text>
               <View style={styles.inputWrap}>
                 <Ionicons name="person-outline" size={20} color="#888" style={styles.inputIcon} />
-                <TextInput value={nombre} onChangeText={setNombre} placeholder="{t("fullNamePlaceholder")}" placeholderTextColor="#666" autoCapitalize="words" autoCorrect={false} style={styles.input} />
+                <TextInput value={nombre} onChangeText={setNombre} placeholder={t("fullNamePlaceholder")} placeholderTextColor="#666" autoCapitalize="words" autoCorrect={false} style={styles.input} />
               </View>
             </View>
 
@@ -282,7 +281,7 @@ export default function RegisterScreen() {
               <Text style={styles.label}>{t("phoneWhatsapp")}</Text>
               <View style={styles.inputWrap}>
                 <Ionicons name="call-outline" size={20} color="#888" style={styles.inputIcon} />
-                <TextInput value={telefono} onChangeText={setTelefono} placeholder="{t("phonePlaceholder")}" placeholderTextColor="#666" keyboardType="phone-pad" style={styles.input} />
+                <TextInput value={telefono} onChangeText={setTelefono} placeholder={t("phonePlaceholder")} placeholderTextColor="#666" keyboardType="phone-pad" style={styles.input} />
               </View>
             </View>
 
@@ -290,7 +289,7 @@ export default function RegisterScreen() {
               <Text style={styles.label}>{t("cityZone")}</Text>
               <View style={styles.inputWrap}>
                 <Ionicons name="location-outline" size={20} color="#888" style={styles.inputIcon} />
-                <TextInput value={ciudad} onChangeText={setCiudad} placeholder="{t("cityPlaceholder")}" placeholderTextColor="#666" autoCapitalize="words" autoCorrect={false} style={styles.input} />
+                <TextInput value={ciudad} onChangeText={setCiudad} placeholder={t("cityPlaceholder")} placeholderTextColor="#666" autoCapitalize="words" autoCorrect={false} style={styles.input} />
               </View>
             </View>
 
@@ -298,11 +297,11 @@ export default function RegisterScreen() {
               <Text style={styles.label}>{t("budgetOptional")} <Text style={styles.optional}>({t("optional")})</Text></Text>
               <View style={styles.inputWrap}>
                 <Ionicons name="cash-outline" size={20} color="#888" style={styles.inputIcon} />
-                <TextInput value={presupuesto} onChangeText={setPresupuesto} placeholder="{t("budgetPlaceholder")}" placeholderTextColor="#666" keyboardType="default" style={styles.input} />
+                <TextInput value={presupuesto} onChangeText={setPresupuesto} placeholder={t("budgetPlaceholder")} placeholderTextColor="#666" keyboardType="default" style={styles.input} />
               </View>
             </View>
 
-            {/* {t("password")} */}
+            {/* CONTRASEÑA */}
             <View style={styles.field}>
               <Text style={styles.label}>{t("password")}</Text>
 
@@ -317,7 +316,7 @@ export default function RegisterScreen() {
                 <TextInput
                   value={password}
                   onChangeText={setPassword}
-                  placeholder="{t("passwordMin")}"
+                  placeholder={t("passwordMin")}
                   placeholderTextColor="#666"
                   secureTextEntry={!showPassword}
                   autoCapitalize="none"
@@ -355,9 +354,9 @@ export default function RegisterScreen() {
               )}
             </View>
 
-            {/* CONFIRMAR {t("password")} */}
+            {/* CONFIRMAR CONTRASEÑA */}
             <View style={styles.field}>
-              <Text style={styles.label}>CONFIRMAR {t("password")}</Text>
+              <Text style={styles.label}>{t("confirmPassword")}</Text>
 
               <View style={styles.inputWrap}>
                 <Ionicons
@@ -370,7 +369,7 @@ export default function RegisterScreen() {
                 <TextInput
                   value={confirmPassword}
                   onChangeText={setConfirmPassword}
-                  placeholder="{t("repeatPassword")}"
+                  placeholder={t("repeatPassword")}
                   placeholderTextColor="#666"
                   secureTextEntry={!showConfirmPassword}
                   autoCapitalize="none"
