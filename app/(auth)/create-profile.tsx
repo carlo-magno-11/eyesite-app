@@ -188,7 +188,7 @@ export default function CreateProfileScreen() {
             <TextInput
               value={nombre}
               onChangeText={setNombre}
-              placeholder="{t("fullNamePlaceholder")}"
+              placeholder={t("fullNamePlaceholder")}
               placeholderTextColor="#777"
               autoCapitalize="words"
               autoCorrect={false}
@@ -203,7 +203,7 @@ export default function CreateProfileScreen() {
             <TextInput
               value={telefono}
               onChangeText={setTelefono}
-              placeholder="{t("phonePlaceholder")}"
+              placeholder={t("phonePlaceholder")}
               placeholderTextColor="#777"
               keyboardType="phone-pad"
               style={styles.input}
@@ -217,7 +217,7 @@ export default function CreateProfileScreen() {
             <TextInput
               value={ciudad}
               onChangeText={setCiudad}
-              placeholder="{t("cityPlaceholder")}"
+              placeholder={t("cityPlaceholder")}
               placeholderTextColor="#777"
               autoCapitalize="words"
               autoCorrect={false}
@@ -233,7 +233,7 @@ export default function CreateProfileScreen() {
             <TextInput
               value={presupuesto}
               onChangeText={setPresupuesto}
-              placeholder="{t("budgetPlaceholder")}"
+              placeholder={t("budgetPlaceholder")}
               placeholderTextColor="#777"
               keyboardType="default"
               style={styles.input}
