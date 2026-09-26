@@ -12,6 +12,7 @@ import * as Sentry from "@sentry/react-native";
 import { supabase } from "@/lib/supabase";
 import { addAppBreadcrumb, reportAppError, setAppMonitoringContext } from "@/lib/monitoring";
 import EyesiteLaunchSplash from "@/components/EyesiteLaunchSplash";
+import { I18nProvider } from "@/lib/i18n";
 
 Sentry.init({
   dsn: "https://2b9f8a4dc404528b87957977fe39da0c@o4512088794333184.ingest.us.sentry.io/4512088804556800",
@@ -241,9 +242,11 @@ export default Sentry.wrap(function RootLayout() {
       <QueryClientProvider client={queryClient}>
         <SafeAreaProvider>
           <ThemeProvider>
+            <I18nProvider>
             <AuthGate>
               <Stack screenOptions={{ headerShown: false, animation: "fade", contentStyle: { backgroundColor: "#fff" }}} />
             </AuthGate>
+            </I18nProvider>
           </ThemeProvider>
         </SafeAreaProvider>
       </QueryClientProvider>
