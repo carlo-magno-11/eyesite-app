@@ -18,6 +18,7 @@ import { useEffect, useMemo, useState } from "react";
 import { router, useLocalSearchParams } from "expo-router";
 import { supabase } from "@/lib/supabase";
 import { useResponsive } from "@/hooks/use-responsive";
+import { useI18n } from "@/lib/i18n";
 
 type Tab = "notifications" | "announcements";
 type Filter = "all" | "unread";
@@ -30,6 +31,7 @@ export default function NotificationsScreen() {
   const [tab, setTab] = useState<Tab>(() => params.announcement_id ? "announcements" : "notifications");
   const [filter, setFilter] = useState<Filter>("all");
   const { horizontalPadding, contentMaxWidth } = useResponsive();
+  const { t } = useI18n();
 
   useEffect(() => {
     if (user?.id) void registerPushToken(user.id);
@@ -80,8 +82,8 @@ export default function NotificationsScreen() {
     <ScreenContainer edges={["top", "left", "right"]} containerClassName="bg-background">
       <View style={[s.h, { paddingHorizontal: horizontalPadding, maxWidth: contentMaxWidth, width: "100%", alignSelf: "center" }]}>
         <View>
-          <Text style={s.t}>COMUNICACIÓN</Text>
-          <Text style={s.sub}>{tab === "notifications" ? `${unread} sin leer` : `${announcements.length} anuncios activos`}</Text>
+          <Text style={s.t}>{t("communication")}</Text>
+          <Text style={s.sub}>{tab === "notifications" ? `${unread} ${t("unread")}` : `${announcements.length} ${t("activeAnnouncements")}`}</Text>
         </View>
         <Pressable onPress={() => router.push("/notification-settings" as never)} hitSlop={10}>
           <Ionicons name="settings-outline" size={24} color={"#C9A84C"} />
@@ -90,10 +92,10 @@ export default function NotificationsScreen() {
 
       <View style={[s.tabs, { paddingHorizontal: horizontalPadding, maxWidth: contentMaxWidth, width: "100%", alignSelf: "center" }]}>
         <Pressable onPress={() => setTab("notifications")} style={[s.tab, tab === "notifications" && s.tabActive]}>
-          <Text style={[s.tabText, tab === "notifications" && s.tabTextActive]}>Notificaciones</Text>
+          <Text style={[s.tabText, tab === "notifications" && s.tabTextActive]}>{t("notifications")}</Text>
         </Pressable>
         <Pressable onPress={() => setTab("announcements")} style={[s.tab, tab === "announcements" && s.tabActive]}>
-          <Text style={[s.tabText, tab === "announcements" && s.tabTextActive]}>Anuncios</Text>
+          <Text style={[s.tabText, tab === "announcements" && s.tabTextActive]}>{t("announcements")}</Text>
         </Pressable>
       </View>
 
@@ -101,14 +103,14 @@ export default function NotificationsScreen() {
         <>
           <View style={[s.filters, { paddingHorizontal: horizontalPadding, maxWidth: contentMaxWidth, width: "100%", alignSelf: "center" }]}>
             <Pressable onPress={() => setFilter("all")} style={[s.filter, filter === "all" && s.filterActive]}>
-              <Text style={[s.filterText, filter === "all" && s.filterTextActive]}>Todas</Text>
+              <Text style={[s.filterText, filter === "all" && s.filterTextActive]}>{t("all")}</Text>
             </Pressable>
             <Pressable onPress={() => setFilter("unread")} style={[s.filter, filter === "unread" && s.filterActive]}>
-              <Text style={[s.filterText, filter === "unread" && s.filterTextActive]}>No leídas</Text>
+              <Text style={[s.filterText, filter === "unread" && s.filterTextActive]}>{t("unreadOnly")}</Text>
             </Pressable>
             {unread > 0 && (
               <Pressable onPress={markAllRead} style={s.readAll}>
-                <Text style={s.readAllText}>Marcar todas</Text>
+                <Text style={s.readAllText}>{t("markAll")}</Text>
               </Pressable>
             )}
           </View>
@@ -118,10 +120,10 @@ export default function NotificationsScreen() {
           ) : error && !items.length ? (
             <View style={s.e}>
               <Text style={s.i}>⚠️</Text>
-              <Text style={s.et}>No se pudieron cargar</Text>
+              <Text style={s.et}>{t("couldNotLoad")}</Text>
               <Text style={s.es}>{error}</Text>
               <Pressable onPress={() => void refetch()} style={s.retryButton}>
-                <Text style={s.retryText}>REINTENTAR</Text>
+                <Text style={s.retryText}>{t("retry")}</Text>
               </Pressable>
             </View>
           ) : (
@@ -132,8 +134,8 @@ export default function NotificationsScreen() {
               ListEmptyComponent={
                 <View style={s.e}>
                   <Text style={s.i}>🔔</Text>
-                  <Text style={s.et}>No hay notificaciones</Text>
-                  <Text style={s.es}>Aquí aparecerán avisos y eventos relacionados con tu cuenta.</Text>
+                  <Text style={s.et}>{t("noNotifications")}</Text>
+                  <Text style={s.es}>{t("notificationsDescription")}</Text>
                 </View>
               }
               renderItem={({ item }) => (
@@ -160,8 +162,8 @@ export default function NotificationsScreen() {
           ListEmptyComponent={
             <View style={s.e}>
               <Text style={s.i}>📢</Text>
-              <Text style={s.et}>No hay anuncios</Text>
-              <Text style={s.es}>Cuando EYESITE publique un anuncio aparecerá aquí.</Text>
+              <Text style={s.et}>{t("noAnnouncements")}</Text>
+              <Text style={s.es}>{t("announcementsDescription")}</Text>
             </View>
           }
           renderItem={({ item }) => (
