@@ -19,13 +19,13 @@ export default function PendingScreen() {
   return (
     <ScreenContainer edges={["top", "bottom"]} containerClassName="bg-background"><View style={[styles.container, { paddingHorizontal: horizontalPadding, maxWidth: contentMaxWidth, width: "100%", alignSelf: "center" }]}>
       <Text style={styles.icon}>⏳</Text>
-      <Text style={styles.title}>Tu cuenta está en revisión</Text>
+      <Text style={styles.title}>{t("accountUnderReview")}</Text>
       <Text style={styles.body}>
         Recibimos tu registro. Nuestro equipo está validando tu cuenta. Te notificaremos en
         cuanto sea aprobada.
       </Text>
       <Pressable onPress={openWhatsApp} style={({ pressed }) => [styles.btn, pressed && { opacity: 0.85 }]}>
-        <Text style={styles.btnText}>CONTACTAR POR WHATSAPP</Text>
+        <Text style={styles.btnText}>{t("contactWhatsapp")}</Text>
       </Pressable>
       <Text style={styles.help}>{CONTACT.whatsappNumberDisplay}</Text>
     </View></ScreenContainer>
