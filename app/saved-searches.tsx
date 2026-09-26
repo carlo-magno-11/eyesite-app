@@ -4,9 +4,11 @@ import { ScreenContainer } from '@/components/screen-container';
 import { useAuth } from '@/hooks/useAuth';
 import { useSavedSearches } from '@/hooks/use-commercial';
 import { useResponsive } from '@/hooks/use-responsive';
+import { useI18n } from '@/lib/i18n';
 
 export default function SavedSearchesScreen() {
   const { user, loading: authLoading } = useAuth();
+  const { t, language } = useI18n();
   const { searches, loading, error, remove } = useSavedSearches(user?.id);
   const { contentMaxWidth, horizontalPadding } = useResponsive();
 
@@ -22,13 +24,13 @@ export default function SavedSearchesScreen() {
         showsVerticalScrollIndicator={false}
       >
         <Pressable onPress={() => router.back()} style={styles.back}>
-          <Text style={styles.backText}>‹ Volver</Text>
+          <Text style={styles.backText}>{t("back")}</Text>
         </Pressable>
 
-        <Text style={styles.eyebrow}>EYESITE COMERCIAL</Text>
-        <Text style={styles.title}>Mis búsquedas</Text>
+        <Text style={styles.eyebrow}>{t("commercial")}</Text>
+        <Text style={styles.title}>{t("savedSearches")}</Text>
         <Text style={styles.subtitle}>
-          Guarda tus criterios para que EYESITE pueda avisarte cuando aparezcan nuevas oportunidades compatibles.
+          {t("savedSearchesSubtitle")}
         </Text>
 
         {loading ? (
@@ -37,16 +39,16 @@ export default function SavedSearchesScreen() {
           </View>
         ) : error ? (
           <View style={styles.card}>
-            <Text style={styles.error}>{error}</Text>
+            <Text style={styles.error}>{error || t("savedSearchesError")}</Text>
           </View>
         ) : searches.length === 0 ? (
           <View style={styles.card}>
-            <Text style={styles.emptyTitle}>Aún no tienes búsquedas guardadas.</Text>
+            <Text style={styles.emptyTitle}>{t("noSavedSearches")}</Text>
             <Text style={styles.emptyText}>
-              Ve a Oportunidades, aplica una búsqueda y toca “Guardar esta búsqueda”.
+              {t("savedSearchesEmptyDescription")}
             </Text>
             <Pressable onPress={() => router.push('/(tabs)/properties' as never)} style={styles.primary}>
-              <Text style={styles.primaryText}>VER OPORTUNIDADES</Text>
+              <Text style={styles.primaryText}>{t("viewOpportunities")}</Text>
             </Pressable>
           </View>
         ) : (
@@ -56,38 +58,38 @@ export default function SavedSearchesScreen() {
                 <View style={styles.copy}>
                   <Text style={styles.cardTitle}>{search.nombre}</Text>
                   <Text style={styles.cardMeta}>
-                    {(search.tipo ? 'Tipo: ' + search.tipo : 'Todos los tipos') +
+                    {(search.tipo ? t("typeLabel") + ': ' + search.tipo : t("allTypes")) +
                       (search.municipio ? ' · ' + search.municipio : '')}
                   </Text>
                   <Text style={styles.cardMeta}>
                     {[
-                      search.min_price != null ? `Desde ${Number(search.min_price).toLocaleString('es-MX')}` : '',
-                      search.max_price != null ? `Hasta ${Number(search.max_price).toLocaleString('es-MX')}` : '',
-                      search.min_surface != null ? `Desde ${Number(search.min_surface).toLocaleString('es-MX')} m²` : '',
-                      search.max_surface != null ? `Hasta ${Number(search.max_surface).toLocaleString('es-MX')} m²` : '',
-                    ].filter(Boolean).join(' · ') || 'Sin límites de precio o superficie'}
+                      search.min_price != null ? `${t("from")} ${Number(search.min_price).toLocaleString(language === "en" ? "en-US" : "es-MX")}` : '',
+                      search.max_price != null ? `${t("to")} ${Number(search.max_price).toLocaleString(language === "en" ? "en-US" : "es-MX")}` : '',
+                      search.min_surface != null ? `${t("from")} ${Number(search.min_surface).toLocaleString(language === "en" ? "en-US" : "es-MX")} m²` : '',
+                      search.max_surface != null ? `${t("to")} ${Number(search.max_surface).toLocaleString(language === "en" ? "en-US" : "es-MX")} m²` : '',
+                    ].filter(Boolean).join(' · ') || t("noPriceSurfaceLimits")}
                   </Text>
                 </View>
                 <View style={[styles.status, !search.activa && styles.statusOff]}>
-                  <Text style={styles.statusText}>{search.activa ? 'ACTIVA' : 'PAUSADA'}</Text>
+                  <Text style={styles.statusText}>{search.activa ? t("active") : t("paused")}</Text>
                 </View>
               </View>
 
               <Pressable
                 onPress={() =>
                   Alert.alert(
-                    'Eliminar búsqueda',
-                    '¿Quieres eliminar esta búsqueda guardada?',
+                    t("deleteSearch"),
+                    t("deleteSearchConfirm"),
                     [
-                      { text: 'Cancelar', style: 'cancel' },
+                      { text: t("cancel"), style: "cancel" },
                       {
-                        text: 'Eliminar',
+                        text: t("deleteSearch"),
                         style: 'destructive',
                         onPress: async () => {
                           try {
                             await remove(search.id);
                           } catch (e: any) {
-                            Alert.alert('No se pudo eliminar', e?.message || 'Inténtalo nuevamente.');
+                            Alert.alert(t("couldNotDelete"), e?.message || t("tryAgainShort"));
                           }
                         },
                       },
@@ -96,7 +98,7 @@ export default function SavedSearchesScreen() {
                 }
                 style={styles.deleteButton}
               >
-                <Text style={styles.deleteText}>Eliminar</Text>
+                <Text style={styles.deleteText}>{t("deleteSearch")}</Text>
               </Pressable>
             </View>
           ))
