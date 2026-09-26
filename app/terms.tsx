@@ -7,7 +7,7 @@ import { ScreenContainer } from '@/components/screen-container';
 import { useResponsive } from '@/hooks/use-responsive';
 
 const TEXTOS: Record<string, string> = {
-  servicio: `TÉRMINOS Y CONDICIONES EYESI+E\n\n1. Plataforma para búsqueda inmobiliaria en Yucatán.\n2. La información de propiedades es referencial, debe verificarse con asesor.\n3. EYESI+E no garantiza disponibilidad inmediata.\n4. El usuario se compromete a datos veraces.\n\nContacto WhatsApp: 999 746 2162`,
+  servicio: `{t("termsTitle")} EYESI+E\n\n1. Plataforma para búsqueda inmobiliaria en Yucatán.\n2. La información de propiedades es referencial, debe verificarse con asesor.\n3. EYESI+E no garantiza disponibilidad inmediata.\n4. El usuario se compromete a datos veraces.\n\nContacto WhatsApp: 999 746 2162`,
   privacidad: `AVISO DE PRIVACIDAD\n\nTus datos (email, nombre, preferencias) se usarán únicamente para contactarte sobre propiedades y listings relevantes, cumpliendo la Ley de Protección de Datos.\nNo vendemos tu info. Baja al WhatsApp 999 746 2162.`,
   datos: `TRATAMIENTO DE DATOS PARA CONTACTO\n\nAutorizas que un asesor de EYESI+E te contacte por WhatsApp, llamada o email para mostrar propiedades y agendar visitas.`
 };
@@ -118,8 +118,8 @@ export default function TermsScreen() {
   return (
     <ScreenContainer edges={['top', 'bottom']} containerClassName="bg-background">
       <ScrollView contentContainerStyle={[styles.container, { paddingHorizontal: horizontalPadding }]}>\n        <View style={[styles.content, isDesktop && { maxWidth: contentMaxWidth ?? 900 }]}>
-        <Text style={styles.title}>TÉRMINOS Y CONDICIONES</Text>
-        <Text style={styles.subtitle}>Revisa y acepta para continuar</Text>
+        <Text style={styles.title}>{t("termsTitle")}</Text>
+        <Text style={styles.subtitle}>{t("termsSubtitle")}</Text>
 
         <View style={styles.card}>
           {TERMS_ITEMS.map((item) => (
@@ -127,7 +127,7 @@ export default function TermsScreen() {
               <Pressable onPress={() => abrirModal(item.key)} style={{flex:1}}>
                 <Text style={styles.label}>
                   {item.label}
-                  {!leido[item.key] && <Text style={{color:'#C9A84C'}}> (Ver info)</Text>}
+                  {!leido[item.key] && <Text style={{color:'#C9A84C'}}> ({t("readInfo")})</Text>}
                 </Text>
               </Pressable>
               <Switch
@@ -145,9 +145,9 @@ export default function TermsScreen() {
           disabled={!allAccepted || saving}
           style={({ pressed }) => [styles.btn, (!allAccepted || saving) && styles.btnDisabled, pressed && allAccepted && { opacity: 0.85 }]}
         >
-          {saving? <ActivityIndicator color="#0D0D0D" /> : <Text style={styles.btnText}>ACEPTAR Y CONTINUAR</Text>}
+          {saving? <ActivityIndicator color="#0D0D0D" /> : <Text style={styles.btnText}>{t("acceptContinue")}</Text>}
         </Pressable>
-        <Text style={styles.hint}>{allAccepted? 'Todo leído y aceptado' : 'Debes leer (Ver info) y aceptar los 3 puntos'}</Text>
+        <Text style={styles.hint}>{allAccepted? '{t("allReadAccepted")}' : 'Debes leer ({t("readInfo")}) y aceptar los 3 puntos'}</Text>
 
         {/* MODAL DE LECTURA */}
         <Modal visible={!!modal} animationType="slide" transparent>
@@ -160,10 +160,10 @@ export default function TermsScreen() {
                 <Text style={styles.modalText}>{modal? TEXTOS[modal] : ''}</Text>
               </ScrollView>
               <Pressable onPress={confirmarLectura} style={styles.modalBtn}>
-                <Text style={styles.modalBtnText}>He leído y Confirmo que leí esta información</Text>
+                <Text style={styles.modalBtnText}>{t("readAndConfirm")}</Text>
               </Pressable>
               <Pressable onPress={()=>setModal(null)} style={{padding:12, alignItems:'center'}}>
-                <Text style={{color:'#888'}}>Cerrar sin aceptar</Text>
+                <Text style={{color:'#888'}}>{t("closeWithoutAccepting")}</Text>
               </Pressable>
             </View>
           </View>
