@@ -657,7 +657,7 @@ export default function PropertyDetailScreen() {
       </ScrollView>
 
       {/* Botones de acción fijos */}
-      <View style={styles.actionBar}>
+      <View style={[styles.actionBar, { paddingBottom: Math.max(16, insets.bottom + 12) }]}>
         <Pressable
           onPress={handleCall}
           style={({ pressed }) => [styles.callBtn, pressed && { opacity: 0.8 }]}
@@ -1033,7 +1033,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 10,
     padding: 16,
-    paddingBottom: Math.max(16, insets.bottom + 12),
+    paddingBottom: 32,
     backgroundColor: '#0D0D0D',
     borderTopWidth: 1,
     borderTopColor: '#2A2A2A',
