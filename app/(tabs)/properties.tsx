@@ -12,6 +12,7 @@ import { useSavedSearches } from '@/hooks/use-commercial';
 
 export default function PropertiesScreen() {
   const params = useLocalSearchParams<{ filter?: string; q?: string }>();
+  const initialQuery = typeof params.q === 'string' ? params.q : '';
   const [search, setSearch] = useState(initialQuery);
   const [catalogSearch, setCatalogSearch] = useState('');
   const [municipio, setMunicipio] = useState('');
@@ -25,7 +26,6 @@ export default function PropertiesScreen() {
   }, [search]);
 
   const initialFilter = typeof params.filter === 'string' && params.filter ? params.filter : 'all';
-  const initialQuery = typeof params.q === 'string' ? params.q : '';
   const [activeFilter, setActiveFilter] = useState<string>(initialFilter);
   useEffect(() => {
     if (typeof params.filter === 'string' && params.filter) {
