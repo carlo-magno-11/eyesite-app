@@ -1196,6 +1196,7 @@ async function cargarDashboard() {
   const stip = document.getElementById("stip");
 
   const savg = document.getElementById("savg");
+  const smap = document.getElementById("smap");
 
   if (st) {
     st.textContent = activos.length;
@@ -1211,6 +1212,21 @@ async function cargarDashboard() {
 
   if (savg) {
     savg.textContent = `${promedio.toFixed(1)}%`;
+  }
+
+  if (smap) {
+    const ubicadas = activos.filter((p) => {
+      const lat = Number(p.latitud);
+      const lng = Number(p.longitud);
+      return (
+        Number.isFinite(lat) &&
+        Number.isFinite(lng) &&
+        lat !== 0 &&
+        lng !== 0
+      );
+    }).length;
+
+    smap.textContent = `${ubicadas}/${activos.length}`;
   }
 
   renderDashboard(activos);
