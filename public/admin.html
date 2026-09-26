@@ -729,7 +729,7 @@
       .stats {
         display: grid;
 
-        grid-template-columns: repeat(4, minmax(0, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
 
         gap: 14px;
 
@@ -2624,6 +2624,12 @@
                 <div class="sv" id="savg">0%</div>
 
                 <div class="slbl">Rendimiento promedio</div>
+              </div>
+
+              <div class="stat">
+                <div class="sv" id="smap">0/0</div>
+
+                <div class="slbl">Propiedades ubicadas en mapa</div>
               </div>
             </div>
 
