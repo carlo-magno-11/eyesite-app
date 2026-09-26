@@ -3,11 +3,13 @@ import { ScreenContainer } from '@/components/screen-container';
 import { useResponsive } from '@/hooks/use-responsive';
 import { CONTACT } from '@/constants/contact';
 import { useAuth } from '@/hooks/useAuth';
+import { useI18n } from '@/lib/i18n';
 
 const DEFAULT_PHONE = CONTACT.whatsappNumber;
 
 export default function DeniedScreen() {
   const { user } = useAuth();
+  const { t } = useI18n();
   const { horizontalPadding, contentMaxWidth } = useResponsive();
   const openWhatsApp = () => {
     const msg = CONTACT.whatsappMessageDenied + (user?.email || '');
@@ -21,8 +23,7 @@ export default function DeniedScreen() {
       <Text style={styles.icon}>🚫</Text>
       <Text style={styles.title}>{t("accountDenied")}</Text>
       <Text style={styles.body}>
-        Lamentablemente tu cuenta no pudo ser aprobada. Si crees que es un error, contáctanos por
-        WhatsApp y lo revisamos.
+        {t("accountDeniedDescription")}
       </Text>
       <Pressable onPress={openWhatsApp} style={({ pressed }) => [styles.btn, pressed && { opacity: 0.85 }]}>
         <Text style={styles.btnText}>{t("appealWhatsapp")}</Text>
