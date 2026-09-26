@@ -5,6 +5,7 @@ import { Property, formatPrice, formatSurface, getReturnColor } from '@/lib/prop
 import { useFavorites } from '@/hooks/use-favorites';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { getFirstImage } from '@/lib/property-media';
+import { useI18n } from '@/lib/i18n';
 
 interface PropertyCardProps {
   property: Property;
@@ -13,6 +14,7 @@ interface PropertyCardProps {
 
 export function PropertyCard({ property, compact = false }: PropertyCardProps) {
   const { isFav, toggleFav } = useFavorites();
+  const { t } = useI18n();
   const favorite = isFav(property.id);
   const returnColor = getReturnColor(property.returnRate);
 
@@ -134,7 +136,7 @@ export function PropertyCard({ property, compact = false }: PropertyCardProps) {
 
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel={favorite ? "Quitar de favoritos" : "Agregar a favoritos"}
+            accessibilityLabel={favorite ? t("removeFromFavorites") : t("addToFavorites")}
             accessibilityState={{ selected: favorite }}
             onPress={handleFavorite}
             hitSlop={8}
@@ -194,7 +196,7 @@ export function PropertyCard({ property, compact = false }: PropertyCardProps) {
 
         <View style={styles.metricsRow}>
           <View style={styles.metric}>
-            <Text style={styles.metricLabel}>PRECIO ACTUAL</Text>
+            <Text style={styles.metricLabel}>{t("currentPrice").toUpperCase()}</Text>
             <Text style={styles.price} numberOfLines={1}>
               {formatPrice(property.currentPrice, property.priceUnit)}
             </Text>
@@ -203,7 +205,7 @@ export function PropertyCard({ property, compact = false }: PropertyCardProps) {
           <View style={styles.metricDivider} />
 
           <View style={styles.metricRight}>
-            <Text style={styles.metricLabel}>SUPERFICIE</Text>
+            <Text style={styles.metricLabel}>{t("surface").toUpperCase()}</Text>
             <Text style={styles.surface} numberOfLines={1}>
               {formatSurface(property.surfaceM2)}
             </Text>
@@ -212,7 +214,7 @@ export function PropertyCard({ property, compact = false }: PropertyCardProps) {
 
         <View style={styles.marketRow}>
           <View style={styles.marketLine} />
-          <Text style={styles.marketLabel}>VALOR DE MERCADO</Text>
+          <Text style={styles.marketLabel}>{t("marketValue").toUpperCase()}</Text>
           <Text style={styles.marketPrice} numberOfLines={1}>
             {formatPrice(property.marketPrice, property.priceUnit)}
           </Text>
