@@ -385,6 +385,7 @@ export type PropertyCatalogOptions = {
   minSurface?: number | null;
   maxSurface?: number | null;
   tipo?: string | null;
+  sort?: 'recent' | 'priceAsc' | 'priceDesc' | 'surfaceDesc' | 'featured';
   pageSize?: number;
 };
 
@@ -435,6 +436,7 @@ export function useProperties(options?: PropertyCatalogOptions) {
   const minSurface = normalizeCatalogNumber(options?.minSurface);
   const maxSurface = normalizeCatalogNumber(options?.maxSurface);
   const tipo = options?.tipo?.trim() ?? '';
+  const sort = options?.sort ?? 'recent';
   const pageSize = Math.max(12, Math.min(options?.pageSize ?? CATALOG_PAGE_SIZE, 48));
 
   const filterKey = JSON.stringify({
@@ -445,6 +447,7 @@ export function useProperties(options?: PropertyCatalogOptions) {
     minSurface,
     maxSurface,
     tipo: tipo.toLowerCase(),
+    sort,
     pageSize,
   });
 
@@ -458,8 +461,19 @@ export function useProperties(options?: PropertyCatalogOptions) {
         let query = supabase
           .from('propiedades_publicas')
           .select(isCatalogMode ? CATALOG_FIELDS : '*')
-          .eq('estado', 'activa')
-          .order('created_at', { ascending: false });
+          .eq('estado', 'activa');
+
+        if (sort === 'priceAsc') {
+          query = query.order('precio_actual', { ascending: true, nullsFirst: false });
+        } else if (sort === 'priceDesc') {
+          query = query.order('precio_actual', { ascending: false, nullsFirst: false });
+        } else if (sort === 'surfaceDesc') {
+          query = query.order('superficie', { ascending: false, nullsFirst: false });
+        } else if (sort === 'featured') {
+          query = query.order('destacada', { ascending: false }).order('created_at', { ascending: false });
+        } else {
+          query = query.order('created_at', { ascending: false });
+        }
 
         if (isCatalogMode && options) {
           if (search) {
