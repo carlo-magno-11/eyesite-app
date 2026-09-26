@@ -17,9 +17,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '@/lib/supabase';
 import AuthBackground from '@/components/AuthBackground';
 import { useResponsive } from '@/hooks/use-responsive';
+import { useI18n } from '@/lib/i18n';
 
 export default function LoginScreen() {
   const { isDesktop } = useResponsive();
+  const { t } = useI18n();
+  const { t } = useI18n();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -137,17 +140,17 @@ export default function LoginScreen() {
 
               <Text style={styles.brand}>EYESI+E</Text>
 
-              <Text style={styles.title}>BIENVENIDO</Text>
+              <Text style={styles.title}>{t("welcome")}</Text>
 
               <Text style={styles.subtitle}>
-                Inicia sesión para descubrir propiedades seleccionadas para ti.
+                {t("discover")}
               </Text>
             </View>
 
             {/* Formulario */}
             <View style={styles.form}>
               <View style={styles.field}>
-                <Text style={styles.label}>CORREO ELECTRÓNICO</Text>
+                <Text style={styles.label}>{t("email")}</Text>
 
                 <View style={styles.inputWrap}>
                   <Ionicons
@@ -176,12 +179,12 @@ export default function LoginScreen() {
 
               <View style={styles.field}>
                 <View style={styles.labelRow}>
-                  <Text style={styles.label}>CONTRASEÑA</Text>
+                  <Text style={styles.label}>{t("password")}</Text>
 
                   <Link href={"/forgot-password" as any} asChild>
                     <Pressable disabled={loading}>
                       <Text style={styles.forgotText}>
-                        ¿Olvidaste tu contraseña?
+                        {t("forgotPassword")}
                       </Text>
                     </Pressable>
                   </Link>
@@ -198,7 +201,7 @@ export default function LoginScreen() {
                   <TextInput
                     value={password}
                     onChangeText={setPassword}
-                    placeholder="Tu contraseña"
+                    placeholder="{t("passwordPlaceholder")}"
                     placeholderTextColor="#666"
                     secureTextEntry={!showPassword}
                     autoCapitalize="none"
@@ -247,13 +250,13 @@ export default function LoginScreen() {
                       size="small"
                     />
                     <Text style={styles.loadingText}>
-                      INICIANDO SESIÓN...
+                      {t("signingIn")}
                     </Text>
                   </>
                 ) : (
                   <>
                     <Text style={styles.buttonText}>
-                      INICIAR SESIÓN
+                      {t("signIn")}
                     </Text>
 
                     <Text style={styles.arrow}>→</Text>
