@@ -49,7 +49,7 @@ export default function RegisterScreen() {
     upper: /[A-ZÁÉÍÓÚÑ]/.test(password),
   };
   const passwordScore = Object.values(passwordChecks).filter(Boolean).length;
-  const passwordLabel = passwordScore <= 1 ? "Débil" : passwordScore === 2 ? "Buena" : "Fuerte";
+  const passwordLabel = passwordScore <= 1 ? t("passwordWeak") : passwordScore === 2 ? t("passwordGood") : t("passwordStrong");
 
   const signup = async () => {
     if (loading) return;
@@ -135,8 +135,8 @@ export default function RegisterScreen() {
       if (error) {
         if (/rate limit|too many|hourly/i.test(error.message)) {
           Alert.alert(
-            "Demasiados intentos",
-            "Supabase detectó demasiados intentos. Espera un momento e inténtalo nuevamente.",
+            t("tooManyAttempts"),
+            t("tooManyAttemptsDescription"),
           );
           return;
         }
@@ -149,7 +149,7 @@ export default function RegisterScreen() {
             t("emailRegisteredDescription"),
             [
               {
-                text: "Iniciar sesión",
+                text: t("signIn"),
                 onPress: () => router.replace("/(auth)/login" as never),
               },
               {
@@ -204,13 +204,12 @@ export default function RegisterScreen() {
         <View style={styles.confirmationScreen}>
           <View style={styles.confirmationCard}>
             <Ionicons name="mail-outline" size={56} color="#C9A84C" />
-            <Text style={styles.confirmationTitle}>CONFIRMA TU CORREO</Text>
-            <Text style={styles.confirmationText}>Tu cuenta fue creada correctamente.</Text>
-            <Text style={styles.confirmationText}>Te enviamos un enlace de confirmación a:</Text>
+            <Text style={styles.confirmationTitle}>{t("confirmEmailTitle")}</Text>
+            <Text style={styles.confirmationText}>{t("accountCreatedCorrectly")}</Text>
+            <Text style={styles.confirmationText}>{t("confirmationSent")}</Text>
             <Text style={styles.confirmationEmail}>{confirmationEmail}</Text>
             <Text style={styles.confirmationHint}>
-              Revisa tu bandeja de entrada y también Spam o Correo no deseado.
-              Debes confirmar tu correo antes de continuar.
+              {t("checkSpam")}
             </Text>
             <TouchableOpacity
               onPress={() => router.replace("/(auth)/login" as never)}
@@ -408,8 +407,7 @@ export default function RegisterScreen() {
                   )}
                 </View>
                 <Text style={styles.legalText}>
-                  He leído y acepto los Términos y Condiciones, Aviso de
-                  Privacidad y tratamiento de datos.
+                  {t("legalText")}
                 </Text>
               </Pressable>
               <Pressable onPress={() => setShowTerms(true)}>
@@ -420,11 +418,11 @@ export default function RegisterScreen() {
               <View style={styles.modalOverlay}>
                 <View style={styles.modalContent}>
                   <Text style={styles.modalTitle}>
-                    ANTES DE CREAR TU CUENTA
+                    {t("beforeAccount")}
                   </Text>
                   <ScrollView style={styles.modalScroll}>
                     <Text style={styles.modalText}>
-                      TÉRMINOS Y CONDICIONES EYESITE\n\nLa información
+                      {t("termsAndPrivacy")}\n\nLa información
                       inmobiliaria es referencial y debe verificarse con un
                       asesor. Te comprometes a proporcionar datos
                       veraces.\n\nAVISO DE PRIVACIDAD\n\nTus datos se utilizarán
@@ -449,7 +447,7 @@ export default function RegisterScreen() {
                     onPress={() => setShowTerms(false)}
                     style={styles.closeTerms}
                   >
-                    <Text style={styles.closeTermsText}>Cerrar</Text>
+                    <Text style={styles.closeTermsText}>{t("close")}</Text>
                   </Pressable>
                 </View>
               </View>
@@ -479,7 +477,7 @@ export default function RegisterScreen() {
 
               <Link href="/(auth)/login" asChild>
                 <Pressable>
-                  <Text style={styles.link}>Iniciar sesión</Text>
+                  <Text style={styles.link}>{t("signIn")}</Text>
                 </Pressable>
               </Link>
             </View>
