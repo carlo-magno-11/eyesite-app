@@ -17,6 +17,7 @@ import { formatPrice } from "@/lib/properties-data";
 import { ScreenContainer } from "@/components/screen-container";
 import { useCommercial } from "@/hooks/use-commercial";
 import { supabase } from "@/lib/supabase";
+import { useI18n } from "@/lib/i18n";
 
 type UserCoords = {
   latitude: number;
@@ -389,6 +390,7 @@ function createMapHtml(properties: NearbyProperty[], initialRegion: Region) {
 
 export default function MapScreen() {
   const router = useRouter();
+  const { t } = useI18n();
   const { height: windowHeight } = useWindowDimensions();
 
   const { trackPropertyEvent } = useCommercial();
@@ -498,10 +500,7 @@ export default function MapScreen() {
       const { status } = await Location.requestForegroundPermissionsAsync();
 
       if (status !== Location.PermissionStatus.GRANTED) {
-        Alert.alert(
-          "Permiso de ubicación",
-          "Activa el permiso de ubicación para encontrar propiedades cercanas.",
-        );
+        Alert.alert(t("mapLocationPermission"), t("mapLocationPermissionDescription"));
         return;
       }
 
@@ -518,10 +517,7 @@ export default function MapScreen() {
     } catch (error) {
       console.error("[EYESITE] map location error", error);
 
-      Alert.alert(
-        "Ubicación",
-        "No pudimos obtener tu ubicación. Puedes utilizar el mapa manualmente.",
-      );
+      Alert.alert(t("mapLocation"), t("mapLocationError"));
     } finally {
       setLocating(false);
     }
@@ -610,7 +606,7 @@ export default function MapScreen() {
     >
       <View style={styles.header}>
         <View style={styles.headerContent}>
-          <Text style={styles.title}>TERRENOS EYESITE CERCA DE TI</Text>
+          <Text style={styles.title}>{t("mapTitle")}</Text>
 
           <Text style={styles.subtitle}>
             {userLocation
@@ -636,7 +632,7 @@ export default function MapScreen() {
 
       <View style={styles.mapHintRow}>
         <Text style={styles.mapHintText}>
-          Explora Yucatán libremente: acerca, aleja y mueve el mapa para buscar.
+          {t("mapHint")}
         </Text>
       </View>
 
@@ -663,11 +659,11 @@ export default function MapScreen() {
 
             <View style={styles.emptyOverlay}>
               <Text style={styles.emptyTitle}>
-                {mapError ? "No se pudieron cargar las propiedades" : "Aún no hay propiedades ubicadas"}
+                {mapError ? t("mapLoadError") : t("mapNoLocated")}
               </Text>
 
               <Text style={styles.emptyText}>
-                {mapError || "Solo aparecen propiedades EYESITE activas, publicadas por administración y con coordenadas válidas."}
+                {mapError || t("mapOnlyActive")}
               </Text>
             </View>
           )}
@@ -676,11 +672,11 @@ export default function MapScreen() {
 
       <View style={styles.footer}>
         <Text style={styles.footerTitle}>
-          {userLocation ? "Propiedades más cercanas" : "Propiedades ubicadas"}
+          {userLocation ? t("mapNearbyTitle") : t("mapLocatedTitle")}
         </Text>
 
         <Text style={styles.footerNote}>
-          Solo propiedades EYESITE publicadas y activas.
+          {t("mapPublishedOnly")}
         </Text>
 
         {nearby.slice(0, 4).map((item) => {
@@ -704,7 +700,7 @@ export default function MapScreen() {
 
                 <Text style={styles.resultMeta}>
                   {item.municipio || item.location || "Yucatán"}
-                  {distance !== undefined ? ` · ${distance.toFixed(1)} km` : ""}
+                  {distance !== undefined ? ` · ${distance.toFixed(1)} km ${t("kmFromYou")}` : ""}
                 </Text>
               </View>
 
