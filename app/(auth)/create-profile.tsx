@@ -251,8 +251,8 @@ export default function CreateProfileScreen() {
             >
               <Text style={styles.buttonText}>
                 {saving
-                  ? '{t("saving")}'
-                  : '{t("saveContinue")}'}
+                  ? t("saving")
+                  : t("saveContinue")}
               </Text>
             </TouchableOpacity>
           </View>
