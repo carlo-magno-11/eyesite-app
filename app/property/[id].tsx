@@ -11,6 +11,8 @@ import { useProperty } from '@/hooks/use-properties';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
 import { useCommercial } from '@/hooks/use-commercial';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useI18n } from '@/lib/i18n';
 
 const WHATSAPP = '+52 9813674060';
 const PHONE = '+52 9813674060';
@@ -18,6 +20,8 @@ const PHONE = '+52 9813674060';
 export default function PropertyDetailScreen() {
   const { id, play } = useLocalSearchParams<{ id: string; play?: string }>();
   const { width: windowWidth } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
+  const { t } = useI18n();
   const contentWidth = Math.min(windowWidth, 1200);
   const galleryHeight = Math.max(260, Math.min(Math.round(windowWidth * 0.56), windowWidth >= 1024 ? 560 : 420));
   const { property, loading } = useProperty(id);
@@ -178,7 +182,7 @@ export default function PropertyDetailScreen() {
       <ScreenContainer containerClassName="bg-background">
         <View style={styles.notFound}>
           <ActivityIndicator color="#C9A84C" size="large" />
-          <Text style={styles.notFoundText}>Cargando propiedad...</Text>
+          <Text style={styles.notFoundText}>{b}</Text>
         </View>
       </ScreenContainer>
     );
@@ -188,9 +192,9 @@ export default function PropertyDetailScreen() {
     return (
       <ScreenContainer containerClassName="bg-background">
         <View style={styles.notFound}>
-          <Text style={styles.notFoundText}>Propiedad no encontrada</Text>
+          <Text style={styles.notFoundText}>{b}</Text>
           <Pressable onPress={() => router.back()} style={styles.backBtn}>
-            <Text style={styles.backBtnText}>← Volver</Text>
+            <Text style={styles.backBtnText}>{b}</Text>
           </Pressable>
         </View>
       </ScreenContainer>
@@ -435,7 +439,7 @@ export default function PropertyDetailScreen() {
           {/* Botón atrás */}
           <Pressable
             onPress={() => router.back()}
-            style={({ pressed }) => [styles.backButton, pressed && { opacity: 0.7 }]}
+            style={({ pressed }) => [styles.backButton, { top: insets.top + 12 }, pressed && { opacity: 0.7 }]}
           >
             <IconSymbol name="chevron.left" size={20} color="#F5F5F5" />
           </Pressable>
@@ -443,7 +447,7 @@ export default function PropertyDetailScreen() {
           {/* Botón compartir */}
           <Pressable
             onPress={handleShareProperty}
-            style={({ pressed }) => [styles.shareButton, pressed && { opacity: 0.7 }]}
+            style={({ pressed }) => [styles.shareButton, { top: insets.top + 12 }, pressed && { opacity: 0.7 }]}
           >
             <IconSymbol name="paperplane.fill" size={20} color="#ffffff" />
           </Pressable>
@@ -451,7 +455,7 @@ export default function PropertyDetailScreen() {
           {/* Botón favorito */}
           <Pressable
             onPress={() => session ? toggleFav(property.id) : Alert.alert('Inicia sesión', 'Inicia sesión para guardar propiedades en favoritos.', [{ text: 'Cancelar', style: 'cancel' }, { text: 'Iniciar sesión', onPress: () => router.push('/(auth)/login' as never) }])}
-            style={({ pressed }) => [styles.favoriteButton, pressed && { opacity: 0.7 }]}
+            style={({ pressed }) => [styles.favoriteButton, { top: insets.top + 12 }, pressed && { opacity: 0.7 }]}
           >
             <IconSymbol
               name={favorite ? 'heart.fill' : 'heart'}
@@ -497,7 +501,7 @@ export default function PropertyDetailScreen() {
           {/* Métricas principales */}
           <View style={styles.metricsGrid}>
             <View style={styles.metricCard}>
-              <Text style={styles.metricLabel}>Precio actual</Text>
+              <Text style={styles.metricLabel}>{b}</Text>
               <Text style={styles.metricValue}>
                {formatPrice(
                 currentPrice,
@@ -506,18 +510,18 @@ export default function PropertyDetailScreen() {
              </Text>
             </View>
             <View style={styles.metricCard}>
-              <Text style={styles.metricLabel}>Precio mercado</Text>
+              <Text style={styles.metricLabel}>{b}</Text>
               <Text style={[styles.metricValue, styles.metricValueMuted]}>
                 {formatPrice(marketPrice, priceUnit)}
               </Text>
             </View>
             <View style={styles.metricCard}>
-              <Text style={styles.metricLabel}>Superficie</Text>
+              <Text style={styles.metricLabel}>{b}</Text>
               <Text style={styles.metricValue}>{formatSurface(surfaceM2, surfaceUnit)}</Text>
             </View>
             {constructionM2 > 0 && (
               <View style={styles.metricCard}>
-                <Text style={styles.metricLabel}>Construcción</Text>
+                <Text style={styles.metricLabel}>{b}</Text>
                 <Text style={styles.metricValue}>{formatSurface(constructionM2, 'm²')}</Text>
               </View>
             )}
@@ -526,7 +530,7 @@ export default function PropertyDetailScreen() {
           {/* Rendimiento destacado */}
           <View style={[styles.returnCard, { borderColor: returnColor + '55' }]}>
             <View>
-              <Text style={styles.returnCardLabel}>Rendimiento a la compra</Text>
+              <Text style={styles.returnCardLabel}>{b}</Text>
               <Text style={styles.returnCardSub}>
                 {returnDiff > 0 ? `${returnDiff}% por debajo del mercado` : 'Al precio de mercado'}
               </Text>
@@ -541,20 +545,20 @@ export default function PropertyDetailScreen() {
 
           {/* Descripción */}
           <View style={styles.descSection}>
-            <Text style={styles.descTitle}>DESCRIPCIÓN</Text>
+            <Text style={styles.descTitle}>{b}</Text>
             <Text style={styles.descText}>{property.description || property.descripcion || 'Sin descripción disponible'}</Text>
           </View>
 
           {property.descripcion_pro ? (
             <View style={styles.descSection}>
-              <Text style={styles.descTitle}>INFORMACIÓN PROFESIONAL</Text>
+              <Text style={styles.descTitle}>{b}</Text>
               <Text style={styles.descText}>{property.descripcion_pro}</Text>
             </View>
           ) : null}
 
           {(property.direccion || property.ubicacion) && (
             <View style={styles.descSection}>
-              <Text style={styles.descTitle}>UBICACIÓN</Text>
+              <Text style={styles.descTitle}>{b}</Text>
               {property.direccion ? <Text style={styles.descText}>{property.direccion}</Text> : null}
               {property.ubicacion && property.ubicacion !== location ? (
                 <Text style={styles.secondaryText}>{property.ubicacion}</Text>
@@ -565,19 +569,19 @@ export default function PropertyDetailScreen() {
           <View style={styles.metricsGrid}>
             {frente > 0 && (
               <View style={styles.metricCard}>
-                <Text style={styles.metricLabel}>Frente</Text>
+                <Text style={styles.metricLabel}>{b}</Text>
                 <Text style={styles.metricValue}>{frente} m</Text>
               </View>
             )}
             {fondo > 0 && (
               <View style={styles.metricCard}>
-                <Text style={styles.metricLabel}>Fondo</Text>
+                <Text style={styles.metricLabel}>{b}</Text>
                 <Text style={styles.metricValue}>{fondo} m</Text>
               </View>
             )}
             {expectedPrice > 0 && (
               <View style={styles.metricCard}>
-                <Text style={styles.metricLabel}>Precio esperado</Text>
+                <Text style={styles.metricLabel}>{b}</Text>
                 <Text style={styles.metricValue}>{formatPrice(expectedPrice, priceUnit)}</Text>
               </View>
             )}
@@ -591,12 +595,12 @@ export default function PropertyDetailScreen() {
             <View style={styles.legalNote}>
               <Text style={styles.legalIcon}>⚖️</Text>
               <View style={styles.legalContent}>
-                <Text style={styles.legalTitle}>SITUACIÓN LEGAL</Text>
+                <Text style={styles.legalTitle}>{b}</Text>
                 {property.estatus_legal ? (
                   <Text style={styles.legalText}>Estatus: {property.estatus_legal}</Text>
                 ) : null}
                 {property.certeza_legal ? (
-                  <Text style={styles.legalText}>Certeza legal: Sí</Text>
+                  <Text style={styles.legalText}>{b}</Text>
                 ) : null}
               </View>
             </View>
@@ -604,12 +608,12 @@ export default function PropertyDetailScreen() {
 
           {property.tour_360 ? (
             <View style={styles.dataSection}>
-              <Text style={styles.sectionTitle}>TOUR 360°</Text>
+              <Text style={styles.sectionTitle}>{b}</Text>
               <Pressable
                 onPress={() => Linking.openURL(property.tour_360 as string)}
                 style={styles.linkCard}
               >
-                <Text style={styles.linkLabel}>Abrir recorrido 360°</Text>
+                <Text style={styles.linkLabel}>{b}</Text>
                 <Text style={styles.linkUrl}>{property.tour_360}</Text>
               </Pressable>
             </View>
@@ -617,7 +621,7 @@ export default function PropertyDetailScreen() {
 
           {privateDocumentPaths.length > 0 ? (
             <View style={styles.dataSection}>
-              <Text style={styles.sectionTitle}>DOCUMENTOS</Text>
+              <Text style={styles.sectionTitle}>{b}</Text>
               {privateDocumentPaths.map((path) => {
                 const name = path.split('/').pop() || 'Documento';
                 const lower = name.toLowerCase();
@@ -625,7 +629,7 @@ export default function PropertyDetailScreen() {
                 return (
                   <Pressable key={path} onPress={() => void openPrivateDocument(path)} style={styles.linkCard} disabled={loadingDocument === path}>
                     <Text style={styles.linkLabel}>{type} · {name}</Text>
-                    <Text style={styles.linkUrl}>{loadingDocument === path ? "Preparando documento..." : "Abrir documento"}</Text>
+                    <Text style={styles.linkUrl}>{loadingDocument === path ? t(""preparingDocument"") : t(""openDocument"")}</Text>
                   </Pressable>
                 );
               })}
@@ -634,7 +638,7 @@ export default function PropertyDetailScreen() {
 
           {property.enlaces && Array.isArray(property.enlaces) && property.enlaces.length > 0 ? (
             <View style={styles.dataSection}>
-              <Text style={styles.sectionTitle}>ENLACES</Text>
+              <Text style={styles.sectionTitle}>{b}</Text>
               {property.enlaces.map((link: any, index: number) => {
                 const url = typeof link === 'string' ? link : link?.url || link?.href;
                 const label = typeof link === 'string' ? link : link?.label || link?.titulo || url;
@@ -659,13 +663,13 @@ export default function PropertyDetailScreen() {
           style={({ pressed }) => [styles.callBtn, pressed && { opacity: 0.8 }]}
         >
           <IconSymbol name="phone.fill" size={18} color="#C9A84C" />
-          <Text style={styles.callBtnText}>Llamar</Text>
+          <Text style={styles.callBtnText}>{b}</Text>
         </Pressable>
         <Pressable
           onPress={handleWhatsApp}
           style={({ pressed }) => [styles.whatsappBtn, pressed && { opacity: 0.85 }]}
         >
-          <Text style={styles.whatsappBtnText}>AGENDAR LLAMADA</Text>
+          <Text style={styles.whatsappBtnText}>{b}</Text>
         </Pressable>
       </View>
 
@@ -1029,7 +1033,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 10,
     padding: 16,
-    paddingBottom: 32,
+    paddingBottom: Math.max(16, insets.bottom + 12),
     backgroundColor: '#0D0D0D',
     borderTopWidth: 1,
     borderTopColor: '#2A2A2A',
