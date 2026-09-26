@@ -153,6 +153,12 @@ const dictionaries = {
     profileReviewNotice: "Tu cuenta permanecerá bajo revisión antes de ser activada.",
     saveContinue: "GUARDAR Y CONTINUAR",
     saving: "GUARDANDO...",
+    currentPrice: "PRECIO ACTUAL",
+    surface: "SUPERFICIE",
+    marketValue: "VALOR DE MERCADO",
+    returnRate: "rendimiento",
+    addToFavorites: "Agregar a favoritos",
+    removeFromFavorites: "Quitar de favoritos",
 
   },
   en: {
@@ -300,6 +306,12 @@ const dictionaries = {
     profileReviewNotice: "Your account will remain under review before it is activated.",
     saveContinue: "SAVE AND CONTINUE",
     saving: "SAVING...",
+    currentPrice: "CURRENT PRICE",
+    surface: "SURFACE",
+    marketValue: "MARKET VALUE",
+    returnRate: "return",
+    addToFavorites: "Add to favorites",
+    removeFromFavorites: "Remove from favorites",
 
   },
 } as const;
