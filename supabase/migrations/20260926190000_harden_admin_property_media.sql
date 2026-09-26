@@ -42,7 +42,7 @@ begin
 
     v_item := v_value #>> '{}';
 
-    if v_item ~* '^https://xhvpvpvtkdgnnxdwdrkn\\.supabase\\.co/storage/v1/object/public/eyesite-media/.+$' then
+    if v_item LIKE 'https://xhvpvpvtkdgnnxdwdrkn.supabase.co/storage/v1/object/public/eyesite-media/%' then
       continue;
     end if;
 
@@ -98,7 +98,7 @@ begin
           raise exception 'Una referencia de media pública no es válida';
         end if;
 
-        if v_item ~* '^https://xhvpvpvtkdgnnxdwdrkn\\.supabase\\.co/storage/v1/object/public/eyesite-media/.+$' then
+        if v_item LIKE 'https://xhvpvpvtkdgnnxdwdrkn.supabase.co/storage/v1/object/public/eyesite-media/%' then
           continue;
         end if;
 
@@ -131,7 +131,7 @@ begin
         raise exception 'Una referencia de media pública no es válida';
       end if;
 
-      if v_item ~* '^https://xhvpvpvtkdgnnxdwdrkn\\.supabase\\.co/storage/v1/object/public/eyesite-media/.+$' then
+      if v_item LIKE 'https://xhvpvpvtkdgnnxdwdrkn.supabase.co/storage/v1/object/public/eyesite-media/%' then
         continue;
       end if;
 
