@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>EYESITE · Restablecer contraseña</title>
+  <style>
+    :root{--bg:#0b0b0b;--card:#141414;--line:#2a2a2a;--gold:#c9a84c;--text:#f5f5f5;--muted:#999;--danger:#ff7070}
+    *{box-sizing:border-box} body{margin:0;min-height:100vh;background:radial-gradient(circle at top,#1a1a1a 0,#0b0b0b 48%);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;display:flex;align-items:center;justify-content:center;padding:24px}
+    .card{width:min(100%,460px);background:rgba(20,20,20,.96);border:1px solid var(--line);border-radius:20px;padding:30px;box-shadow:0 20px 60px rgba(0,0,0,.45)}
+    .brand{text-align:center;color:var(--gold);font-weight:900;letter-spacing:4px;font-size:15px;margin-bottom:26px}
+    h1{font-size:25px;text-align:center;margin:0 0 10px}.sub{text-align:center;color:var(--muted);line-height:1.5;font-size:14px;margin:0 0 24px}
+    label{display:block;color:#bdbdbd;font-size:11px;font-weight:800;letter-spacing:1px;margin:0 0 7px}
+    input{width:100%;height:52px;border-radius:11px;border:1px solid #333;background:#101010;color:#fff;padding:0 14px;font-size:16px;outline:none;margin-bottom:15px}
+    input:focus{border-color:var(--gold)} .code{letter-spacing:6px;text-align:center;font-weight:800}
+    button{width:100%;height:54px;border:0;border-radius:11px;background:var(--gold);color:#0b0b0b;font-weight:900;letter-spacing:.8px;cursor:pointer}
+    button:disabled{opacity:.55;cursor:not-allowed}.hidden{display:none}.message{margin-top:16px;padding:12px;border-radius:10px;background:#101010;color:var(--muted);font-size:13px;line-height:1.5}
+    .error{color:var(--danger)} .success{color:#b9df9a}
+    .small{text-align:center;color:#666;font-size:11px;line-height:1.5;margin-top:18px}
+  </style>
+</head>
+<body>
+<main class="card">
+  <div class="brand">EYESITE</div>
+  <section id="requestStep">
+    <h1>Restablecer contraseña</h1>
+    <p class="sub">Escribe tu correo. Te enviaremos un código de verificación para crear una nueva contraseña.</p>
+    <label for="email">CORREO ELECTRÓNICO</label>
+    <input id="email" type="email" autocomplete="email" placeholder="correo@ejemplo.com">
+    <button id="requestBtn">ENVIAR CÓDIGO</button>
+  </section>
+
+  <section id="verifyStep" class="hidden">
+    <h1>Verifica tu código</h1>
+    <p class="sub">Introduce el código de 6 dígitos que recibiste por correo.</p>
+    <label for="code">CÓDIGO</label>
+    <input id="code" class="code" inputmode="numeric" maxlength="6" autocomplete="one-time-code" placeholder="000000">
+    <button id="verifyBtn">VERIFICAR CÓDIGO</button>
+    <div id="verifyMessage" class="message hidden"></div>
+  </section>
+
+  <section id="passwordStep" class="hidden">
+    <h1>Nueva contraseña</h1>
+    <p class="sub">Tu código fue validado. Ahora crea una contraseña nueva.</p>
+    <label for="password">NUEVA CONTRASEÑA</label>
+    <input id="password" type="password" autocomplete="new-password" placeholder="Mínimo 8 caracteres, mayúscula y número">
+    <label for="confirm">CONFIRMAR CONTRASEÑA</label>
+    <input id="confirm" type="password" autocomplete="new-password" placeholder="Repite la contraseña">
+    <button id="saveBtn">GUARDAR CONTRASEÑA</button>
+    <div id="saveMessage" class="message hidden"></div>
+  </section>
+
+  <p id="globalMessage" class="message hidden"></p>
+  <div class="small">Si no solicitaste este cambio, puedes ignorar este correo.</div>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+(() => {
+  const SUPABASE_URL = "https://xhvpvpvtkdgnnxdwdrkn.supabase.co";
+  const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhodnB2cHZ0a2Rnbm54ZHdkcmtuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODcwODk5MTEsImV4cCI6MjEwMjY2NTkxMX0.zsEMmjhbln24S25FnbKvlkic2djzON8QoXNLO8CtXA0";
+  const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false }
+  });
+
+  const $ = (id) => document.getElementById(id);
+  const email = $("email");
+  const code = $("code");
+  const password = $("password");
+  const confirm = $("confirm");
+  const globalMessage = $("globalMessage");
+
+  const show = (id) => $(id).classList.remove("hidden");
+  const hide = (id) => $(id).classList.add("hidden");
+  const message = (el, text, error=false) => {
+    el.textContent = text;
+    el.className = "message " + (error ? "error" : "success");
+    el.classList.remove("hidden");
+  };
+
+  const params = new URLSearchParams(location.search);
+  const emailParam = params.get("email");
+  if (emailParam) email.value = emailParam.trim().toLowerCase();
+
+  $("requestBtn").addEventListener("click", async () => {
+    const value = email.value.trim().toLowerCase();
+    if (!/^\S+@\S+\.\S+$/.test(value)) {
+      message(globalMessage, "Introduce un correo válido.", true); return;
+    }
+    $("requestBtn").disabled = true;
+    try {
+      const { error } = await sb.auth.resetPasswordForEmail(value, {
+        redirectTo: "https://auth.eyesite.mx/?mode=recovery"
+      });
+      if (error) throw error;
+      email.value = value;
+      hide("requestStep"); show("verifyStep");
+      message($("verifyMessage"), "Revisa tu correo. El código es de un solo uso y tiene una vigencia limitada.");
+    } catch (e) {
+      message(globalMessage, "No pudimos enviar el código. Inténtalo nuevamente.", true);
+    } finally { $("requestBtn").disabled = false; }
+  });
+
+  $("verifyBtn").addEventListener("click", async () => {
+    const value = email.value.trim().toLowerCase();
+    const token = code.value.replace(/\D/g, "");
+    if (!/^\S+@\S+\.\S+$/.test(value) || token.length !== 6) {
+      message($("verifyMessage"), "Escribe el correo y el código de 6 dígitos.", true); return;
+    }
+    $("verifyBtn").disabled = true;
+    try {
+      const { error } = await sb.auth.verifyOtp({ email: value, token, type: "recovery" });
+      if (error) throw error;
+      hide("verifyStep"); show("passwordStep");
+    } catch (e) {
+      message($("verifyMessage"), "El código no es válido, ya fue usado o expiró.", true);
+    } finally { $("verifyBtn").disabled = false; }
+  });
+
+  $("saveBtn").addEventListener("click", async () => {
+    const p = password.value;
+    const c = confirm.value;
+    if (p.length < 8 || !/[A-ZÁÉÍÓÚÑ]/.test(p) || !/\d/.test(p)) {
+      message($("saveMessage"), "Usa al menos 8 caracteres, una mayúscula y un número.", true); return;
+    }
+    if (p !== c) {
+      message($("saveMessage"), "Las contraseñas no coinciden.", true); return;
+    }
+    $("saveBtn").disabled = true;
+    try {
+      const { error } = await sb.auth.updateUser({ password: p });
+      if (error) throw error;
+      await sb.auth.signOut();
+      message($("saveMessage"), "Contraseña actualizada correctamente. Ya puedes cerrar esta página e iniciar sesión en EYESITE.");
+      $("saveBtn").disabled = true;
+    } catch (e) {
+      message($("saveMessage"), "No se pudo actualizar la contraseña. Solicita un código nuevo e inténtalo otra vez.", true);
+      $("saveBtn").disabled = false;
+    }
+  });
+})();
+</script>
+</body>
+</html>

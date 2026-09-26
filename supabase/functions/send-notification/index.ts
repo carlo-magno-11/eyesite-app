@@ -42,7 +42,82 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: "Solo administradores activos" }), { status: 403, headers: H });
     }
 
+    const contentLength = Number(req.headers.get("content-length") || "0");
+    if (contentLength > 64 * 1024) {
+      return new Response(JSON.stringify({ error: "Payload demasiado grande" }), { status: 413, headers: H });
+    }
+
     const body = await req.json();
+
+    if (!body || typeof body !== "object" || Array.isArray(body)) {
+      return new Response(JSON.stringify({ error: "El cuerpo debe ser un objeto JSON" }), { status: 400, headers: H });
+    }
+
+    const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    const isUuid = (value: unknown): value is string =>
+      typeof value === "string" && UUID_RE.test(value.trim());
+
+    const isBoundedString = (value: unknown, max: number) =>
+      typeof value === "string" && value.length <= max;
+
+    if (body.user_id !== undefined && !isUuid(body.user_id)) {
+      return new Response(JSON.stringify({ error: "user_id inválido" }), { status: 400, headers: H });
+    }
+
+    if (body.user_ids !== undefined) {
+      if (!Array.isArray(body.user_ids) || body.user_ids.length > 500 || body.user_ids.some((id: unknown) => !isUuid(id))) {
+        return new Response(JSON.stringify({ error: "user_ids inválido o excede el máximo de 500 destinatarios" }), { status: 400, headers: H });
+      }
+    }
+
+    if (body.property_id !== undefined && !isUuid(body.property_id)) {
+      return new Response(JSON.stringify({ error: "property_id inválido" }), { status: 400, headers: H });
+    }
+
+    if (body.announcement_id !== undefined && !isUuid(body.announcement_id)) {
+      return new Response(JSON.stringify({ error: "announcement_id inválido" }), { status: 400, headers: H });
+    }
+
+    if (body.titulo !== undefined && !isBoundedString(body.titulo, 120)) {
+      return new Response(JSON.stringify({ error: "titulo inválido o demasiado largo" }), { status: 400, headers: H });
+    }
+
+    if (body.mensaje !== undefined && !isBoundedString(body.mensaje, 4000)) {
+      return new Response(JSON.stringify({ error: "mensaje inválido o demasiado largo" }), { status: 400, headers: H });
+    }
+
+    if (body.tipo !== undefined && !isBoundedString(body.tipo, 64)) {
+      return new Response(JSON.stringify({ error: "tipo inválido o demasiado largo" }), { status: 400, headers: H });
+    }
+
+    if (body.event_key !== undefined && !isBoundedString(body.event_key, 160)) {
+      return new Response(JSON.stringify({ error: "event_key inválido o demasiado largo" }), { status: 400, headers: H });
+    }
+
+    if (body.in_app !== undefined && typeof body.in_app !== "boolean") {
+      return new Response(JSON.stringify({ error: "in_app debe ser booleano" }), { status: 400, headers: H });
+    }
+
+    if (body.data !== undefined && (typeof body.data !== "object" || body.data === null || Array.isArray(body.data))) {
+      return new Response(JSON.stringify({ error: "data debe ser un objeto JSON" }), { status: 400, headers: H });
+    }
+
+    if (body.data !== undefined) {
+      let dataSize = 0;
+      try {
+        dataSize = JSON.stringify(body.data).length;
+      } catch {
+        return new Response(JSON.stringify({ error: "data no es serializable" }), { status: 400, headers: H });
+      }
+      if (dataSize > 16 * 1024) {
+        return new Response(JSON.stringify({ error: "data demasiado grande" }), { status: 400, headers: H });
+      }
+    }
+
+    if (body.user_ids && body.user_ids.length + (body.user_id ? 1 : 0) > 500 && !body.property_id) {
+      return new Response(JSON.stringify({ error: "La solicitud supera el máximo de 500 destinatarios" }), { status: 400, headers: H });
+    }
+
     const targetUserId = body.user_id ? String(body.user_id) : null;
     const targetUserIds = Array.isArray(body.user_ids)
       ? body.user_ids.map((id: unknown) => String(id)).filter(Boolean)
@@ -69,6 +144,10 @@ Deno.serve(async (req) => {
     if (targetUserId) resolvedUserIds.push(targetUserId);
 
     resolvedUserIds = [...new Set(resolvedUserIds)];
+
+    if (resolvedUserIds.length > 500) {
+      return new Response(JSON.stringify({ error: "La solicitud supera el máximo de 500 destinatarios" }), { status: 400, headers: H });
+    }
 
     let query = adminClient
       .from("profiles")
@@ -126,6 +205,31 @@ Deno.serve(async (req) => {
     }
 
     const isAnnouncement = Boolean(body.announcement_id || navigationData.announcement_id || String(body.tipo || "").toLowerCase() === "anuncio");
+    const announcementId = body.announcement_id ? String(body.announcement_id) : null;
+
+    if (announcementId) {
+      const { data: announcement, error: announcementError } = await adminClient
+        .from("anuncios")
+        .select("id,activa,estado_publicacion")
+        .eq("id", announcementId)
+        .maybeSingle();
+      if (announcementError) throw announcementError;
+      if (!announcement || announcement.estado_publicacion !== "publicado" || announcement.activa !== true) {
+        return new Response(JSON.stringify({ error: "El anuncio no está publicado y activo" }), { status: 400, headers: H });
+      }
+
+      const deliveryRows = (rows || []).map((row: any) => ({
+        anuncio_id: announcementId,
+        user_id: row.id,
+      }));
+      if (deliveryRows.length) {
+        const { error: deliveryError } = await adminClient
+          .from("anuncio_entregas")
+          .upsert(deliveryRows, { onConflict: "anuncio_id,user_id", ignoreDuplicates: true });
+        if (deliveryError) throw deliveryError;
+      }
+    }
+
     const messages = (rows || [])
       .filter((row: any) => {
         const pushEnabled = isAnnouncement
@@ -136,6 +240,7 @@ Deno.serve(async (req) => {
           && row.expo_push_token.startsWith("ExponentPushToken[");
       })
       .map((row: any) => ({
+        userId: row.id,
         to: row.expo_push_token,
         sound: "default",
         title: String(body.titulo || "EYESITE"),
@@ -147,35 +252,183 @@ Deno.serve(async (req) => {
       }));
 
     if (!messages.length) {
+      if (announcementId) {
+        const deliveryNow = new Date().toISOString();
+        await adminClient
+          .from("anuncio_entregas")
+          .update({
+            push_status: "not_configured",
+            push_attempts: 0,
+            push_next_retry_at: null,
+            push_error: null,
+            updated_at: deliveryNow,
+          })
+          .eq("anuncio_id", announcementId)
+          .eq("push_status", "pending");
+      }
       return new Response(JSON.stringify({ ok: true, sent: 0, invalid_tokens: 0 }), { headers: H });
     }
 
-    const expoResponse = await fetch("https://exp.host/--/api/v2/push/send", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(messages),
-    });
+    const EXPO_BATCH_SIZE = 100;
+    const EXPO_CONCURRENCY = 3;
+    const DB_CONCURRENCY = 10;
 
-    const expoResult = await expoResponse.json();
-    const tickets = Array.isArray(expoResult?.data) ? expoResult.data : [];
+    const chunks = <T>(items: T[], size: number) => {
+      const out: T[][] = [];
+      for (let index = 0; index < items.length; index += size) {
+        out.push(items.slice(index, index + size));
+      }
+      return out;
+    };
+
+    const mapWithConcurrency = async <T>(
+      items: T[],
+      concurrency: number,
+      worker: (item: T) => Promise<void>,
+    ) => {
+      let cursor = 0;
+      const workers = Array.from(
+        { length: Math.min(concurrency, items.length) },
+        async () => {
+          while (true) {
+            const index = cursor++;
+            if (index >= items.length) return;
+            await worker(items[index]);
+          }
+        },
+      );
+      await Promise.all(workers);
+    };
 
     let sent = 0;
     const invalidTokens: string[] = [];
+    const deliveryNow = new Date().toISOString();
 
-    tickets.forEach((ticket: any, index: number) => {
-      if (ticket?.status === "ok") {
-        sent += 1;
-      } else if (ticket?.details?.error === "DeviceNotRegistered") {
-        const token = messages[index]?.to;
-        if (token) invalidTokens.push(token);
+    for (const batch of chunks(messages, EXPO_BATCH_SIZE)) {
+      try {
+        const expoMessages = batch.map(({ userId: _userId, ...message }) => message);
+        const expoResponse = await fetch("https://exp.host/--/api/v2/push/send", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(expoMessages),
+        });
+        const expoResult = await expoResponse.json();
+        const tickets = Array.isArray(expoResult?.data) ? expoResult.data : [];
+
+        await mapWithConcurrency(batch, DB_CONCURRENCY, async (message, index) => {
+          const ticket = tickets[index];
+
+          if (ticket?.status === "ok") {
+            sent += 1;
+            if (announcementId && message.userId) {
+              const { error } = await adminClient
+                .from("anuncio_entregas")
+                .update({
+                  push_status: "sent",
+                  push_attempts: 1,
+                  sent_at: deliveryNow,
+                  push_next_retry_at: null,
+                  push_error: null,
+                  updated_at: deliveryNow,
+                })
+                .eq("anuncio_id", announcementId)
+                .eq("user_id", message.userId);
+              if (error) throw error;
+            }
+            return;
+          }
+
+          if (ticket?.details?.error === "DeviceNotRegistered") {
+            if (message.to) invalidTokens.push(message.to);
+            if (announcementId && message.userId) {
+              const { error } = await adminClient
+                .from("anuncio_entregas")
+                .update({
+                  push_status: "not_configured",
+                  push_attempts: 1,
+                  push_next_retry_at: null,
+                  push_error: "DeviceNotRegistered",
+                  updated_at: deliveryNow,
+                })
+                .eq("anuncio_id", announcementId)
+                .eq("user_id", message.userId);
+              if (error) throw error;
+            }
+            return;
+          }
+
+          if (announcementId && message.userId) {
+            const errorMessage = String(
+              ticket?.details?.error ||
+                ticket?.message ||
+                (!expoResponse.ok ? "Expo request failed" : "Push rechazado"),
+            );
+            const { error } = await adminClient
+              .from("anuncio_entregas")
+              .update({
+                push_status: "error",
+                push_attempts: 1,
+                push_next_retry_at: deliveryNow,
+                push_error: errorMessage,
+                updated_at: deliveryNow,
+              })
+              .eq("anuncio_id", announcementId)
+              .eq("user_id", message.userId);
+            if (error) throw error;
+          }
+        });
+
+        if (!expoResponse.ok) {
+          return new Response(
+            JSON.stringify({
+              ok: false,
+              attempted: messages.length,
+              sent,
+              invalid_tokens: invalidTokens.length,
+              error: expoResult?.errors?.[0]?.message || "Expo request failed",
+            }),
+            { status: 502, headers: H },
+          );
+        }
+      } catch (batchError) {
+        const errorMessage =
+          batchError instanceof Error ? batchError.message : String(batchError);
+
+        if (announcementId) {
+          await mapWithConcurrency(batch, DB_CONCURRENCY, async (message) => {
+            if (!message.userId) return;
+            await adminClient
+              .from("anuncio_entregas")
+              .update({
+                push_status: "error",
+                push_attempts: 1,
+                push_next_retry_at: deliveryNow,
+                push_error: errorMessage,
+                updated_at: deliveryNow,
+              })
+              .eq("anuncio_id", announcementId)
+              .eq("user_id", message.userId);
+          });
+        }
+
+        return new Response(
+          JSON.stringify({
+            ok: false,
+            attempted: messages.length,
+            sent,
+            invalid_tokens: invalidTokens.length,
+            error: errorMessage,
+          }),
+          { status: 502, headers: H },
+        );
       }
-    });
+    }
 
     if (invalidTokens.length) {
       await adminClient
         .from("profiles")
         .update({ expo_push_token: null })
-        .in("expo_push_token", invalidTokens);
+        .in("expo_push_token", [...new Set(invalidTokens)]);
     }
 
     return new Response(

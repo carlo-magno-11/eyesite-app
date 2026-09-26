@@ -1,29 +1,71 @@
+import { useCallback, useEffect, useState } from 'react';
 import { View, Text, FlatList, StyleSheet, ActivityIndicator } from 'react-native';
 import { ScreenContainer } from '@/components/screen-container';
 import { PropertyCard } from '@/components/property-card';
 import { useFavorites } from '@/hooks/use-favorites';
-import { useProperties } from '@/hooks/use-properties';
+import { mapProperty } from '@/hooks/use-properties';
+import { supabase } from '@/lib/supabase';
 import { useResponsive } from '@/hooks/use-responsive';
+import type { Property } from '@/lib/properties-data';
+import { useI18n } from '@/lib/i18n';
+
+const FAVORITES_FIELDS = [
+  'id','codigo','titulo','tipo','municipio','ubicacion','direccion',
+  'superficie','unidad_superficie','precio_actual','precio_mercado',
+  'precio','precio_esperado','unidad_precio','rendimiento','moneda',
+  'destacada','fotos','portada_url','portada_tipo','tipo_portada',
+  'video_url','activa','estado','orden','created_at','updated_at',
+  'latitud','longitud',
+].join(',');
 
 export default function FavoritesScreen() {
   const { favs } = useFavorites();
-  const { properties, loading: propsLoading, refetch: fetchProperties } = useProperties();
+  const [favoriteProperties, setFavoriteProperties] = useState<Property[]>([]);
+  const [loading, setLoading] = useState(true);
   const { propertyColumns, horizontalPadding, contentMaxWidth } = useResponsive();
+  const { t } = useI18n();
 
-  const favoriteProperties = properties.filter((p) => favs.includes(p.id));
-  const loading = propsLoading;
+  const fetchFavoriteProperties = useCallback(async () => {
+    if (!favs.length) {
+      setFavoriteProperties([]);
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    const { data, error } = await supabase
+      .from('propiedades_publicas')
+      .select(FAVORITES_FIELDS)
+      .eq('estado', 'activa')
+      .in('id', favs);
+    if (error) {
+      console.warn('[favorites] properties load:', error.message);
+      setFavoriteProperties([]);
+    } else {
+      const byId = new Map(favs.map((id, index) => [id, index]));
+      const mapped = (data ?? []).map(mapProperty).sort((a, b) => (byId.get(a.id) ?? 0) - (byId.get(b.id) ?? 0));
+      setFavoriteProperties(mapped);
+    }
+    setLoading(false);
+  }, [favs]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      void fetchFavoriteProperties();
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [fetchFavoriteProperties]);
 
   return (
     <ScreenContainer edges={['top', 'left', 'right']} containerClassName="bg-background">
       <View style={[styles.header, { paddingHorizontal: horizontalPadding, maxWidth: contentMaxWidth, width: '100%', alignSelf: 'center' }]}>
-        <Text style={styles.headerTitle}>FAVORITOS</Text>
-        <Text style={styles.headerCount}>{favoriteProperties.length} guardadas</Text>
+        <Text style={styles.headerTitle}>{t("favoritesTitle")}</Text>
+        <Text style={styles.headerCount}>{favoriteProperties.length} {t("favoritesCount")}</Text>
       </View>
 
       {loading && favoriteProperties.length === 0 ? (
         <View style={styles.emptyContainer}>
           <ActivityIndicator color="#C9A84C" size="large" />
-          <Text style={styles.emptyText}>Cargando favoritos...</Text>
+          <Text style={styles.emptyText}>{t("loadingFavorites")}</Text>
         </View>
       ) : (
         <FlatList
@@ -32,7 +74,7 @@ export default function FavoritesScreen() {
           keyExtractor={(item) => item.id}
           numColumns={propertyColumns}
           refreshing={loading}
-          onRefresh={fetchProperties}
+          onRefresh={fetchFavoriteProperties}
           columnWrapperStyle={propertyColumns > 1 ? styles.columnWrapper : undefined}
           contentContainerStyle={[styles.listContainer, { paddingHorizontal: horizontalPadding, maxWidth: contentMaxWidth, width: '100%', alignSelf: 'center' }]}
           showsVerticalScrollIndicator={false}
@@ -44,11 +86,11 @@ export default function FavoritesScreen() {
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
               <Text style={styles.emptyIcon}>🏡</Text>
-              <Text style={styles.emptyTitle}>Sin favoritos aún</Text>
+              <Text style={styles.emptyTitle}>{t("noFavorites")}</Text>
               <Text style={styles.emptyText}>
-                Guarda las propiedades que más te interesen tocando el ícono de corazón en cada propiedad.
+                {t("noFavoritesDescription")}
               </Text>
-              <Text style={styles.emptyHint}>FIND YOUR LEGACY</Text>
+              <Text style={styles.emptyHint}>{t("findYourLegacy")}</Text>
             </View>
           }
         />
@@ -68,8 +110,17 @@ const styles = StyleSheet.create({
   headerTitle: { color: '#F5F5F5', fontSize: 18, fontWeight: '800', letterSpacing: 2 },
   headerCount: { color: '#9A9A9A', fontSize: 13 },
   listContainer: { paddingBottom: 100 },
-  columnWrapper: { gap: 16, marginBottom: 16 },
-  gridItem: { flex: 1, minWidth: 0 },
+  columnWrapper: {
+    gap: 16,
+    marginBottom: 16,
+    justifyContent: 'center',
+    width: '100%',
+  },
+  gridItem: {
+    flex: 1,
+    minWidth: 0,
+    maxWidth: 430,
+  },
   singleItem: { width: '100%', marginBottom: 16 },
   emptyContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 40, paddingBottom: 80 },
   emptyIcon: { fontSize: 64, marginBottom: 20 },

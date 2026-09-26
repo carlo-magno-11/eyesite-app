@@ -1,5 +1,5 @@
-import { useState, useMemo } from 'react';
-import { View, Text, TextInput, FlatList, Pressable, StyleSheet, ActivityIndicator } from 'react-native';
+import { useEffect, useState, useMemo } from 'react';
+import { View, Text, TextInput, FlatList, Pressable, StyleSheet, ActivityIndicator, Alert } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
 import { PROPERTY_TYPES_OPTIONS } from '@/lib/properties-data';
@@ -7,26 +7,52 @@ import { PropertyCard } from '@/components/property-card';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { useProperties } from '@/hooks/use-properties';
 import { useResponsive } from '@/hooks/use-responsive';
+import { useAuth } from '@/hooks/useAuth';
+import { useSavedSearches } from '@/hooks/use-commercial';
 
 export default function PropertiesScreen() {
-  const params = useLocalSearchParams<{ filter?: string }>();
-  const [search, setSearch] = useState('');
+  const params = useLocalSearchParams<{ filter?: string; q?: string }>();
+  const initialQuery = typeof params.q === 'string' ? params.q : '';
+  const [search, setSearch] = useState(initialQuery);
+  const [catalogSearch, setCatalogSearch] = useState('');
+  const [municipio, setMunicipio] = useState('');
+  const [minPrice, setMinPrice] = useState('');
+  const [maxPrice, setMaxPrice] = useState('');
+  const [minSurface, setMinSurface] = useState('');
+  const [maxSurface, setMaxSurface] = useState('');
+  useEffect(() => {
+    const timer = setTimeout(() => setCatalogSearch(search), 300);
+    return () => clearTimeout(timer);
+  }, [search]);
+
   const initialFilter = typeof params.filter === 'string' && params.filter ? params.filter : 'all';
   const [activeFilter, setActiveFilter] = useState<string>(initialFilter);
-  const { properties, loading, error, refetch: fetchProperties } = useProperties();
-  const { propertyColumns, horizontalPadding, contentMaxWidth, isDesktop } = useResponsive();
+  const catalogOptions = useMemo(() => ({
+    search: catalogSearch,
+    municipio,
+    minPrice: minPrice ? Number(minPrice) : null,
+    maxPrice: maxPrice ? Number(maxPrice) : null,
+    minSurface: minSurface ? Number(minSurface) : null,
+    maxSurface: maxSurface ? Number(maxSurface) : null,
+    tipo: activeFilter === 'all' ? null : activeFilter,
+  }), [catalogSearch, municipio, minPrice, maxPrice, minSurface, maxSurface, activeFilter]);
 
-  const filtered = useMemo(() => {
-    return properties.filter((p) => {
-      const matchesType = activeFilter === 'all' || (p.type || p.tipo || '').toLowerCase() === activeFilter.toLowerCase();
-      const matchesSearch =
-        search.trim() === '' ||
-        (p.title || p.titulo || '').toLowerCase().includes(search.toLowerCase()) ||
-        (p.location || p.municipio || '').toLowerCase().includes(search.toLowerCase()) ||
-        (p.municipality || p.municipio || '').toLowerCase().includes(search.toLowerCase());
-      return matchesType && matchesSearch;
-    });
-  }, [search, activeFilter, properties]);
+  const {
+    properties,
+    loading,
+    loadingMore,
+    hasMore,
+    error,
+    refetch: fetchProperties,
+    loadMore,
+  } = useProperties(catalogOptions);
+
+  const { propertyColumns, horizontalPadding, contentMaxWidth, isDesktop } = useResponsive();
+  const { user } = useAuth();
+  const { save } = useSavedSearches(user?.id);
+
+  const visibleCountLabel = hasMore ? `${properties.length}+` : String(properties.length);
+
 
   return (
     <ScreenContainer edges={['top', 'left', 'right']} containerClassName="bg-background">
@@ -34,7 +60,7 @@ export default function PropertiesScreen() {
       <View style={[styles.content, { paddingHorizontal: horizontalPadding, maxWidth: contentMaxWidth }, isDesktop && styles.contentCentered]}>
         <View style={styles.header}>
         <Text style={styles.headerTitle}>OPORTUNIDADES</Text>
-        <Text style={styles.headerCount}>{filtered.length} propiedades</Text>
+        <Text style={styles.headerCount}>{visibleCountLabel} propiedades</Text>
       </View>
 
         </View>
@@ -59,6 +85,14 @@ export default function PropertiesScreen() {
         </View>
       </View>
 
+      <View style={[styles.advancedFilters, { paddingHorizontal: horizontalPadding, maxWidth: contentMaxWidth }, isDesktop && styles.contentCentered]}>
+        <TextInput style={styles.filterInput} placeholder="Zona / municipio" placeholderTextColor="#777" value={municipio} onChangeText={setMunicipio} />
+        <TextInput style={styles.filterInput} placeholder="Precio mínimo" placeholderTextColor="#777" value={minPrice} onChangeText={setMinPrice} keyboardType="numeric" />
+        <TextInput style={styles.filterInput} placeholder="Precio máximo" placeholderTextColor="#777" value={maxPrice} onChangeText={setMaxPrice} keyboardType="numeric" />
+        <TextInput style={styles.filterInput} placeholder="Superficie mínima m²" placeholderTextColor="#777" value={minSurface} onChangeText={setMinSurface} keyboardType="numeric" />
+        <TextInput style={styles.filterInput} placeholder="Superficie máxima m²" placeholderTextColor="#777" value={maxSurface} onChangeText={setMaxSurface} keyboardType="numeric" />
+      </View>
+
       {/* Filtros */}
       <View style={[styles.filtersWrapper, { maxWidth: contentMaxWidth }, isDesktop && styles.contentCentered]}>
         <FlatList
@@ -66,7 +100,7 @@ export default function PropertiesScreen() {
           showsHorizontalScrollIndicator={false}
           data={PROPERTY_TYPES_OPTIONS}
           keyExtractor={(item) => item.key}
-          contentContainerStyle={styles.filtersContainer}
+          contentContainerStyle={[styles.filtersContainer, { paddingHorizontal: horizontalPadding }]}
           renderItem={({ item }) => (
             <Pressable
               onPress={() => setActiveFilter(item.key)}
@@ -89,6 +123,51 @@ export default function PropertiesScreen() {
         />
       </View>
 
+      <View style={[styles.savedSearchRow, { paddingHorizontal: horizontalPadding, maxWidth: contentMaxWidth }, isDesktop && styles.contentCentered]}>
+        <Pressable
+          onPress={async () => {
+            if (!user) {
+              Alert.alert('Inicia sesión', 'Necesitas una sesión activa para guardar una búsqueda.');
+              return;
+            }
+
+            try {
+              const criteriaParts = [
+                activeFilter !== 'all' ? `tipo ${activeFilter}` : '',
+                municipio.trim() ? municipio.trim() : '',
+                minPrice ? `desde ${Number(minPrice).toLocaleString('es-MX')}` : '',
+                maxPrice ? `hasta ${Number(maxPrice).toLocaleString('es-MX')}` : '',
+                minSurface ? `desde ${Number(minSurface).toLocaleString('es-MX')} m²` : '',
+                maxSurface ? `hasta ${Number(maxSurface).toLocaleString('es-MX')} m²` : '',
+              ].filter(Boolean);
+              await save({
+                nombre: criteriaParts.length ? `Búsqueda: ${criteriaParts.join(' · ')}` : 'Todas las propiedades',
+                min_price: minPrice ? Number(minPrice) : null,
+                max_price: maxPrice ? Number(maxPrice) : null,
+                min_surface: minSurface ? Number(minSurface) : null,
+                max_surface: maxSurface ? Number(maxSurface) : null,
+                municipio: municipio.trim() || null,
+                tipo: activeFilter === 'all' ? null : activeFilter,
+                objetivo: null,
+                plazo_compra: null,
+                financiamiento: null,
+                activa: true,
+              });
+              Alert.alert('Búsqueda guardada', 'EYESITE te avisará cuando podamos encontrar nuevas coincidencias.');
+            } catch (error: any) {
+              Alert.alert('No se pudo guardar', error?.message || 'Inténtalo nuevamente.');
+            }
+          }}
+          style={({ pressed }) => [styles.savedSearchButton, pressed && { opacity: 0.78 }]}
+        >
+          <Text style={styles.savedSearchIcon}>🔔</Text>
+          <View style={styles.savedSearchCopy}>
+            <Text style={styles.savedSearchTitle}>GUARDAR ESTA BÚSQUEDA</Text>
+            <Text style={styles.savedSearchText}>Recibe alertas de nuevas propiedades compatibles.</Text>
+          </View>
+        </Pressable>
+      </View>
+
       {/* Lista de propiedades */}
       {loading ? (
         <View style={styles.loadingContainer}>
@@ -97,16 +176,33 @@ export default function PropertiesScreen() {
         </View>
       ) : (
         <FlatList
-          data={filtered}
+          data={properties}
           keyExtractor={(item) => item.id}
           refreshing={loading}
           onRefresh={fetchProperties}
+          onEndReached={loadMore}
+          onEndReachedThreshold={0.65}
           key={`properties-grid-${propertyColumns}`}
           numColumns={propertyColumns}
           columnWrapperStyle={propertyColumns > 1 ? styles.columnWrapper : undefined}
           contentContainerStyle={[styles.listContainer, { paddingHorizontal: horizontalPadding, maxWidth: contentMaxWidth }, isDesktop && styles.contentCentered]}
           showsVerticalScrollIndicator={false}
-          renderItem={({ item }) => <View style={propertyColumns > 1 ? styles.gridItem : styles.singleItem}><PropertyCard property={item} /></View>}
+          renderItem={({ item }) => <View
+              style={[
+                propertyColumns > 1 ? styles.gridItem : styles.singleItem,
+                propertyColumns === 2 && styles.gridItemTwo,
+                propertyColumns === 3 && styles.gridItemThree,
+                propertyColumns === 4 && styles.gridItemFour,
+              ]}
+            >
+              <PropertyCard property={item} />
+            </View>}
+          ListFooterComponent={loadingMore ? (
+            <View style={styles.loadMoreContainer}>
+              <ActivityIndicator color="#C9A84C" size="small" />
+              <Text style={styles.loadingMoreText}>Cargando más propiedades...</Text>
+            </View>
+          ) : null}
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
               <Text style={styles.emptyIcon}>🔍</Text>
@@ -133,7 +229,7 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
   },
   header: {
-    paddingHorizontal: 20,
+    paddingHorizontal: 0,
     paddingTop: 16,
     paddingBottom: 12,
     flexDirection: 'row',
@@ -141,28 +237,28 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   headerTitle: {
-    color: '#F5F5F5',
+    color: "#F5F5F5",
     fontSize: 18,
     fontWeight: '800',
     letterSpacing: 2,
   },
   headerCount: {
-    color: '#9A9A9A',
+    color: "#9A9A9A",
     fontSize: 13,
   },
   searchContainer: {
-    paddingHorizontal: 20,
+    paddingHorizontal: 0,
     paddingBottom: 12,
   },
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#1A1A1A',
+    backgroundColor: "#141414",
     borderRadius: 10,
     paddingHorizontal: 14,
     paddingVertical: 12,
     borderWidth: 1,
-    borderColor: '#2A2A2A',
+    borderColor: "#2A2A2A",
     gap: 10,
   },
   searchInput: {
@@ -170,11 +266,31 @@ const styles = StyleSheet.create({
     color: '#F5F5F5',
     fontSize: 14,
   },
+  advancedFilters: {
+    width: '100%',
+    alignSelf: 'center',
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    paddingBottom: 8,
+  },
+  filterInput: {
+    flexGrow: 1,
+    minWidth: 150,
+    backgroundColor: '#141414',
+    borderRadius: 9,
+    borderWidth: 1,
+    borderColor: '#2A2A2A',
+    color: '#F5F5F5',
+    paddingHorizontal: 11,
+    paddingVertical: 10,
+    fontSize: 12,
+  },
   filtersWrapper: {
     marginBottom: 8,
   },
   filtersContainer: {
-    paddingHorizontal: 20,
+    paddingHorizontal: 0,
     gap: 8,
     paddingBottom: 4,
   },
@@ -205,14 +321,53 @@ const styles = StyleSheet.create({
   },
   columnWrapper: {
     justifyContent: 'space-between',
-    gap: 16,
   },
   gridItem: {
-    flex: 1,
     minWidth: 0,
+  },
+  gridItemTwo: {
+    width: '48.5%',
+  },
+  gridItemThree: {
+    width: '31.5%',
+  },
+  gridItemFour: {
+    width: '23.5%',
   },
   singleItem: {
     width: '100%',
+  },
+  savedSearchRow: {
+    width: '100%',
+    alignSelf: 'center',
+    paddingBottom: 10,
+  },
+  savedSearchButton: {
+    backgroundColor: '#171717',
+    borderWidth: 1,
+    borderColor: '#C9A84C',
+    borderRadius: 10,
+    padding: 13,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  savedSearchIcon: {
+    fontSize: 18,
+  },
+  savedSearchCopy: {
+    flex: 1,
+  },
+  savedSearchTitle: {
+    color: '#C9A84C',
+    fontSize: 11,
+    fontWeight: '900',
+    letterSpacing: 0.8,
+  },
+  savedSearchText: {
+    color: '#888',
+    fontSize: 11,
+    marginTop: 3,
   },
   loadingContainer: {
     flex: 1,
@@ -224,6 +379,15 @@ const styles = StyleSheet.create({
     color: '#9A9A9A',
     fontSize: 14,
     marginTop: 12,
+  },
+  loadMoreContainer: {
+    alignItems: 'center',
+    paddingVertical: 18,
+    gap: 6,
+  },
+  loadingMoreText: {
+    color: '#888',
+    fontSize: 11,
   },
   emptyContainer: {
     alignItems: 'center',

@@ -15,6 +15,7 @@ type NotificationItem = {
 };
 
 const isExpoGo = Constants.executionEnvironment === "storeClient";
+let notificationChannelGeneration = 0;
 
 export function useNotifications(userId?: string) {
   const [items, setItems] = useState<NotificationItem[]>([]);
@@ -30,6 +31,14 @@ export function useNotifications(userId?: string) {
 
     setLoading(true);
     setErrorMessage(null);
+
+    const { data: userData, error: sessionError } = await supabase.auth.getUser();
+    if (sessionError || userData.user?.id !== userId) {
+      setItems([]);
+      setErrorMessage(sessionError?.message || "La sesión ya no está disponible.");
+      setLoading(false);
+      return;
+    }
 
     const { data, error } = await supabase
       .from("notificaciones")
@@ -55,8 +64,9 @@ export function useNotifications(userId?: string) {
 
     if (!userId) return () => clearTimeout(timer);
 
+    const channelId = ++notificationChannelGeneration;
     const channel = supabase
-      .channel(`user-notifications-${userId}`)
+      .channel(`user-notifications-${userId}-${channelId}`)
       .on("postgres_changes", {
         event: "*",
         schema: "public",
@@ -112,6 +122,11 @@ export function useNotifications(userId?: string) {
   };
 }
 
+/**
+ * Registers the device token for the currently authenticated user.
+ * The caller's userId is treated only as a lifecycle hint; authorization
+ * always comes from the current Supabase session.
+ */
 export async function registerPushToken(userId?: string) {
   if (!userId || Platform.OS === "web") return null;
 
@@ -121,6 +136,16 @@ export async function registerPushToken(userId?: string) {
   }
 
   try {
+    const { data: userData, error: sessionError } = await supabase.auth.getUser();
+    const sessionUserId = userData.user?.id;
+
+    if (sessionError || !sessionUserId || sessionUserId !== userId) {
+      if (sessionError) {
+        reportAppError(sessionError, { area: "push", action: "session_check" });
+      }
+      return null;
+    }
+
     const Notifications = await import("expo-notifications");
 
     if (Platform.OS === "android") {
@@ -150,7 +175,7 @@ export async function registerPushToken(userId?: string) {
       const { error } = await supabase
         .from("profiles")
         .update({ expo_push_token: result.data })
-        .eq("id", userId);
+        .eq("id", sessionUserId);
 
       if (error) reportAppError(error, { area: "push", action: "save_token" });
       else addAppBreadcrumb("Token push registrado", undefined, "push");

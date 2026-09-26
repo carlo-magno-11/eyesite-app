@@ -22,14 +22,15 @@ export default function ForgotPasswordScreen() {
     setLoading(true);
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(cleanEmail, {
-        redirectTo: "https://auth.eyesite.mx/auth/callback?type=recovery",
+        redirectTo: "https://auth.eyesite.mx/?mode=recovery",
       });
 
       if (error) {
         if (/rate limit|too many|hourly/i.test(error.message)) {
           throw new Error("Se alcanzó el límite de envíos. Espera unos minutos e inténtalo nuevamente.");
         }
-        throw error;
+        // Do not surface provider details that could reveal account state or internals.
+        throw new Error("No pudimos procesar la solicitud. Si la cuenta existe, recibirás un enlace.");
       }
 
       Alert.alert(

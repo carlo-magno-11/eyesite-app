@@ -2,20 +2,22 @@ import { useState } from "react";
 import { Alert, ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { router } from "expo-router";
 import { supabase } from "@/lib/supabase";
+import { useI18n } from "@/lib/i18n";
 
 export default function ResetPasswordScreen() {
+  const { t } = useI18n();
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [saving, setSaving] = useState(false);
 
   const save = async () => {
     if (saving) return;
-    if (password.length < 6) {
-      Alert.alert("Contraseña muy corta", "Usa al menos 6 caracteres.");
+    if (password.length < 8 || !/[A-ZÁÉÍÓÚÑ]/.test(password) || !/\d/.test(password)) {
+      Alert.alert(t("invalidPassword"), t("invalidPasswordDescription"));
       return;
     }
     if (password !== confirm) {
-      Alert.alert("No coincide", "Las contraseñas deben coincidir.");
+      Alert.alert(t("passwordMismatch"), t("passwordMismatchDescription"));
       return;
     }
 
@@ -29,12 +31,19 @@ export default function ResetPasswordScreen() {
       const { error } = await supabase.auth.updateUser({ password });
       if (error) throw error;
 
-      Alert.alert("Contraseña actualizada", "Tu contraseña fue cambiada correctamente.", [
+      // Recovery creates a valid Supabase session. End that recovery session
+      // before returning to login so a completed reset cannot bypass the
+      // normal email/profile/approval gates through an already-authenticated
+      // client session.
+      const { error: signOutError } = await supabase.auth.signOut();
+      if (signOutError) throw signOutError;
+
+      Alert.alert(t("passwordUpdated"), t("passwordUpdatedDescription"), [
         { text: "Continuar", onPress: () => router.replace("/(auth)/login" as never) },
       ]);
     } catch (error: any) {
       console.error("[reset-password]", error);
-      Alert.alert("No se pudo actualizar", error?.message || "El enlace puede haber expirado. Solicita uno nuevo.");
+      Alert.alert(t("passwordUpdateFailed"), error?.message || t("passwordUpdateFailedDescription"));
     } finally {
       setSaving(false);
     }
@@ -43,13 +52,13 @@ export default function ResetPasswordScreen() {
   return (
     <View style={styles.container}>
       <Text style={styles.logo}>EYESITE</Text>
-      <Text style={styles.title}>NUEVA CONTRASEÑA</Text>
-      <Text style={styles.subtitle}>Crea una nueva contraseña para tu cuenta.</Text>
+      <Text style={styles.title}>{t("newPassword")}</Text>
+      <Text style={styles.subtitle}>{t("newPasswordSubtitle")}</Text>
 
       <TextInput
         value={password}
         onChangeText={setPassword}
-        placeholder="Nueva contraseña"
+        placeholder={t("newPasswordPlaceholder")}
         placeholderTextColor="#777"
         secureTextEntry
         autoCapitalize="none"
@@ -59,7 +68,7 @@ export default function ResetPasswordScreen() {
       <TextInput
         value={confirm}
         onChangeText={setConfirm}
-        placeholder="Confirmar contraseña"
+        placeholder={t("confirmPasswordPlaceholder")}
         placeholderTextColor="#777"
         secureTextEntry
         autoCapitalize="none"
@@ -68,7 +77,7 @@ export default function ResetPasswordScreen() {
       />
 
       <Pressable onPress={save} disabled={saving} style={[styles.button, saving && styles.disabled]}>
-        {saving ? <ActivityIndicator color="#0E0E0E" /> : <Text style={styles.buttonText}>GUARDAR CONTRASEÑA</Text>}
+        {saving ? <ActivityIndicator color="#0E0E0E" /> : <Text style={styles.buttonText}>{t("savePassword")}</Text>}
       </Pressable>
     </View>
   );

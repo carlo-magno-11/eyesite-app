@@ -18,6 +18,7 @@ import { useEffect, useMemo, useState } from "react";
 import { router, useLocalSearchParams } from "expo-router";
 import { supabase } from "@/lib/supabase";
 import { useResponsive } from "@/hooks/use-responsive";
+import { useI18n } from "@/lib/i18n";
 
 type Tab = "notifications" | "announcements";
 type Filter = "all" | "unread";
@@ -30,6 +31,7 @@ export default function NotificationsScreen() {
   const [tab, setTab] = useState<Tab>(() => params.announcement_id ? "announcements" : "notifications");
   const [filter, setFilter] = useState<Filter>("all");
   const { horizontalPadding, contentMaxWidth } = useResponsive();
+  const { t } = useI18n();
 
   useEffect(() => {
     if (user?.id) void registerPushToken(user.id);
@@ -80,20 +82,20 @@ export default function NotificationsScreen() {
     <ScreenContainer edges={["top", "left", "right"]} containerClassName="bg-background">
       <View style={[s.h, { paddingHorizontal: horizontalPadding, maxWidth: contentMaxWidth, width: "100%", alignSelf: "center" }]}>
         <View>
-          <Text style={s.t}>COMUNICACIÓN</Text>
-          <Text style={s.sub}>{tab === "notifications" ? `${unread} sin leer` : `${announcements.length} anuncios activos`}</Text>
+          <Text style={s.t}>{t("communication")}</Text>
+          <Text style={s.sub}>{tab === "notifications" ? `${unread} ${t("unread")}` : `${announcements.length} ${t("activeAnnouncements")}`}</Text>
         </View>
         <Pressable onPress={() => router.push("/notification-settings" as never)} hitSlop={10}>
-          <Ionicons name="settings-outline" size={24} color="#C9A84C" />
+          <Ionicons name="settings-outline" size={24} color={"#C9A84C"} />
         </Pressable>
       </View>
 
       <View style={[s.tabs, { paddingHorizontal: horizontalPadding, maxWidth: contentMaxWidth, width: "100%", alignSelf: "center" }]}>
         <Pressable onPress={() => setTab("notifications")} style={[s.tab, tab === "notifications" && s.tabActive]}>
-          <Text style={[s.tabText, tab === "notifications" && s.tabTextActive]}>Notificaciones</Text>
+          <Text style={[s.tabText, tab === "notifications" && s.tabTextActive]}>{t("notifications")}</Text>
         </Pressable>
         <Pressable onPress={() => setTab("announcements")} style={[s.tab, tab === "announcements" && s.tabActive]}>
-          <Text style={[s.tabText, tab === "announcements" && s.tabTextActive]}>Anuncios</Text>
+          <Text style={[s.tabText, tab === "announcements" && s.tabTextActive]}>{t("announcements")}</Text>
         </Pressable>
       </View>
 
@@ -101,14 +103,14 @@ export default function NotificationsScreen() {
         <>
           <View style={[s.filters, { paddingHorizontal: horizontalPadding, maxWidth: contentMaxWidth, width: "100%", alignSelf: "center" }]}>
             <Pressable onPress={() => setFilter("all")} style={[s.filter, filter === "all" && s.filterActive]}>
-              <Text style={[s.filterText, filter === "all" && s.filterTextActive]}>Todas</Text>
+              <Text style={[s.filterText, filter === "all" && s.filterTextActive]}>{t("all")}</Text>
             </Pressable>
             <Pressable onPress={() => setFilter("unread")} style={[s.filter, filter === "unread" && s.filterActive]}>
-              <Text style={[s.filterText, filter === "unread" && s.filterTextActive]}>No leídas</Text>
+              <Text style={[s.filterText, filter === "unread" && s.filterTextActive]}>{t("unreadOnly")}</Text>
             </Pressable>
             {unread > 0 && (
               <Pressable onPress={markAllRead} style={s.readAll}>
-                <Text style={s.readAllText}>Marcar todas</Text>
+                <Text style={s.readAllText}>{t("markAll")}</Text>
               </Pressable>
             )}
           </View>
@@ -118,10 +120,10 @@ export default function NotificationsScreen() {
           ) : error && !items.length ? (
             <View style={s.e}>
               <Text style={s.i}>⚠️</Text>
-              <Text style={s.et}>No se pudieron cargar</Text>
+              <Text style={s.et}>{t("couldNotLoad")}</Text>
               <Text style={s.es}>{error}</Text>
               <Pressable onPress={() => void refetch()} style={s.retryButton}>
-                <Text style={s.retryText}>REINTENTAR</Text>
+                <Text style={s.retryText}>{t("retry")}</Text>
               </Pressable>
             </View>
           ) : (
@@ -132,8 +134,8 @@ export default function NotificationsScreen() {
               ListEmptyComponent={
                 <View style={s.e}>
                   <Text style={s.i}>🔔</Text>
-                  <Text style={s.et}>No hay notificaciones</Text>
-                  <Text style={s.es}>Aquí aparecerán avisos y eventos relacionados con tu cuenta.</Text>
+                  <Text style={s.et}>{t("noNotifications")}</Text>
+                  <Text style={s.es}>{t("notificationsDescription")}</Text>
                 </View>
               }
               renderItem={({ item }) => (
@@ -156,12 +158,12 @@ export default function NotificationsScreen() {
         <FlatList
           data={announcements}
           keyExtractor={(item) => item.id}
-          contentContainerStyle={s.l}
+          contentContainerStyle={[s.l, { paddingHorizontal: horizontalPadding, maxWidth: contentMaxWidth, width: "100%", alignSelf: "center" }]}
           ListEmptyComponent={
             <View style={s.e}>
               <Text style={s.i}>📢</Text>
-              <Text style={s.et}>No hay anuncios</Text>
-              <Text style={s.es}>Cuando EYESITE publique un anuncio aparecerá aquí.</Text>
+              <Text style={s.et}>{t("noAnnouncements")}</Text>
+              <Text style={s.es}>{t("announcementsDescription")}</Text>
             </View>
           }
           renderItem={({ item }) => (
@@ -214,11 +216,11 @@ export default function NotificationsScreen() {
 const s = StyleSheet.create({
   h:{padding:20,flexDirection:"row",justifyContent:"space-between",borderBottomWidth:1,borderBottomColor:"#2A2A2A"},
   t:{color:"#F5F5F5",fontSize:20,fontWeight:"800",letterSpacing:1},
-  sub:{color:"#999",fontSize:12,marginTop:4},
+  sub:{color:"#9A9A9A",fontSize:12,marginTop:4},
   tabs:{flexDirection:"row",paddingHorizontal:16,paddingTop:14,gap:8},
-  tab:{flex:1,paddingVertical:11,borderRadius:10,backgroundColor:"#171717",alignItems:"center",borderWidth:1,borderColor:"#2A2A2A"},
+  tab:{flex:1,paddingVertical:11,borderRadius:10,backgroundColor:"#141414",alignItems:"center",borderWidth:1,borderColor:"#2A2A2A"},
   tabActive:{borderColor:"#C9A84C",backgroundColor:"#211D13"},
-  tabText:{color:"#888",fontSize:12,fontWeight:"700"},
+  tabText:{color:"#9A9A9A",fontSize:12,fontWeight:"700"},
   tabTextActive:{color:"#C9A84C"},
   filters:{flexDirection:"row",alignItems:"center",padding:16,gap:8},
   filter:{paddingVertical:7,paddingHorizontal:12,borderRadius:20,borderWidth:1,borderColor:"#303030"},
@@ -232,10 +234,10 @@ const s = StyleSheet.create({
   u:{borderColor:"#C9A84C"},
   row:{flexDirection:"row",alignItems:"center",justifyContent:"space-between",gap:8},
   dot:{width:8,height:8,borderRadius:4,backgroundColor:"#C9A84C"},
-  ct:{color:"#FFF",fontSize:16,fontWeight:"700",flex:1},
+  ct:{color:"#F5F5F5",fontSize:16,fontWeight:"700",flex:1},
   ty:{color:"#C9A84C",fontSize:10,fontWeight:"800",marginTop:6},
-  m:{color:"#C0C0C0",fontSize:14,lineHeight:21,marginTop:8},
-  d:{color:"#777",fontSize:10,marginTop:10},
+  m:{color:"#D0D0D0",fontSize:14,lineHeight:21,marginTop:8},
+  d:{color:"#9A9A9A",fontSize:10,marginTop:10},
   heroImage:{width:"100%",height:190,borderRadius:10,marginTop:12,backgroundColor:"#222"},gallery:{gap:8,paddingTop:10},galleryImage:{width:150,height:100,borderRadius:9,backgroundColor:"#222"},linkButton:{marginTop:14,alignSelf:"flex-start",paddingVertical:9,paddingHorizontal:14,borderRadius:9,backgroundColor:"#C9A84C"},linkText:{color:"#0E0E0E",fontSize:11,fontWeight:"800"},e:{alignItems:"center",padding:50},
   i:{fontSize:50},
   et:{color:"#FFF",fontSize:18,fontWeight:"700",marginTop:15},

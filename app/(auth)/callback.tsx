@@ -12,6 +12,16 @@ export default function AuthCallbackScreen() {
   useEffect(() => {
     let mounted = true;
     let handled = false;
+    let recoveryDetected = false;
+
+    const authSubscription = supabase.auth.onAuthStateChange((event) => {
+      if (event === "PASSWORD_RECOVERY") {
+        recoveryDetected = true;
+        if (mounted) {
+          router.replace("/reset-password" as never);
+        }
+      }
+    });
 
     const handleUrl = async (url: string) => {
       if (handled) return;
@@ -61,7 +71,7 @@ export default function AuthCallbackScreen() {
 
         if (!mounted) return;
 
-        if (type === "recovery") {
+        if (type === "recovery" || recoveryDetected) {
           router.replace("/reset-password" as never);
           return;
         }
@@ -98,6 +108,7 @@ export default function AuthCallbackScreen() {
     return () => {
       mounted = false;
       subscription.remove();
+      authSubscription.data.subscription.unsubscribe();
     };
   }, []);
 

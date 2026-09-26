@@ -1,0 +1,5 @@
+# EYESITE Supabase local configuration
+# Scheduled communications authenticates with its own scheduler secret.
+# All other Edge Functions keep Supabase's default JWT verification.
+[functions.process-scheduled-communications]
+verify_jwt = false

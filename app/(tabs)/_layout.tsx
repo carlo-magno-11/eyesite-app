@@ -4,9 +4,11 @@ import { Platform } from "react-native";
 import { useAuth } from "@/hooks/useAuth";
 import { HapticTab } from "@/components/haptic-tab";
 import { IconSymbol } from "@/components/ui/icon-symbol";
+import { useI18n } from "@/lib/i18n";
 
 export default function TabLayout() {
   const { session } = useAuth();
+  const { t } = useI18n();
   const insets = useSafeAreaInsets();
   const bottomPadding = Platform.OS === "web" ? 12 : Math.max(insets.bottom,16);
   const tabBarHeight = 56 + bottomPadding;
@@ -14,16 +16,16 @@ export default function TabLayout() {
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: '#C9A84C',
-        tabBarInactiveTintColor: '#9A9A9A',
+        tabBarActiveTintColor: "#C9A84C",
+        tabBarInactiveTintColor: "#9A9A9A",
         headerShown: false,
         tabBarButton: (props: any) => <HapticTab {...props} />,
         tabBarStyle: {
           paddingTop: 8,
           paddingBottom: bottomPadding,
           height: tabBarHeight,
-          backgroundColor: '#0D0D0D',
-          borderTopColor: '#2A2A2A',
+          backgroundColor: "#0B0B0B",
+          borderTopColor: "#2A2A2A",
           borderTopWidth: 0.5,
         },
         tabBarLabelStyle: {
@@ -36,7 +38,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: "Inicio",
+          title: t("home"),
           tabBarIcon: ({ color }) => <IconSymbol size={24} name="house.fill" color={color} />,
         }}
       />
@@ -50,14 +52,14 @@ export default function TabLayout() {
       <Tabs.Screen
         name="map"
         options={{
-          title: "Mapa",
+          title: t("map"),
           tabBarIcon: ({ color }) => <IconSymbol size={24} name="map.fill" color={color} />,
         }}
       />
       <Tabs.Screen
         name="publish"
         options={{
-          title: "Publicar",
+          title: t("publish"),
           href: session ? undefined : null,
           tabBarIcon: ({ color }) => <IconSymbol size={28} name="plus.circle.fill" color={color} />,
         }}
@@ -65,7 +67,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="favorites"
         options={{
-          title: "Favoritos",
+          title: t("favorites"),
           href: session ? undefined : null,
           tabBarIcon: ({ color }) => <IconSymbol size={24} name="heart.fill" color={color} />,
         }}
@@ -80,7 +82,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="contact"
         options={{
-          title: "Nosotros",
+          title: t("about"),
           tabBarIcon: ({ color }) => <IconSymbol size={24} name="person.fill" color={color} />,
         }}
       />

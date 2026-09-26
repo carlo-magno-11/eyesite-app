@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -7,14 +7,17 @@ import {
   StyleSheet,
   Text,
   View,
+  useWindowDimensions,
 } from "react-native";
 import { useRouter } from "expo-router";
 import * as Location from "expo-location";
 import { LeafletMap } from "@/components/leaflet-map";
 
-import { useProperties } from "@/hooks/use-properties";
 import { formatPrice } from "@/lib/properties-data";
 import { ScreenContainer } from "@/components/screen-container";
+import { useCommercial } from "@/hooks/use-commercial";
+import { supabase } from "@/lib/supabase";
+import { useI18n } from "@/lib/i18n";
 
 type UserCoords = {
   latitude: number;
@@ -26,7 +29,22 @@ type Region = {
   longitude: number;
   latitudeDelta: number;
   longitudeDelta: number;
+  zoom: number;
 };
+
+const YUCATAN_BOUNDS = {
+  south: 19.35,
+  west: -90.55,
+  north: 21.82,
+  east: -87.28,
+};
+
+const YUCATAN_MAP_CENTER = {
+  latitude: 20.6,
+  longitude: -88.91,
+};
+
+const YUCATAN_QUERY_RADIUS_KM = 300;
 
 type MapProperty = {
   id: string;
@@ -49,13 +67,13 @@ type NearbyProperty = MapProperty & {
 };
 
 const DEFAULT_REGION: Region = {
-  latitude: 20.9674,
-  longitude: -89.5926,
-  latitudeDelta: 0.8,
-  longitudeDelta: 0.8,
+  ...YUCATAN_MAP_CENTER,
+  latitudeDelta: 2.55,
+  longitudeDelta: 3.35,
+  zoom: 7,
 };
 
-const RADIUS_OPTIONS = [10, 25, 50, 100] as const;
+
 
 function distanceKm(a: UserCoords, b: UserCoords) {
   const R = 6371;
@@ -113,7 +131,11 @@ function escapeHtml(value: unknown) {
     .replace(/'/g, "&#039;");
 }
 
-function createMapHtml(properties: NearbyProperty[], initialRegion: Region) {
+function createMapHtml(
+  properties: NearbyProperty[],
+  initialRegion: Region,
+  userLocation: UserCoords | null,
+) {
   const safeProperties = properties.map((property) => ({
     id: escapeHtml(property.id),
     title: escapeHtml(getPropertyTitle(property)),
@@ -127,6 +149,10 @@ function createMapHtml(properties: NearbyProperty[], initialRegion: Region) {
         : null,
   }));
 
+  const userLocationJson = userLocation
+    ? JSON.stringify(userLocation)
+    : "null";
+
   const propertiesJson = JSON.stringify(safeProperties)
     .replace(/</g, "\\u003c")
     .replace(/>/g, "\\u003e")
@@ -138,6 +164,7 @@ function createMapHtml(properties: NearbyProperty[], initialRegion: Region) {
     longitude: initialRegion.longitude,
     latitudeDelta: initialRegion.latitudeDelta,
     longitudeDelta: initialRegion.longitudeDelta,
+    zoom: initialRegion.zoom,
   });
 
   return `
@@ -164,7 +191,7 @@ function createMapHtml(properties: NearbyProperty[], initialRegion: Region) {
     height: 100%;
     margin: 0;
     padding: 0;
-    background: #0d0d0d;
+    background: #0b0b0b;
   }
 
   body {
@@ -177,9 +204,9 @@ function createMapHtml(properties: NearbyProperty[], initialRegion: Region) {
   }
 
   .leaflet-control-zoom a {
-    background: #151515 !important;
+    background: #141414 !important;
     color: #f5f5f5 !important;
-    border-color: #303030 !important;
+    border-color: #2a2a2a !important;
   }
 
   .leaflet-control-attribution {
@@ -189,7 +216,7 @@ function createMapHtml(properties: NearbyProperty[], initialRegion: Region) {
   }
 
   .leaflet-control-attribution a {
-    color: #c9a84c !important;
+    color: #d8b968 !important;
   }
 
   .property-popup {
@@ -212,7 +239,7 @@ function createMapHtml(properties: NearbyProperty[], initialRegion: Region) {
   .property-price {
     font-size: 13px;
     font-weight: 700;
-    color: #9a7626;
+    color: #c9a84c;
     margin-bottom: 4px;
   }
 
@@ -242,13 +269,14 @@ function createMapHtml(properties: NearbyProperty[], initialRegion: Region) {
 <script>
   const PROPERTIES = ${propertiesJson};
   const INITIAL_REGION = ${initialJson};
+  const USER_LOCATION = ${userLocationJson};
 
   const map = L.map('map', {
     zoomControl: true,
     attributionControl: true,
   }).setView(
     [INITIAL_REGION.latitude, INITIAL_REGION.longitude],
-    11
+    INITIAL_REGION.zoom
   );
 
   L.tileLayer(
@@ -258,6 +286,12 @@ function createMapHtml(properties: NearbyProperty[], initialRegion: Region) {
       attribution: '&copy; OpenStreetMap contributors',
     }
   ).addTo(map);
+
+  map.setMaxBounds([
+    [19.35, -90.55],
+    [21.82, -87.28],
+  ]);
+  map.options.maxBoundsViscosity = 0.85;
 
   function sendToApp(payload) {
     const message = JSON.stringify(payload);
@@ -296,6 +330,25 @@ function createMapHtml(properties: NearbyProperty[], initialRegion: Region) {
   });
 
   const markers = [];
+
+  if (
+    USER_LOCATION &&
+    Number.isFinite(USER_LOCATION.latitude) &&
+    Number.isFinite(USER_LOCATION.longitude)
+  ) {
+    L.circleMarker(
+      [USER_LOCATION.latitude, USER_LOCATION.longitude],
+      {
+        radius: 8,
+        color: '#111',
+        weight: 3,
+        fillColor: '#4A90E2',
+        fillOpacity: 1,
+      }
+    )
+      .addTo(map)
+      .bindTooltip('Tu ubicación', { direction: 'top', offset: [0, -8] });
+  }
 
   PROPERTIES.forEach((property) => {
     if (
@@ -370,17 +423,16 @@ function createMapHtml(properties: NearbyProperty[], initialRegion: Region) {
     });
   }
 
-  if (markers.length > 0) {
-    const group = L.featureGroup(markers);
+  // Leaflet keeps internal pixel dimensions. Recalculate them when the
+  // responsive WebView/iframe changes size (browser resize, orientation,
+  // split-screen, tablet rotation, etc.).
+  const refreshMapSize = () => map.invalidateSize({ pan: false });
+  window.addEventListener('resize', refreshMapSize);
+  setTimeout(refreshMapSize, 0);
+  setTimeout(refreshMapSize, 250);
 
-    map.fitBounds(
-      group.getBounds(),
-      {
-        padding: [30, 30],
-        maxZoom: 14,
-      }
-    );
-  }
+  // The default view is the whole state of Yucatán. User location is optional
+  // and never replaces the initial statewide view.
 </script>
 </body>
 </html>
@@ -389,16 +441,82 @@ function createMapHtml(properties: NearbyProperty[], initialRegion: Region) {
 
 export default function MapScreen() {
   const router = useRouter();
+  const { t } = useI18n();
+  const { height: windowHeight } = useWindowDimensions();
 
-  const { properties, loading } = useProperties();
+  const { trackPropertyEvent } = useCommercial();
+  const [properties, setProperties] = useState<MapProperty[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [mapError, setMapError] = useState<string | null>(null);
+  const mapRequestGeneration = useRef(0);
 
   const [userLocation, setUserLocation] = useState<UserCoords | null>(null);
 
-  const [region, setRegion] = useState<Region>(DEFAULT_REGION);
-
-  const [radius, setRadius] = useState<number>(25);
-
   const [locating, setLocating] = useState(false);
+
+  const fetchMapProperties = useCallback(async (center: UserCoords, radiusKm: number) => {
+    const requestId = ++mapRequestGeneration.current;
+    try {
+      setLoading(true);
+      const { data, error } = await supabase.rpc("get_public_map_properties", {
+        p_lat: center.latitude,
+        p_lon: center.longitude,
+        p_radius_km: radiusKm,
+        p_limit: 500,
+      });
+
+      if (error) throw error;
+      if (requestId !== mapRequestGeneration.current) return;
+      setProperties((data ?? []) as MapProperty[]);
+      setMapError(null);
+    } catch (error) {
+      if (requestId !== mapRequestGeneration.current) return;
+      console.error("[EYESITE] map properties error", error);
+      setProperties([]);
+      setMapError(error instanceof Error ? error.message : t("mapLoadError"));
+    } finally {
+      if (requestId === mapRequestGeneration.current) setLoading(false);
+    }
+  }, [t]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      void fetchMapProperties(
+        { latitude: YUCATAN_MAP_CENTER.latitude, longitude: YUCATAN_MAP_CENTER.longitude },
+        YUCATAN_QUERY_RADIUS_KM,
+      );
+    }, 0);
+
+    let refreshTimer: ReturnType<typeof setTimeout> | null = null;
+
+    const channel = supabase
+      .channel("eyesite-map-property-feed")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "propiedades_cambios",
+        },
+        () => {
+          if (refreshTimer) clearTimeout(refreshTimer);
+          refreshTimer = setTimeout(() => {
+            refreshTimer = null;
+            void fetchMapProperties(
+              { latitude: YUCATAN_MAP_CENTER.latitude, longitude: YUCATAN_MAP_CENTER.longitude },
+              YUCATAN_QUERY_RADIUS_KM,
+            );
+          }, 500);
+        },
+      )
+      .subscribe();
+
+    return () => {
+      clearTimeout(timer);
+      if (refreshTimer) clearTimeout(refreshTimer);
+      void supabase.removeChannel(channel);
+    };
+  }, [fetchMapProperties]);
 
   const requestLocation = useCallback(async () => {
     setLocating(true);
@@ -418,12 +536,6 @@ export default function MapScreen() {
               };
 
               setUserLocation(coords);
-              setRegion({
-                latitude: coords.latitude,
-                longitude: coords.longitude,
-                latitudeDelta: 0.25,
-                longitudeDelta: 0.25,
-              });
               resolve();
             },
             reject,
@@ -441,10 +553,7 @@ export default function MapScreen() {
       const { status } = await Location.requestForegroundPermissionsAsync();
 
       if (status !== Location.PermissionStatus.GRANTED) {
-        Alert.alert(
-          "Permiso de ubicación",
-          "Activa el permiso de ubicación para encontrar propiedades cercanas.",
-        );
+        Alert.alert(t("mapLocationPermission"), t("mapLocationPermissionDescription"));
         return;
       }
 
@@ -458,33 +567,14 @@ export default function MapScreen() {
       };
 
       setUserLocation(coords);
-      setRegion({
-        latitude: coords.latitude,
-        longitude: coords.longitude,
-        latitudeDelta: 0.25,
-        longitudeDelta: 0.25,
-      });
     } catch (error) {
       console.error("[EYESITE] map location error", error);
 
-      Alert.alert(
-        "Ubicación",
-        "No pudimos obtener tu ubicación. Puedes utilizar el mapa manualmente.",
-      );
+      Alert.alert(t("mapLocation"), t("mapLocationError"));
     } finally {
       setLocating(false);
     }
-  }, []);
-
-  useEffect(() => {
-    if (Platform.OS === "web") return;
-
-    const timer = setTimeout(() => {
-      requestLocation();
-    }, 250);
-
-    return () => clearTimeout(timer);
-  }, [requestLocation]);
+  }, [t]);
 
   const geoProperties = useMemo(() => {
     return (properties ?? []).filter((property: any) => {
@@ -495,7 +585,11 @@ export default function MapScreen() {
         Number.isFinite(latitude) &&
         Number.isFinite(longitude) &&
         Math.abs(latitude) <= 90 &&
-        Math.abs(longitude) <= 180
+        Math.abs(longitude) <= 180 &&
+        latitude >= YUCATAN_BOUNDS.south &&
+        latitude <= YUCATAN_BOUNDS.north &&
+        longitude >= YUCATAN_BOUNDS.west &&
+        longitude <= YUCATAN_BOUNDS.east
       );
     });
   }, [properties]);
@@ -516,13 +610,37 @@ export default function MapScreen() {
           longitude: getLongitude(property),
         }),
       }))
-      .filter((property: any) => Number(property.distance) <= radius)
       .sort((a: any, b: any) => Number(a.distance) - Number(b.distance));
-  }, [geoProperties, radius, userLocation]);
+  }, [geoProperties, userLocation]);
 
   const mapHtml = useMemo(
-    () => createMapHtml(nearby, region),
-    [nearby, region],
+    () =>
+      createMapHtml(
+        nearby,
+        userLocation
+          ? {
+              ...DEFAULT_REGION,
+              latitude: userLocation.latitude,
+              longitude: userLocation.longitude,
+              latitudeDelta: 0.18,
+              longitudeDelta: 0.18,
+              zoom: 11,
+            }
+          : DEFAULT_REGION,
+        userLocation,
+      ),
+    [nearby, userLocation],
+  );
+
+  // Web: keep the map responsive across laptops, tablets and split-screen.
+  // The map shares the page with a header and a short result list.
+  // En web el mapa debe ocupar el espacio vertical disponible y no quedar
+  // reducido por una altura fija pequeña. El footer permanece compacto debajo.
+  const unlocatedCount = Math.max(properties.length - geoProperties.length, 0);
+
+  const webMapHeight = Math.max(
+    500,
+    Math.min(Math.round(windowHeight * 0.70), 860),
   );
 
   const handleMapMessage = useCallback(
@@ -532,13 +650,16 @@ export default function MapScreen() {
 
         if (data?.type === "property" || data?.type === "property_marker") {
           if (!data.id) return;
+          void trackPropertyEvent(String(data.id), "map_open", {
+            interaction: data.type === "property_marker" ? "marker" : "popup",
+          }, "map");
           router.push(`/property/${String(data.id)}` as any);
         }
       } catch (error) {
         console.error("[EYESITE] map message error", error);
       }
     },
-    [router],
+    [router, trackPropertyEvent],
   );
 
   return (
@@ -548,16 +669,25 @@ export default function MapScreen() {
     >
       <View style={styles.header}>
         <View style={styles.headerContent}>
-          <Text style={styles.title}>TERRENOS EYESITE CERCA DE TI</Text>
+          <Text style={styles.title}>{t("mapTitle")}</Text>
 
           <Text style={styles.subtitle}>
             {userLocation
-              ? `${nearby.length} oportunidades en ${radius} km`
+              ? `${nearby.length} oportunidades en Yucatán`
               : `${geoProperties.length} propiedades con ubicación`}
           </Text>
         </View>
 
-        {(
+        <View style={styles.headerActions}>
+          {userLocation && (
+            <Pressable
+              onPress={() => setUserLocation(null)}
+              style={styles.resetMapButton}
+            >
+              <Text style={styles.resetMapButtonText}>{t("mapAllYucatan")}</Text>
+            </Pressable>
+          )}
+
           <Pressable
             onPress={requestLocation}
             style={styles.locationButton}
@@ -569,32 +699,21 @@ export default function MapScreen() {
               <Text style={styles.locationButtonText}>⌖</Text>
             )}
           </Pressable>
-        )}
+        </View>
       </View>
 
-      <View style={styles.radiusRow}>
-        {RADIUS_OPTIONS.map((value) => (
-          <Pressable
-            key={value}
-            onPress={() => setRadius(value)}
-            style={[
-              styles.radiusChip,
-              radius === value && styles.radiusChipActive,
-            ]}
-          >
-            <Text
-              style={[
-                styles.radiusText,
-                radius === value && styles.radiusTextActive,
-              ]}
-            >
-              {value} km
-            </Text>
-          </Pressable>
-        ))}
+      <View style={styles.mapHintRow}>
+        <Text style={styles.mapHintText}>
+          {t("mapHint")}
+        </Text>
       </View>
 
-      <View style={styles.mapWrap}>
+      <View
+        style={[
+          styles.mapWrap,
+          Platform.OS === "web" && { height: webMapHeight },
+        ]}
+      >
         <>
           <LeafletMap
             html={mapHtml}
@@ -609,14 +728,14 @@ export default function MapScreen() {
           )}
 
           {!loading && geoProperties.length === 0 && (
+
             <View style={styles.emptyOverlay}>
               <Text style={styles.emptyTitle}>
-                Aún no hay propiedades ubicadas
+                {mapError ? t("mapLoadError") : t("mapNoLocated")}
               </Text>
 
               <Text style={styles.emptyText}>
-                Solo aparecen propiedades EYESITE activas, publicadas por
-                administración y con coordenadas válidas.
+                {mapError || t("mapOnlyActive")}
               </Text>
             </View>
           )}
@@ -625,12 +744,18 @@ export default function MapScreen() {
 
       <View style={styles.footer}>
         <Text style={styles.footerTitle}>
-          {userLocation ? "Más cercanas" : "Propiedades ubicadas"}
+          {userLocation ? t("mapNearbyTitle") : t("mapLocatedTitle")}
         </Text>
 
         <Text style={styles.footerNote}>
-          Solo propiedades EYESITE publicadas y activas.
+          {t("mapPublishedOnly")}
         </Text>
+
+        {unlocatedCount > 0 && (
+          <Text style={styles.unlocatedNote}>
+            {unlocatedCount} {t("mapUnlocated")}
+          </Text>
+        )}
 
         {nearby.slice(0, 4).map((item) => {
           const distance =
@@ -653,7 +778,7 @@ export default function MapScreen() {
 
                 <Text style={styles.resultMeta}>
                   {item.municipio || item.location || "Yucatán"}
-                  {distance !== undefined ? ` · ${distance.toFixed(1)} km` : ""}
+                  {distance !== undefined ? ` · ${distance.toFixed(1)} km ${t("kmFromYou")}` : ""}
                 </Text>
               </View>
 
@@ -692,6 +817,27 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
 
+  headerActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+
+  resetMapButton: {
+    minHeight: 38,
+    paddingHorizontal: 10,
+    borderRadius: 19,
+    borderWidth: 1,
+    borderColor: "#C9A84C",
+    justifyContent: "center",
+  },
+
+  resetMapButtonText: {
+    color: "#C9A84C",
+    fontSize: 10,
+    fontWeight: "800",
+  },
+
   locationButton: {
     width: 42,
     height: 42,
@@ -703,40 +849,19 @@ const styles = StyleSheet.create({
   },
 
   locationButtonText: {
-    color: "#0D0D0D",
+    color: "#0B0B0B",
     fontSize: 23,
     fontWeight: "900",
   },
 
-  radiusRow: {
-    flexDirection: "row",
-    gap: 8,
+  mapHintRow: {
     paddingHorizontal: 18,
     paddingBottom: 10,
   },
 
-  radiusChip: {
-    borderWidth: 1,
-    borderColor: "#303030",
-    borderRadius: 18,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    backgroundColor: "#181818",
-  },
-
-  radiusChipActive: {
-    backgroundColor: "#C9A84C",
-    borderColor: "#C9A84C",
-  },
-
-  radiusText: {
-    color: "#B8B8B8",
-    fontSize: 12,
-    fontWeight: "700",
-  },
-
-  radiusTextActive: {
-    color: "#0D0D0D",
+  mapHintText: {
+    color: "#9A9A9A",
+    fontSize: 11,
   },
 
   mapWrap: {
@@ -754,7 +879,7 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFill,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "rgba(13,13,13,.45)",
+    backgroundColor: "rgba(11,11,11,.55)",
   },
 
   emptyOverlay: {
@@ -764,7 +889,7 @@ const styles = StyleSheet.create({
     bottom: 24,
     padding: 16,
     borderRadius: 12,
-    backgroundColor: "rgba(13,13,13,.92)",
+    backgroundColor: "rgba(11,11,11,.94)",
     borderWidth: 1,
     borderColor: "#C9A84C",
   },
@@ -795,7 +920,7 @@ const styles = StyleSheet.create({
   },
 
   footerNote: {
-    color: "#777777",
+    color: "#707070",
     fontSize: 10,
     marginBottom: 4,
   },
@@ -811,7 +936,7 @@ const styles = StyleSheet.create({
     width: 30,
     height: 30,
     borderRadius: 15,
-    backgroundColor: "#1D1D1D",
+    backgroundColor: "#1A1A1A",
     alignItems: "center",
     justifyContent: "center",
   },

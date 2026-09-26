@@ -1,4 +1,5 @@
-import { View, Text, ScrollView, Pressable, StyleSheet, ActivityIndicator } from 'react-native';
+import { useState } from 'react';
+import { View, Text, ScrollView, Pressable, StyleSheet, ActivityIndicator, TextInput } from 'react-native';
 import { Image } from 'expo-image';
 import { ScreenContainer } from '@/components/screen-container';
 import { PropertyCard } from '@/components/property-card';
@@ -8,6 +9,8 @@ import { useAuth } from '@/hooks/useAuth';
 import { useNotifications } from '@/hooks/use-notifications';
 import { useResponsive } from '@/hooks/use-responsive';
 import { Ionicons } from '@expo/vector-icons';
+import { rankPropertyMatches } from '@/lib/commercial';
+import { useI18n } from '@/lib/i18n';
 
 const CATEGORIES = [
   { key: 'terreno', label: 'Terrenos', icon: '🌿' },
@@ -18,10 +21,12 @@ const CATEGORIES = [
 ];
 
 export default function HomeScreen() {
+  const { t } = useI18n();
+  const [homeSearch, setHomeSearch] = useState('');
   const { properties, loading } = useProperties();
-  const { user, session } = useAuth();
+  const { user, session, profile } = useAuth();
   const { unread } = useNotifications(user?.id);
-  const { horizontalPadding, contentMaxWidth, isDesktop, isLargeDesktop } = useResponsive();
+  const { horizontalPadding, contentMaxWidth, isDesktop, isLargeDesktop, propertyColumns } = useResponsive();
   const featuredProperties = properties.filter((p) => p.featured || p.destacada);
   // Si todavía no hay propiedades marcadas como destacadas, mostramos las
   // primeras oportunidades reales para evitar una sección vacía en producción.
@@ -30,16 +35,29 @@ export default function HomeScreen() {
       ? featuredProperties
       : properties.slice(0, 6);
 
+  const budgetNumber = Number(String(profile?.presupuesto ?? '').replace(/[^0-9.]/g, '')) || 0;
+  const recommendedProperties = budgetNumber > 0 || profile?.ciudad
+    ? rankPropertyMatches(
+        properties,
+        {
+          minPrice: budgetNumber > 0 ? budgetNumber * 0.8 : null,
+          maxPrice: budgetNumber > 0 ? budgetNumber * 1.2 : null,
+          municipio: profile?.ciudad ?? null,
+        },
+        profile?.ciudad || budgetNumber > 0 ? 50 : 101,
+      ).slice(0, 3)
+    : [];
+
   const handleCategoryPress = (key: string) => {
     router.push({ pathname: '/(tabs)/properties', params: { filter: key } } as any);
   };
 
 
   return (
-    <ScreenContainer edges={['top', 'left', 'right']} containerClassName="bg-[#0D0D0D]">
+    <ScreenContainer edges={['top', 'left', 'right']} containerClassName="bg-[#0B0B0B]">
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 100, backgroundColor: '#0D0D0D' }}
+        contentContainerStyle={{ paddingBottom: 110, backgroundColor: '#0B0B0B' }}
       >
         {/* Header with Tagline */}
         <View style={[styles.taglineContainer, { paddingHorizontal: horizontalPadding }]}>
@@ -93,6 +111,47 @@ export default function HomeScreen() {
           </View>
         </View>
 
+        {/* Búsqueda principal */}
+        <View style={[styles.searchSection, { paddingHorizontal: horizontalPadding, maxWidth: contentMaxWidth }, isDesktop && styles.centeredContent]}>
+          <Text style={styles.searchTitle}>{t('homeSearchTitle')}</Text>
+          <View style={styles.searchBar}>
+            <Ionicons name="search-outline" size={19} color="#9A9A9A" />
+            <TextInput
+              value={homeSearch}
+              onChangeText={setHomeSearch}
+              placeholder={t('homeSearchPlaceholder')}
+              placeholderTextColor="#777"
+              style={styles.searchInput}
+              returnKeyType="search"
+              onSubmitEditing={() => {
+                const query = homeSearch.trim();
+                router.push(
+                  query
+                    ? { pathname: '/(tabs)/properties', params: { q: query } } as any
+                    : '/(tabs)/properties' as any,
+                );
+              }}
+              accessibilityLabel={t('homeSearchPlaceholder')}
+            />
+            <Pressable
+              onPress={() => {
+                const query = homeSearch.trim();
+                router.push(
+                  query
+                    ? { pathname: '/(tabs)/properties', params: { q: query } } as any
+                    : '/(tabs)/properties' as any,
+                );
+              }}
+              style={({ pressed }) => [styles.searchButton, pressed && { opacity: 0.8 }]}
+              accessibilityRole="button"
+              accessibilityLabel={t('searchProperties')}
+            >
+              <Ionicons name="arrow-forward" size={18} color="#0D0D0D" />
+            </Pressable>
+          </View>
+          <Text style={styles.searchHint}>{t('homeSearchHint')}</Text>
+        </View>
+
         {/* Categorías */}
         <View style={[styles.section, { paddingHorizontal: horizontalPadding, maxWidth: contentMaxWidth }, isDesktop && styles.centeredContent]}>
           <Text style={styles.sectionTitle}>CATEGORÍAS</Text>
@@ -110,6 +169,40 @@ export default function HomeScreen() {
           </ScrollView>
         </View>
 
+        {/* Recomendaciones comerciales */}
+        {session && recommendedProperties.length > 0 ? (
+          <View style={[styles.section, { paddingHorizontal: horizontalPadding, maxWidth: contentMaxWidth }, isDesktop && styles.centeredContent]}>
+            <View style={styles.sectionHeader}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.sectionTitle}>PARA TI</Text>
+                <Text style={styles.recommendationHint}>Basado en tu presupuesto y zona.</Text>
+              </View>
+              <Pressable onPress={() => router.push('/saved-searches' as never)}>
+                <Text style={styles.viewAllLink}>Mis búsquedas →</Text>
+              </Pressable>
+            </View>
+            <View style={[styles.propertiesGrid, propertyColumns > 1 && styles.propertiesGridRow]}>
+              {recommendedProperties.map((property) => (
+                <View
+                  key={property.id}
+                  style={[
+                    styles.propertyGridItem,
+                    propertyColumns > 1 && styles.propertyGridItemMulti,
+                    propertyColumns === 2 && styles.propertyGridItemTwo,
+                    propertyColumns === 3 && styles.propertyGridItemThree,
+                    propertyColumns === 4 && styles.propertyGridItemFour,
+                  ]}
+                >
+                  <View style={styles.matchBadge}>
+                    <Text style={styles.matchBadgeText}>{property.matchScore}% COMPATIBLE</Text>
+                  </View>
+                  <PropertyCard property={property} />
+                </View>
+              ))}
+            </View>
+          </View>
+        ) : null}
+
         {/* Oportunidades Destacadas */}
         <View style={[styles.section, { paddingHorizontal: horizontalPadding, maxWidth: contentMaxWidth }, isDesktop && styles.centeredContent]}>
           <View style={styles.sectionHeader}>
@@ -123,9 +216,25 @@ export default function HomeScreen() {
               <ActivityIndicator color="#C9A84C" size="large" />
             </View>
           ) : (
-            highlightedProperties.map((property) => (
-              <PropertyCard key={property.id} property={property} />
-            ))
+            <View style={[
+              styles.propertiesGrid,
+              propertyColumns > 1 && styles.propertiesGridRow,
+            ]}>
+              {highlightedProperties.map((property) => (
+                <View
+                  key={property.id}
+                  style={[
+                    styles.propertyGridItem,
+                    propertyColumns > 1 && styles.propertyGridItemMulti,
+                    propertyColumns === 2 && styles.propertyGridItemTwo,
+                    propertyColumns === 3 && styles.propertyGridItemThree,
+                    propertyColumns === 4 && styles.propertyGridItemFour,
+                  ]}
+                >
+                  <PropertyCard property={property} />
+                </View>
+              ))}
+            </View>
           )}
         </View>
       </ScrollView>
@@ -203,7 +312,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    backgroundColor: 'rgba(11, 11, 11, 0.48)',
   },
   heroContent: {
     position: 'absolute',
@@ -240,6 +349,48 @@ const styles = StyleSheet.create({
     fontSize: 12,
     letterSpacing: 1,
   },
+  searchSection: {
+    marginTop: 2,
+    marginBottom: 10,
+  },
+  searchTitle: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '800',
+    letterSpacing: 0.8,
+    marginBottom: 9,
+  },
+  searchBar: {
+    minHeight: 50,
+    borderRadius: 12,
+    backgroundColor: '#141414',
+    borderWidth: 1,
+    borderColor: '#2A2A2A',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingLeft: 14,
+    paddingRight: 5,
+    gap: 9,
+  },
+  searchInput: {
+    flex: 1,
+    color: '#F5F5F5',
+    fontSize: 14,
+    paddingVertical: 10,
+  },
+  searchButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    backgroundColor: '#C9A84C',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  searchHint: {
+    color: '#777',
+    fontSize: 11,
+    marginTop: 7,
+  },
   section: {
     marginVertical: 20,
     paddingHorizontal: 16,
@@ -249,6 +400,27 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 16,
+  },
+  recommendationHint: {
+    color: '#777',
+    fontSize: 11,
+    marginTop: 4,
+  },
+  matchBadge: {
+    position: 'absolute',
+    zIndex: 2,
+    top: 8,
+    left: 8,
+    backgroundColor: '#C9A84C',
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  matchBadgeText: {
+    color: '#0D0D0D',
+    fontSize: 9,
+    fontWeight: '900',
+    letterSpacing: 0.4,
   },
   sectionTitle: {
     fontSize: 16,
@@ -267,11 +439,17 @@ const styles = StyleSheet.create({
   },
   categoryCard: {
     alignItems: 'center',
-    marginRight: 16,
-    paddingVertical: 12,
+    width: 92,
+    marginRight: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 8,
+    borderRadius: 14,
+    backgroundColor: '#141414',
+    borderWidth: 1,
+    borderColor: '#2A2A2A',
   },
   categoryIcon: {
-    fontSize: 32,
+    fontSize: 28,
     marginBottom: 8,
   },
   categoryLabel: {
@@ -279,6 +457,31 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontWeight: '500',
     textAlign: 'center',
+  },
+  propertiesGridRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    rowGap: 16,
+  },
+  propertiesGrid: {
+    width: '100%',
+  },
+  propertyGridItem: {
+    width: '100%',
+    minWidth: 0,
+  },
+  propertyGridItemMulti: {
+    minWidth: 0,
+  },
+  propertyGridItemTwo: {
+    width: '48.5%',
+  },
+  propertyGridItemThree: {
+    width: '31.5%',
+  },
+  propertyGridItemFour: {
+    width: '23.5%',
   },
   loadingContainer: {
     paddingVertical: 40,

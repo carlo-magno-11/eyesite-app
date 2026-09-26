@@ -1,11 +1,11 @@
 import { View, Text, Pressable, StyleSheet } from 'react-native';
-// expo-image: mejor render de thumbs + caché memoria/disco
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { Property, formatPrice, formatSurface, getReturnColor } from '@/lib/properties-data';
 import { useFavorites } from '@/hooks/use-favorites';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { getFirstImage } from '@/lib/property-media';
+import { useI18n } from '@/lib/i18n';
 
 interface PropertyCardProps {
   property: Property;
@@ -13,34 +13,23 @@ interface PropertyCardProps {
 }
 
 export function PropertyCard({ property, compact = false }: PropertyCardProps) {
-const { isFav, toggleFav } = useFavorites();
+  const { isFav, toggleFav } = useFavorites();
+  const { t } = useI18n();
   const favorite = isFav(property.id);
   const returnColor = getReturnColor(property.returnRate);
 
-  // ── V5: FOTO y VIDEO conviven ──
-  // El video NUNCA se usa como thumb (antes portada_url guardaba la URL del
-  // video → <Image uri=video> = CARD NEGRA con play). Si portada_url es un
-  // video (datos legacy), se cae a la primera FOTO.
-  
-const thumbUri =
-  getFirstImage(
-    property.fotos ??
-      property.images ??
-      property.imagenes,
-    property.portada_url
+  const thumbUri = getFirstImage(
+    property.fotos ?? property.images ?? property.imagenes,
+    property.portada_url,
   );
 
-const videoUrl =
-  property.video_url ??
-  property.videos?.[0] ??
-  null;
-
-const hasVideo =
-  Boolean(videoUrl);
+  const videoUrl = property.video_url ?? property.videos?.[0] ?? null;
+  const hasVideo = Boolean(videoUrl);
 
   const handlePress = () => {
-    // Si hay video, el detalle abre directo el reproductor (?play=1)
-    router.push(`/property/${property.id}${hasVideo ? '?play=1' : ''}` as any);
+    router.push(
+      `/property/${property.id}${hasVideo ? '?play=1' : ''}` as any,
+    );
   };
 
   const handleFavorite = () => {
@@ -51,7 +40,10 @@ const hasVideo =
     return (
       <Pressable
         onPress={handlePress}
-        style={({ pressed }) => [styles.compactCard, pressed && { opacity: 0.8 }]}
+        style={({ pressed }) => [
+          styles.compactCard,
+          pressed && styles.pressed,
+        ]}
       >
         {thumbUri ? (
           <Image
@@ -63,24 +55,51 @@ const hasVideo =
           />
         ) : (
           <View style={[styles.compactImage, styles.noPhotoFallback]}>
-            <Text style={styles.noPhotoIcon}>🏠</Text>
+            <IconSymbol name="house.fill" size={32} color="#C9A84C" />
           </View>
         )}
-        <View style={styles.compactOverlay} />
-        {hasVideo && (
-          <View style={styles.videoBadge} pointerEvents="none">
-            <Text style={styles.videoBadgeText}>▶️</Text>
+
+        <View style={styles.compactOverlay} pointerEvents="none" />
+
+        <View style={styles.compactTopRow} pointerEvents="none">
+          <View style={styles.compactCodeBadge}>
+            <Text style={styles.compactCodeText}>EYESITE · #{property.code}</Text>
           </View>
-        )}
+          {hasVideo && (
+            <View style={styles.compactMediaBadge}>
+              <IconSymbol name="play.circle.fill" size={10} color="#0E0E0E" />
+            </View>
+          )}
+        </View>
+
         <View style={styles.compactContent}>
-          <View style={[styles.returnBadge, { backgroundColor: returnColor + '33', borderColor: returnColor }]}>
-            <Text style={[styles.returnBadgeText, { color: returnColor }]}>
-              +{property.returnRate}%
+          <View style={styles.compactReturnRow}>
+            <View
+              style={[
+                styles.returnBadge,
+                {
+                  backgroundColor: `${returnColor}22`,
+                  borderColor: `${returnColor}99`,
+                },
+              ]}
+            >
+              <Text style={[styles.returnBadgeText, { color: returnColor }]}>
+                +{property.returnRate}%
+              </Text>
+            </View>
+          </View>
+          <Text style={styles.compactTitle} numberOfLines={2}>
+            {property.title}
+          </Text>
+          <View style={styles.compactLocationRow}>
+            <IconSymbol name="location.fill" size={10} color="#C9A84C" />
+            <Text style={styles.compactLocation} numberOfLines={1}>
+              {property.municipality}
             </Text>
           </View>
-          <Text style={styles.compactTitle} numberOfLines={2}>{property.title}</Text>
-          <Text style={styles.compactLocation} numberOfLines={1}>{property.municipality}</Text>
-          <Text style={styles.compactPrice}>{formatPrice(property.currentPrice, property.priceUnit)}</Text>
+          <Text style={styles.compactPrice}>
+            {formatPrice(property.currentPrice, property.priceUnit)}
+          </Text>
         </View>
       </Pressable>
     );
@@ -89,7 +108,7 @@ const hasVideo =
   return (
     <Pressable
       onPress={handlePress}
-      style={({ pressed }) => [styles.card, pressed && { opacity: 0.85 }]}
+      style={({ pressed }) => [styles.card, pressed && styles.pressed]}
     >
       <View style={styles.imageContainer}>
         {thumbUri ? (
@@ -102,51 +121,103 @@ const hasVideo =
           />
         ) : (
           <View style={[styles.image, styles.noPhotoFallback]}>
-            <Text style={styles.noPhotoIcon}>🏠</Text>
+            <IconSymbol name="house.fill" size={42} color="#C9A84C" />
+            <Text style={styles.noPhotoText}>EYESITE</Text>
           </View>
         )}
-        <View style={styles.imageOverlay} />
-        {hasVideo && (
-          <View style={styles.videoBadge} pointerEvents="none">
-            <Text style={styles.videoBadgeText}>▶️</Text>
+
+        <View style={styles.imageVignette} pointerEvents="none" />
+
+        <View style={styles.topOverlay} pointerEvents="box-none">
+          <View style={styles.codeBadge}>
+            <View style={styles.liveDot} />
+            <Text style={styles.codeBadgeText}>EYESITE · #{property.code}</Text>
           </View>
-        )}
-        {/* Property Code - Subtle */}
-        <View style={styles.codeBadge}>
-          <Text style={styles.codeBadgeText}>#{property.code}</Text>
+
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={favorite ? t("removeFromFavorites") : t("addToFavorites")}
+            accessibilityState={{ selected: favorite }}
+            onPress={handleFavorite}
+            hitSlop={8}
+            style={({ pressed }) => [
+              styles.favoriteBtn,
+              pressed && styles.favoritePressed,
+            ]}
+          >
+            <IconSymbol
+              name={favorite ? 'heart.fill' : 'heart'}
+              size={17}
+              color={favorite ? '#C9A84C' : '#F5F5F5'}
+            />
+          </Pressable>
         </View>
-        <Pressable
-          onPress={handleFavorite}
-          style={({ pressed }) => [styles.favoriteBtn, pressed && { opacity: 0.7 }]}
-        >
-          <Text style={styles.favoriteHeart}>{favorite ? '♥️' : '♡'}</Text>
-        </Pressable>
-        <View style={[styles.returnBadge, { backgroundColor: returnColor + '33', borderColor: returnColor }]}>
-          <Text style={[styles.returnBadgeText, { color: returnColor }]}>
-            +{property.returnRate}%
-          </Text>
+
+        <View style={styles.bottomOverlay} pointerEvents="none">
+          <View
+            style={[
+              styles.returnBadge,
+              {
+                backgroundColor: `${returnColor}24`,
+                borderColor: `${returnColor}AA`,
+              },
+            ]}
+          >
+            <Text style={[styles.returnBadgeText, { color: returnColor }]}>
+              +{property.returnRate}% {t("returnRate")}
+            </Text>
+          </View>
+
+          {hasVideo && (
+            <View style={styles.videoBadge}>
+              <IconSymbol name="play.circle.fill" size={10} color="#0E0E0E" />
+              <Text style={styles.videoBadgeText}>{t("video")}</Text>
+            </View>
+          )}
         </View>
       </View>
+
       <View style={styles.content}>
-        <Text style={styles.title} numberOfLines={2}>{property.title}</Text>
+        <View style={styles.titleRow}>
+          <Text style={styles.title} numberOfLines={2}>
+            {property.title}
+          </Text>
+          <IconSymbol name="chevron.right" size={13} color="#666" />
+        </View>
+
         <View style={styles.locationRow}>
-          <IconSymbol name="location.fill" size={12} color="#9A9A9A" />
-          <Text style={styles.location}>{property.location}</Text>
-        </View>
-        <View style={styles.priceRow}>
-          <View>
-            <Text style={styles.priceLabel}>Precio actual</Text>
-            <Text style={styles.price}>{formatPrice(property.currentPrice, property.priceUnit)}</Text>
+          <View style={styles.locationIcon}>
+            <IconSymbol name="location.fill" size={11} color="#C9A84C" />
           </View>
-          <View style={styles.surfaceContainer}>
-            <Text style={styles.priceLabel}>Superficie</Text>
-            <Text style={styles.surface}>{formatSurface(property.surfaceM2)}</Text>
+          <Text style={styles.location} numberOfLines={1}>
+            {property.location}
+          </Text>
+        </View>
+
+        <View style={styles.metricsRow}>
+          <View style={styles.metric}>
+            <Text style={styles.metricLabel}>{t("currentPrice").toUpperCase()}</Text>
+            <Text style={styles.price} numberOfLines={1}>
+              {formatPrice(property.currentPrice, property.priceUnit)}
+            </Text>
+          </View>
+
+          <View style={styles.metricDivider} />
+
+          <View style={styles.metricRight}>
+            <Text style={styles.metricLabel}>{t("surface").toUpperCase()}</Text>
+            <Text style={styles.surface} numberOfLines={1}>
+              {formatSurface(property.surfaceM2)}
+            </Text>
           </View>
         </View>
-        <View style={styles.divider} />
+
         <View style={styles.marketRow}>
-          <Text style={styles.marketLabel}>Precio mercado: </Text>
-          <Text style={styles.marketPrice}>{formatPrice(property.marketPrice, property.priceUnit)}</Text>
+          <View style={styles.marketLine} />
+          <Text style={styles.marketLabel}>{t("marketValue").toUpperCase()}</Text>
+          <Text style={styles.marketPrice} numberOfLines={1}>
+            {formatPrice(property.marketPrice, property.priceUnit)}
+          </Text>
         </View>
       </View>
     </Pressable>
@@ -156,176 +227,249 @@ const hasVideo =
 const styles = StyleSheet.create({
   card: {
     width: '100%',
-    backgroundColor: '#1A1A1A',
-    borderRadius: 14,
+    backgroundColor: '#141414',
+    borderRadius: 20,
     overflow: 'hidden',
     borderWidth: 1,
     borderColor: '#2A2A2A',
-    marginBottom: 16,
-    minHeight: 392,
+    marginBottom: 18,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.28,
+    shadowRadius: 18,
+    elevation: 5,
+  },
+  pressed: {
+    opacity: 0.92,
+    transform: [{ scale: 0.992 }],
   },
   imageContainer: {
     position: 'relative',
     width: '100%',
     aspectRatio: 16 / 10,
-    minHeight: 180,
-    maxHeight: 250,
+    minHeight: 185,
+    maxHeight: 270,
+    backgroundColor: '#0E0E0E',
   },
   image: {
     width: '100%',
     height: '100%',
   },
-  imageOverlay: {
+  imageVignette: {
     ...StyleSheet.absoluteFill,
-    backgroundColor: 'rgba(0,0,0,0.2)',
+    backgroundColor: 'rgba(0,0,0,0.18)',
   },
-  videoPlayOverlay: {
-    ...StyleSheet.absoluteFill,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  videoPlayIcon: {
-    fontSize: 34,
-    color: '#C9A84C',
-    textShadowColor: 'rgba(0,0,0,0.7)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 6,
-  },
-  favoriteBtn: {
+  topOverlay: {
     position: 'absolute',
     top: 12,
+    left: 12,
     right: 12,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    borderRadius: 20,
-    padding: 8,
-  },
-  favoriteHeart: {
-    fontSize: 20,
-    color: '#C9A84C',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
   codeBadge: {
-    position: 'absolute',
-    top: 8,
-    left: 8,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-    borderRadius: 4,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(10,10,10,0.72)',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(201,168,76,0.32)',
+    paddingHorizontal: 9,
+    paddingVertical: 6,
+  },
+  liveDot: {
+    width: 5,
+    height: 5,
+    borderRadius: 3,
+    backgroundColor: '#C9A84C',
+    marginRight: 6,
   },
   codeBadgeText: {
-    color: '#C9A84C',
-    fontSize: 10,
-    fontWeight: '600',
+    color: '#E9E9E9',
+    fontSize: 9,
+    fontWeight: '800',
+    letterSpacing: 0.55,
+  },
+  favoriteBtn: {
+    width: 38,
+    height: 38,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(10,10,10,0.72)',
+    borderRadius: 19,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.14)',
+  },
+  favoritePressed: {
+    backgroundColor: 'rgba(201,168,76,0.18)',
+  },
+  bottomOverlay: {
+    position: 'absolute',
+    left: 12,
+    right: 12,
+    bottom: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
   returnBadge: {
-    position: 'absolute',
-    bottom: 12,
-    left: 12,
-    borderRadius: 6,
+    borderRadius: 9,
     borderWidth: 1,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    paddingHorizontal: 9,
+    paddingVertical: 6,
   },
   returnBadgeText: {
-    fontSize: 12,
-    fontWeight: '700',
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.25,
+  },
+  videoBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: '#C9A84C',
+    borderRadius: 9,
+    paddingHorizontal: 9,
+    paddingVertical: 6,
+  },
+  videoBadgeText: {
+    color: '#0E0E0E',
+    fontSize: 9,
+    fontWeight: '900',
+    letterSpacing: 0.7,
   },
   content: {
-    padding: 16,
-    minHeight: 184,
-    justifyContent: 'flex-start',
+    paddingHorizontal: 16,
+    paddingTop: 15,
+    paddingBottom: 15,
+  },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 7,
   },
   title: {
+    flex: 1,
     color: '#F5F5F5',
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: '700',
-    marginBottom: 7,
-    lineHeight: 20,
-    minHeight: 40,
+    lineHeight: 21,
+    letterSpacing: 0.05,
+    paddingRight: 10,
   },
   locationRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    marginBottom: 12,
-    minHeight: 18,
+    minHeight: 22,
+    marginBottom: 14,
+  },
+  locationIcon: {
+    width: 23,
+    height: 23,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 7,
+    backgroundColor: 'rgba(201,168,76,0.10)',
+    marginRight: 7,
   },
   location: {
+    flex: 1,
     color: '#9A9A9A',
     fontSize: 12,
+    fontWeight: '500',
   },
-  priceRow: {
+  metricsRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-end',
-    minHeight: 48,
-    marginBottom: 10,
+    alignItems: 'center',
+    minHeight: 54,
+    borderRadius: 12,
+    backgroundColor: '#101010',
+    borderWidth: 1,
+    borderColor: '#222222',
+    paddingHorizontal: 12,
+    paddingVertical: 9,
   },
-  priceLabel: {
-    color: '#9A9A9A',
-    fontSize: 11,
-    marginBottom: 2,
+  metric: {
+    flex: 1,
+    minWidth: 0,
+  },
+  metricRight: {
+    flex: 0.82,
+    minWidth: 0,
+    alignItems: 'flex-end',
+  },
+  metricLabel: {
+    color: '#6F6F6F',
+    fontSize: 8,
+    fontWeight: '800',
+    letterSpacing: 0.75,
+    marginBottom: 3,
   },
   price: {
     color: '#C9A84C',
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  surfaceContainer: {
-    alignItems: 'flex-end',
+    fontSize: 17,
+    fontWeight: '800',
   },
   surface: {
     color: '#F5F5F5',
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: '700',
   },
-  divider: {
-    height: 1,
+  metricDivider: {
+    width: 1,
+    height: 30,
     backgroundColor: '#2A2A2A',
-    marginBottom: 10,
+    marginHorizontal: 12,
   },
   marketRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    marginTop: 12,
+  },
+  marketLine: {
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#C9A84C',
+    marginRight: 7,
   },
   marketLabel: {
-    color: '#9A9A9A',
-    fontSize: 12,
+    color: '#6F6F6F',
+    fontSize: 8,
+    fontWeight: '800',
+    letterSpacing: 0.55,
+    marginRight: 6,
   },
   marketPrice: {
-    color: '#9A9A9A',
-    fontSize: 12,
+    flex: 1,
+    color: '#777',
+    fontSize: 11,
+    fontWeight: '600',
     textDecorationLine: 'line-through',
   },
-  videoBadge: {
-    position: 'absolute',
-    bottom: 8,
-    right: 8,
-    backgroundColor: '#FFD60A',
-    borderRadius: 20,
-    padding: 6,
-  },
-  videoBadgeText: {
-    fontSize: 14,
-  },
   noPhotoFallback: {
-    backgroundColor: '#1E1E1E',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  noPhotoIcon: {
-    fontSize: 40,
-    color: '#4A4A4A',
+  noPhotoText: {
+    color: '#555',
+    fontSize: 9,
+    fontWeight: '800',
+    letterSpacing: 3,
+    marginTop: 8,
   },
-  // Compact styles
+
+  // Compact / horizontal cards.
   compactCard: {
-    width: 180,
-    height: 220,
-    borderRadius: 12,
+    width: 188,
+    height: 228,
+    borderRadius: 18,
     overflow: 'hidden',
     marginRight: 12,
     borderWidth: 1,
     borderColor: '#2A2A2A',
+    backgroundColor: '#141414',
   },
   compactImage: {
     width: '100%',
@@ -333,21 +477,36 @@ const styles = StyleSheet.create({
   },
   compactOverlay: {
     ...StyleSheet.absoluteFill,
-    backgroundColor: 'rgba(0,0,0,0.55)',
+    backgroundColor: 'rgba(0,0,0,0.48)',
+  },
+  compactTopRow: {
+    position: 'absolute',
+    top: 9,
+    left: 9,
+    right: 9,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   compactCodeBadge: {
-    position: 'absolute',
-    top: 6,
-    left: 6,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-    borderRadius: 3,
-    paddingHorizontal: 4,
-    paddingVertical: 2,
+    backgroundColor: 'rgba(10,10,10,0.68)',
+    borderRadius: 8,
+    paddingHorizontal: 7,
+    paddingVertical: 5,
   },
   compactCodeText: {
     color: '#C9A84C',
-    fontSize: 9,
-    fontWeight: '600',
+    fontSize: 8,
+    fontWeight: '800',
+    letterSpacing: 0.45,
+  },
+  compactMediaBadge: {
+    width: 25,
+    height: 25,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#C9A84C',
+    borderRadius: 13,
   },
   compactContent: {
     position: 'absolute',
@@ -356,21 +515,31 @@ const styles = StyleSheet.create({
     right: 0,
     padding: 12,
   },
+  compactReturnRow: {
+    flexDirection: 'row',
+    marginBottom: 7,
+  },
   compactTitle: {
     color: '#F5F5F5',
     fontSize: 13,
-    fontWeight: '600',
-    marginBottom: 4,
+    fontWeight: '700',
     lineHeight: 17,
+    marginBottom: 5,
+  },
+  compactLocationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 5,
   },
   compactLocation: {
-    color: '#9A9A9A',
-    fontSize: 11,
-    marginBottom: 4,
+    flex: 1,
+    color: '#B0B0B0',
+    fontSize: 10,
+    marginLeft: 5,
   },
   compactPrice: {
     color: '#C9A84C',
-    fontSize: 13,
-    fontWeight: '700',
+    fontSize: 14,
+    fontWeight: '800',
   },
 });

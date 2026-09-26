@@ -6,6 +6,7 @@ import { router } from "expo-router";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 import { ScreenContainer } from "@/components/screen-container";
+import { useI18n } from "@/lib/i18n";
 
 type ProfileFormProps = {
   user: NonNullable<ReturnType<typeof useAuth>["user"]>;
@@ -14,6 +15,7 @@ type ProfileFormProps = {
 
 function AccountForm({ user, profile }: ProfileFormProps) {
   const { contentMaxWidth, horizontalPadding } = useResponsive();
+  const { t } = useI18n();
   const [nombre, setNombre] = useState(profile.nombre ?? "");
   const [telefono, setTelefono] = useState(profile.telefono ?? "");
   const [ciudad, setCiudad] = useState(profile.ciudad ?? "");
@@ -25,7 +27,7 @@ function AccountForm({ user, profile }: ProfileFormProps) {
   const saveProfile = async () => {
     if (saving) return;
     if (!nombre.trim() || !ciudad.trim()) {
-      Alert.alert("Falta información", "Nombre y ciudad son obligatorios.");
+      Alert.alert(t("missingAccountInfo"), t("nameCityRequired"));
       return;
     }
 
@@ -43,11 +45,11 @@ function AccountForm({ user, profile }: ProfileFormProps) {
         .eq("id", user.id);
 
       if (error) throw error;
-      Alert.alert("Perfil actualizado", "Tus datos se guardaron correctamente.");
+      Alert.alert(t("profileUpdated"), t("profileSaved"));
     } catch (error: any) {
       Alert.alert(
-        "No se pudo guardar",
-        error?.message || "Inténtalo nuevamente.",
+        t("couldNotSave"),
+        error?.message || t("tryAgainShort"),
       );
     } finally {
       setSaving(false);
@@ -61,12 +63,12 @@ function AccountForm({ user, profile }: ProfileFormProps) {
 
   const deleteAccount = () => {
     Alert.alert(
-      "Eliminar mi cuenta",
-      "Se eliminarán tu cuenta, favoritos, solicitudes, notificaciones y el contenido inmobiliario que hayas enviado personalmente. Las propiedades del catálogo creadas por EYESITE para tu cuenta pueden permanecer publicadas, pero quedarán desvinculadas de ella. Esta acción no se puede deshacer.",
+      t("deleteAccountTitle"),
+      t("deleteAccountDescription"),
       [
-        { text: "Cancelar", style: "cancel" },
+        { text: t("cancel"), style: "cancel" },
         {
-          text: "Eliminar definitivamente",
+          text: t("deletePermanently"),
           style: "destructive",
           onPress: async () => {
             try {
@@ -79,8 +81,8 @@ function AccountForm({ user, profile }: ProfileFormProps) {
               router.replace("/(auth)/login" as never);
             } catch (error: any) {
               Alert.alert(
-                "No se pudo eliminar",
-                error?.message || "Inténtalo nuevamente.",
+                t("couldNotDeleteAccount"),
+                error?.message || t("tryAgainShort"),
               );
             }
           },
@@ -92,32 +94,38 @@ function AccountForm({ user, profile }: ProfileFormProps) {
   const menuItems = [
     {
       icon: "map-outline" as const,
-      title: "MIS TERRENOS",
-      text: "Propiedades publicadas a tu nombre",
+      title: t("myProperties"),
+      text: t("propertiesInYourName"),
       route: "/my-properties",
     },
     {
       icon: "document-text-outline" as const,
-      title: "MIS SOLICITUDES",
-      text: "Consulta pendientes, aprobadas y rechazadas",
+      title: t("myRequests"),
+      text: t("requestsDescription"),
       route: "/my-requests",
     },
     {
+      icon: "search-outline" as const,
+      title: t("savedSearches").toUpperCase(),
+      text: t("searchesDescription"),
+      route: "/saved-searches",
+    },
+    {
       icon: "notifications-outline" as const,
-      title: "NOTIFICACIONES",
-      text: "Mensajes y anuncios de EYESITE",
+      title: t("notifications").toUpperCase(),
+      text: t("notificationsDescriptionShort"),
       route: "/notifications",
     },
     {
       icon: "settings-outline" as const,
-      title: "CONFIGURACIÓN",
-      text: "Sesión, privacidad y preferencias",
+      title: t("settings"),
+      text: t("settingsDescription"),
       route: "/settings",
     },
     {
       icon: "business-outline" as const,
-      title: "NOSOTROS",
-      text: "Conoce EYESITE y nuestros medios de contacto",
+      title: t("about").toUpperCase(),
+      text: t("aboutDescription"),
       route: "/about",
     },
   ];
@@ -144,8 +152,8 @@ function AccountForm({ user, profile }: ProfileFormProps) {
             </Text>
           </View>
           <View style={styles.headerCopy}>
-            <Text style={styles.eyebrow}>CUENTA EYESITE</Text>
-            <Text style={styles.title}>Mi cuenta</Text>
+            <Text style={styles.eyebrow}>{t("accountEyesite")}</Text>
+            <Text style={styles.title}>{t("myAccount")}</Text>
             <Text style={styles.subtitle} numberOfLines={1}>
               {user.email ?? "Cuenta EYESITE"}
             </Text>
@@ -158,53 +166,53 @@ function AccountForm({ user, profile }: ProfileFormProps) {
               <Ionicons name="person-outline" size={20} color="#C9A84C" />
             </View>
             <View style={styles.sectionCopy}>
-              <Text style={styles.sectionTitle}>Datos personales</Text>
+              <Text style={styles.sectionTitle}>{t("personalData")}</Text>
               <Text style={styles.sectionHint}>
-                Mantén tu información actualizada
+                {t("keepInfoUpdated")}
               </Text>
             </View>
           </View>
 
-          <Text style={styles.label}>CORREO</Text>
+          <Text style={styles.label}>{t("email")}</Text>
           <View style={styles.readonly}>
             <Text style={styles.readonlyText}>{user.email ?? "—"}</Text>
           </View>
 
-          <Text style={styles.label}>NOMBRE</Text>
+          <Text style={styles.label}>{t("fullName")}</Text>
           <TextInput
             value={nombre}
             onChangeText={setNombre}
             style={styles.input}
-            placeholder="Nombre completo"
+            placeholder={t("fullNameAccountPlaceholder")}
             placeholderTextColor="#777"
           />
 
-          <Text style={styles.label}>TELÉFONO</Text>
+          <Text style={styles.label}>{t("phoneWhatsapp")}</Text>
           <TextInput
             value={telefono}
             onChangeText={setTelefono}
             keyboardType="phone-pad"
             style={styles.input}
-            placeholder="Teléfono"
+            placeholder={t("phoneAccountPlaceholder")}
             placeholderTextColor="#777"
           />
 
-          <Text style={styles.label}>CIUDAD / ZONA</Text>
+          <Text style={styles.label}>{t("cityZone")}</Text>
           <TextInput
             value={ciudad}
             onChangeText={setCiudad}
             style={styles.input}
-            placeholder="Ciudad"
+            placeholder={t("cityAccountPlaceholder")}
             placeholderTextColor="#777"
           />
 
-          <Text style={styles.label}>PRESUPUESTO</Text>
+          <Text style={styles.label}>{t("budgetOptional")}</Text>
           <TextInput
             value={presupuesto}
             onChangeText={setPresupuesto}
             keyboardType="numeric"
             style={styles.input}
-            placeholder="Presupuesto"
+            placeholder={t("budgetAccountPlaceholder")}
             placeholderTextColor="#777"
           />
 
@@ -219,12 +227,12 @@ function AccountForm({ user, profile }: ProfileFormProps) {
           >
             <Ionicons name="checkmark-circle-outline" size={19} color="#0D0D0D" />
             <Text style={styles.primaryText}>
-              {saving ? "GUARDANDO..." : "GUARDAR CAMBIOS"}
+              {saving ? t("savingUpper") : t("saveChanges")}
             </Text>
           </Pressable>
         </View>
 
-        <Text style={styles.groupTitle}>ACCESOS RÁPIDOS</Text>
+        <Text style={styles.groupTitle}>{t("quickAccess")}</Text>
         <View style={styles.menuGroup}>
           {menuItems.map((item) => (
             <Pressable
@@ -250,10 +258,9 @@ function AccountForm({ user, profile }: ProfileFormProps) {
         <View style={styles.infoCard}>
           <Ionicons name="shield-checkmark-outline" size={20} color="#C9A84C" />
           <View style={styles.infoCopy}>
-            <Text style={styles.infoTitle}>Tu cuenta está protegida</Text>
+            <Text style={styles.infoTitle}>{t("accountProtected")}</Text>
             <Text style={styles.infoText}>
-              EYESITE mantiene separados tus datos personales del catálogo
-              público de propiedades.
+              {t("accountProtectedDescription")}
             </Text>
           </View>
         </View>
@@ -263,7 +270,7 @@ function AccountForm({ user, profile }: ProfileFormProps) {
           style={({ pressed }) => [styles.secondary, pressed && styles.pressed]}
         >
           <Ionicons name="log-out-outline" size={18} color="#C9A84C" />
-          <Text style={styles.secondaryText}>CERRAR SESIÓN</Text>
+          <Text style={styles.secondaryText}>{t("logout")}</Text>
         </Pressable>
 
         <Pressable
@@ -271,7 +278,7 @@ function AccountForm({ user, profile }: ProfileFormProps) {
           style={({ pressed }) => [styles.danger, pressed && styles.dangerPressed]}
         >
           <Ionicons name="trash-outline" size={17} color="#E57373" />
-          <Text style={styles.dangerText}>ELIMINAR MI CUENTA</Text>
+          <Text style={styles.dangerText}>{t("deleteMyAccount")}</Text>
         </Pressable>
       </ScrollView>
     </ScreenContainer>
@@ -338,14 +345,14 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   subtitle: {
-    color: "#888",
+    color:"#9A9A9A",
     fontSize: 12,
     marginTop: 3,
   },
   card: {
-    backgroundColor: "#171717",
+    backgroundColor:"#141414",
     borderWidth: 1,
-    borderColor: "#2A2A2A",
+    borderColor:"#2A2A2A",
     borderRadius: 14,
     padding: 17,
     marginBottom: 22,
@@ -378,7 +385,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   label: {
-    color: "#999",
+    color:"#9A9A9A",
     fontSize: 10,
     fontWeight: "800",
     letterSpacing: 0.7,
@@ -398,7 +405,7 @@ const styles = StyleSheet.create({
   },
   input: {
     backgroundColor: "#101010",
-    color: "#FFF",
+    color:"#F5F5F5",
     borderWidth: 1,
     borderColor: "#333",
     borderRadius: 8,
