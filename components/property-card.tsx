@@ -164,14 +164,14 @@ export function PropertyCard({ property, compact = false }: PropertyCardProps) {
             ]}
           >
             <Text style={[styles.returnBadgeText, { color: returnColor }]}>
-              +{property.returnRate}% rendimiento
+              +{property.returnRate}% {t("returnRate")}
             </Text>
           </View>
 
           {hasVideo && (
             <View style={styles.videoBadge}>
               <IconSymbol name="play.circle.fill" size={10} color="#0E0E0E" />
-              <Text style={styles.videoBadgeText}>VIDEO</Text>
+              <Text style={styles.videoBadgeText}>{t("video")}</Text>
             </View>
           )}
         </View>
