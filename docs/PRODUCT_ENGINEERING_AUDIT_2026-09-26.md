@@ -115,3 +115,22 @@ No considerar EYESITE terminada hasta que:
 
 ### Engineering gate
 - The latest workflow must be checked again after the current commits; no green status is claimed until GitHub Actions reports it.
+
+## 2026-09-26 — Property detail visual/UX pass
+
+Changes started:
+- Stronger property hero: type, featured status, title, location, current price and market reference.
+- Four decision facts surfaced immediately: area, frontage, depth and return.
+- Added a visual terrain-shape guide when frontage/depth are available. It is explicitly an orientation aid, not a survey/topographic plan.
+- Construction area is surfaced separately when available.
+- Added map context when valid coordinates exist.
+- Dynamic sections now use the existing i18n dictionary instead of hardcoded Spanish section names.
+- Corrected the legal-certainty display so it no longer repeats the legal status value when certainty is present.
+- The fixed contact bar remains the primary conversion action.
+
+Recommended next design iteration:
+- Classify media as cover, video, gallery, professional photos and documents.
+- Add a compact summary/navigation row for long property pages.
+- Add a true property-location preview that can open the statewide map focused on the selected property once map route parameters are supported.
+- Add verified-data indicators only for fields actually reviewed by EYESITE/admin.
+- On wide Web layouts, evolve the page into a two-column reading layout with information and persistent conversion context.
