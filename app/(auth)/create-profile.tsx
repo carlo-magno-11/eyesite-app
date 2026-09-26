@@ -15,10 +15,12 @@ import { useRouter } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import AuthBackground from '@/components/AuthBackground';
 import { useResponsive } from '@/hooks/use-responsive';
+import { useI18n } from '@/lib/i18n';
 
 export default function CreateProfileScreen() {
   const router = useRouter();
   const { isDesktop, horizontalPadding, contentMaxWidth } = useResponsive();
+  const { t } = useI18n();
 
   const [nombre, setNombre] = useState('');
   const [telefono, setTelefono] = useState('');
@@ -48,7 +50,7 @@ export default function CreateProfileScreen() {
     const presupuestoLimpio = presupuesto.trim();
 
     if (!nombreLimpio) {
-      Alert.alert('Falta información', 'Escribe tu nombre completo.');
+      Alert.alert(t("missingInfo"), t("enterName"));
       return;
     }
 
@@ -56,14 +58,14 @@ export default function CreateProfileScreen() {
 
     if (telefonoSoloNumeros.length < 10) {
       Alert.alert(
-        'Teléfono inválido',
-        'Escribe un número de teléfono válido de al menos 10 dígitos.'
+        t("invalidPhone"),
+        t("validPhone")
       );
       return;
     }
 
     if (!ciudadLimpia) {
-      Alert.alert('Falta información', 'Escribe tu ciudad o zona.');
+      Alert.alert(t("missingInfo"), t("enterCityShort"));
       return;
     }
 
@@ -85,8 +87,8 @@ export default function CreateProfileScreen() {
 
       if (!user) {
         Alert.alert(
-          'Sesión no disponible',
-          'Tu sesión no está disponible. Vuelve a iniciar sesión.'
+          t("sessionUnavailable"),
+          t("sessionUnavailableDescription")
         );
 
         router.replace('/(auth)/login' as never);
@@ -127,9 +129,9 @@ export default function CreateProfileScreen() {
         console.error('Error guardando perfil:', profileError);
 
         Alert.alert(
-          'No se pudo guardar',
+          t("saveFailed"),
           profileError.message ||
-            'Ocurrió un error al guardar tu información.'
+            t("saveFailedDescription")
         );
 
         return;
@@ -145,9 +147,9 @@ export default function CreateProfileScreen() {
       console.error('Error en create-profile:', error);
 
       Alert.alert(
-        'Error',
+        t("profileError"),
         error?.message ||
-          'Ocurrió un error inesperado. Intenta nuevamente.'
+          t("profileErrorDescription")
       );
     } finally {
       setSaving(false);
@@ -167,26 +169,26 @@ export default function CreateProfileScreen() {
         >
           <View style={[styles.content, isDesktop && { maxWidth: contentMaxWidth ?? 620 }]}>
           <View style={styles.header}>
-            <Text style={styles.step}>PASO 1 DE 2</Text>
+            <Text style={styles.step}>{t("step1of2")}</Text>
 
             <Text style={styles.title}>
-              COMPLETA TU PERFIL
+              {t("completeProfile")}
             </Text>
 
             <Text style={styles.subtitle}>
-              Necesitamos algunos datos para crear tu perfil.
+              {t("profileSubtitle")}
             </Text>
           </View>
 
           <View style={styles.form}>
             <Text style={styles.label}>
-              NOMBRE COMPLETO
+              {t("fullName")}
             </Text>
 
             <TextInput
               value={nombre}
               onChangeText={setNombre}
-              placeholder="Tu nombre completo"
+              placeholder="{t("fullNamePlaceholder")}"
               placeholderTextColor="#777"
               autoCapitalize="words"
               autoCorrect={false}
@@ -195,13 +197,13 @@ export default function CreateProfileScreen() {
             />
 
             <Text style={styles.label}>
-              TELÉFONO / WHATSAPP
+              {t("phoneWhatsapp")}
             </Text>
 
             <TextInput
               value={telefono}
               onChangeText={setTelefono}
-              placeholder="10 dígitos"
+              placeholder="{t("phonePlaceholder")}"
               placeholderTextColor="#777"
               keyboardType="phone-pad"
               style={styles.input}
@@ -209,13 +211,13 @@ export default function CreateProfileScreen() {
             />
 
             <Text style={styles.label}>
-              CIUDAD / ZONA
+              {t("cityZone")}
             </Text>
 
             <TextInput
               value={ciudad}
               onChangeText={setCiudad}
-              placeholder="Ciudad o zona de interés"
+              placeholder="{t("cityPlaceholder")}"
               placeholderTextColor="#777"
               autoCapitalize="words"
               autoCorrect={false}
@@ -224,14 +226,14 @@ export default function CreateProfileScreen() {
             />
 
             <Text style={styles.label}>
-              PRESUPUESTO
-              <Text style={styles.optional}> (OPCIONAL)</Text>
+              {t("budgetOptional")}
+              <Text style={styles.optional}> ({t("optional")})</Text>
             </Text>
 
             <TextInput
               value={presupuesto}
               onChangeText={setPresupuesto}
-              placeholder="Ej. $2,500,000"
+              placeholder="{t("budgetPlaceholder")}"
               placeholderTextColor="#777"
               keyboardType="default"
               style={styles.input}
@@ -249,15 +251,15 @@ export default function CreateProfileScreen() {
             >
               <Text style={styles.buttonText}>
                 {saving
-                  ? 'GUARDANDO...'
-                  : 'GUARDAR Y CONTINUAR'}
+                  ? '{t("saving")}'
+                  : '{t("saveContinue")}'}
               </Text>
             </TouchableOpacity>
           </View>
 
           <View style={styles.footer}>
             <Text style={styles.footerText}>
-              Tu cuenta permanecerá bajo revisión antes de ser activada.
+              {t("underReview")}
             </Text>
           </View>
           </View>
