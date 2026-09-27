@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 import * as Linking from "expo-linking";
 import { router } from "expo-router";
@@ -6,100 +6,88 @@ import { router } from "expo-router";
 import { supabase } from "@/lib/supabase";
 
 export default function AuthCallbackScreen() {
-  const [message, setMessage] = useState("Verificando tu correo...");
+  const [message, setMessage] = useState("Verificando tu enlace...");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const handledUrlRef = useRef<string | null>(null);
+  const recoveryRef = useRef(false);
 
   useEffect(() => {
     let mounted = true;
-    let handled = false;
-    let recoveryDetected = false;
+
+    const goToRecovery = () => {
+      if (!mounted) return;
+      recoveryRef.current = true;
+      router.replace("/reset-password" as never);
+    };
 
     const authSubscription = supabase.auth.onAuthStateChange((event) => {
       if (event === "PASSWORD_RECOVERY") {
-        recoveryDetected = true;
-        if (mounted) {
-          router.replace("/reset-password" as never);
-        }
+        goToRecovery();
       }
     });
 
     const handleUrl = async (url: string) => {
-      if (handled) return;
-      handled = true;
+      if (!url || handledUrlRef.current === url) return;
+      handledUrlRef.current = url;
 
       try {
         setMessage("Confirmando tu cuenta...");
         setErrorMessage(null);
 
         const parsed = Linking.parse(url);
+        const params = parsed.queryParams ?? {};
 
-        const code =
-          typeof parsed.queryParams?.code === "string"
-            ? parsed.queryParams.code
-            : null;
-
-        const tokenHash =
-          typeof parsed.queryParams?.token_hash === "string"
-            ? parsed.queryParams.token_hash
-            : null;
-
-        const type =
-          typeof parsed.queryParams?.type === "string"
-            ? parsed.queryParams.type
-            : "email";
+        const code = typeof params.code === "string" ? params.code : null;
+        const tokenHash = typeof params.token_hash === "string" ? params.token_hash : null;
+        const type = typeof params.type === "string" ? params.type : "email";
 
         if (code) {
           const { error } = await supabase.auth.exchangeCodeForSession(code);
-
-          if (error) {
-            throw error;
-          }
+          if (error) throw error;
         } else if (tokenHash) {
+          const otpType = type === "recovery" ? "recovery" : "email";
           const { error } = await supabase.auth.verifyOtp({
             token_hash: tokenHash,
-            type: type as "email" | "recovery",
+            type: otpType,
           });
-
-          if (error) {
-            throw error;
-          }
+          if (error) throw error;
         } else {
-          throw new Error(
-            "El enlace de confirmación no contiene un código válido.",
-          );
+          const { data: { session } } = await supabase.auth.getSession();
+
+          // On web, Supabase may already have consumed the URL before this
+          // screen runs. A recovery session is still sufficient to continue.
+          if (session && type === "recovery") {
+            goToRecovery();
+            return;
+          }
+
+          throw new Error("El enlace no contiene un código válido o ya expiró.");
         }
 
         if (!mounted) return;
 
-        if (type === "recovery" || recoveryDetected) {
-          router.replace("/reset-password" as never);
+        if (type === "recovery" || recoveryRef.current) {
+          goToRecovery();
           return;
         }
 
         setMessage("¡Correo confirmado correctamente!");
+        setTimeout(() => {
+          if (mounted) router.replace("/(auth)/login" as never);
+        }, 900);
       } catch (error: any) {
         console.error("[EYESITE] auth callback error:", error);
-
         if (!mounted) return;
-
         setErrorMessage(
-          error?.message ||
-            "No pudimos confirmar el correo. Solicita un nuevo enlace.",
+          error?.message || "No pudimos procesar el enlace. Solicita uno nuevo.",
         );
-
-        setMessage("No se pudo confirmar tu cuenta.");
+        setMessage("No se pudo procesar el enlace.");
       }
     };
 
-    const run = async () => {
-      const initialUrl = await Linking.getInitialURL();
-
-      if (initialUrl) {
-        await handleUrl(initialUrl);
-      }
-    };
-
-    void run();
+    void Linking.getInitialURL().then((url) => {
+      if (url) void handleUrl(url);
+    });
 
     const subscription = Linking.addEventListener("url", ({ url }) => {
       void handleUrl(url);
@@ -115,54 +103,17 @@ export default function AuthCallbackScreen() {
   return (
     <View style={styles.container}>
       <Text style={styles.logo}>EYESITE</Text>
-
-      {!errorMessage && (
-        <ActivityIndicator
-          size="large"
-          color="#C9A84C"
-          style={styles.spinner}
-        />
-      )}
-
+      {!errorMessage && <ActivityIndicator size="large" color="#C9A84C" style={styles.spinner} />}
       <Text style={styles.message}>{message}</Text>
-
       {errorMessage && <Text style={styles.error}>{errorMessage}</Text>}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    padding: 32,
-    backgroundColor: "#0E0E0E",
-  },
-
-  logo: {
-    fontSize: 30,
-    fontWeight: "900",
-    letterSpacing: 2,
-    color: "#C9A84C",
-  },
-
-  spinner: {
-    marginTop: 24,
-  },
-
-  message: {
-    marginTop: 20,
-    fontSize: 17,
-    textAlign: "center",
-    color: "#FFFFFF",
-  },
-
-  error: {
-    marginTop: 16,
-    fontSize: 14,
-    lineHeight: 21,
-    textAlign: "center",
-    color: "#FF6B6B",
-  },
+  container: { flex: 1, alignItems: "center", justifyContent: "center", padding: 32, backgroundColor: "#0E0E0E" },
+  logo: { fontSize: 30, fontWeight: "900", letterSpacing: 2, color: "#C9A84C" },
+  spinner: { marginTop: 24 },
+  message: { marginTop: 20, fontSize: 17, textAlign: "center", color: "#FFFFFF" },
+  error: { marginTop: 16, fontSize: 14, lineHeight: 21, textAlign: "center", color: "#FF6B6B" },
 });
