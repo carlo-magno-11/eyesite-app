@@ -59,11 +59,6 @@ export default function CreateProfileScreen() {
       return;
     }
 
-    if (telefonoSoloNumeros.length < 10) {
-      Alert.alert(t("invalidPhone"), t("validPhone"));
-      return;
-    }
-
     setStep(2);
   };
 
@@ -81,16 +76,6 @@ export default function CreateProfileScreen() {
       return;
     }
 
-    if (telefonoSoloNumeros.length < 10) {
-      setStep(1);
-      Alert.alert(t("invalidPhone"), t("validPhone"));
-      return;
-    }
-
-    if (!ciudadLimpia) {
-      Alert.alert(t("missingInfo"), t("enterCityShort"));
-      return;
-    }
 
     const presupuestoNumero = presupuestoLimpio
       ? Number(presupuestoLimpio.replace(/[^0-9.]/g, ''))
@@ -121,8 +106,8 @@ export default function CreateProfileScreen() {
         id: user.id,
         email: user.email ?? null,
         nombre: nombreLimpio,
-        telefono: telefonoSoloNumeros,
-        ciudad: ciudadLimpia,
+        telefono: telefonoSoloNumeros || null,
+        ciudad: ciudadLimpia || null,
         presupuesto: presupuestoNumero,
       };
 
@@ -192,7 +177,7 @@ export default function CreateProfileScreen() {
                   returnKeyType="next"
                 />
 
-                <Text style={styles.label}>{t("phoneWhatsapp")}</Text>
+                <Text style={styles.label}>{t("phoneWhatsapp")} <Text style={styles.optional}>({t("optional")})</Text></Text>
                 <TextInput
                   value={telefono}
                   onChangeText={setTelefono}
@@ -218,7 +203,7 @@ export default function CreateProfileScreen() {
               </View>
             ) : (
               <View style={styles.form}>
-                <Text style={styles.label}>{t("cityZone")}</Text>
+                <Text style={styles.label}>{t("cityZone")} <Text style={styles.optional}>({t("optional")})</Text></Text>
                 <TextInput
                   value={ciudad}
                   onChangeText={setCiudad}
