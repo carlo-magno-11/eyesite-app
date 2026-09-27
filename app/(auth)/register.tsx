@@ -42,6 +42,39 @@ export default function RegisterScreen() {
   const [legalAccepted, setLegalAccepted] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
   const [confirmationEmail, setConfirmationEmail] = useState<string | null>(null);
+  const [resendingConfirmation, setResendingConfirmation] = useState(false);
+
+  const resendConfirmation = async () => {
+    if (!confirmationEmail || resendingConfirmation) return;
+    setResendingConfirmation(true);
+    try {
+      const { error } = await supabase.auth.resend({
+        type: "signup",
+        email: confirmationEmail,
+        options: {
+          emailRedirectTo:
+            Platform.OS === "web"
+              ? "https://auth.eyesite.mx/auth/callback"
+              : "eyesite://auth/callback",
+        },
+      });
+      if (error) throw error;
+      Alert.alert(
+        "Correo reenviado",
+        "Revisa tu bandeja de entrada y la carpeta de spam.",
+      );
+    } catch (error: any) {
+      console.error("[register] resend confirmation:", error);
+      Alert.alert(
+        "No se pudo reenviar",
+        /rate limit|too many|hourly/i.test(error?.message || "")
+          ? "Espera unos minutos antes de solicitar otro correo."
+          : "No pudimos reenviar el correo. Inténtalo nuevamente.",
+      );
+    } finally {
+      setResendingConfirmation(false);
+    }
+  };
 
   const passwordChecks = {
     length: password.length >= 8,
@@ -212,11 +245,25 @@ export default function RegisterScreen() {
               {t("checkSpam")}
             </Text>
             <TouchableOpacity
-              onPress={() => router.replace("/(auth)/login" as never)}
-              style={styles.button}
+              onPress={resendConfirmation}
+              disabled={resendingConfirmation}
+              style={[styles.button, resendingConfirmation && styles.buttonDisabled]}
               activeOpacity={0.8}
             >
-              <Text style={styles.buttonText}>IR A INICIAR SESIÓN</Text>
+              {resendingConfirmation ? (
+                <ActivityIndicator color="#0E0E0E" />
+              ) : (
+                <Text style={styles.buttonText}>REENVIAR VERIFICACIÓN</Text>
+              )}
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={() => router.replace("/(auth)/login" as never)}
+              style={[styles.secondaryButton, resendingConfirmation && styles.buttonDisabled]}
+              activeOpacity={0.8}
+              disabled={resendingConfirmation}
+            >
+              <Text style={styles.secondaryButtonText}>IR A INICIAR SESIÓN</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -698,6 +745,21 @@ const styles = StyleSheet.create({
     gap: 10,
   },
 
+  secondaryButton: {
+    marginTop: 12,
+    minHeight: 50,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "#C9A84C",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  secondaryButtonText: {
+    color: "#C9A84C",
+    fontSize: 13,
+    fontWeight: "900",
+    letterSpacing: 0.8,
+  },
   buttonText: {
     color: "#0E0E0E",
     fontWeight: "900",
