@@ -161,49 +161,39 @@ const UserCard = React.memo(function UserCard({
           <Text style={[styles.estadoText, { color: estadoColor }]}>{estado}</Text>
         </View>
       </View>
-
       <Text style={styles.cardEmail}>{profile.email || '—'}</Text>
       <Text style={styles.cardMeta}>Tel: {telefono}</Text>
       <Text style={styles.cardMeta}>Zona: {profile.ciudad || '—'}</Text>
-      <Text style={styles.cardMeta}>
-        Presupuesto: {profile.presupuesto != null ? String(profile.presupuesto) : '—'}
-      </Text>
-      {profile.created_at && (
-        <Text style={styles.cardMeta}>
-          Registro: {new Date(profile.created_at).toLocaleDateString()}
-        </Text>
-      )}
-      <Text style={styles.cardMeta}>
-        Correo: {profile.email_confirmed_at ? 'verificado' : 'sin verificar'}
-      </Text>
-
+      <Text style={styles.cardMeta}>Presupuesto: {profile.presupuesto != null ? String(profile.presupuesto) : '—'}</Text>
+      {profile.created_at ? (
+        <Text style={styles.cardMeta}>Registro: {new Date(profile.created_at).toLocaleDateString()}</Text>
+      ) : null}
+      <Text style={styles.cardMeta}>Correo: {profile.email_confirmed_at ? 'verificado' : 'sin verificar'}</Text>
       <View style={styles.actions}>
-        {estado !== 'activa' && (
+        {estado !== 'activa' ? (
           <Pressable
             style={({ pressed }) => [styles.btnAprobar, pressed && { opacity: 0.85 }]}
             onPress={() => onUpdate(profile, 'activa')}
           >
             <Text style={styles.btnText}>Aprobar</Text>
           </Pressable>
-        )}
-
-        {estado === 'pendiente' && (
+        ) : null}
+        {estado === 'pendiente' ? (
           <Pressable
             style={({ pressed }) => [styles.btnRechazar, pressed && { opacity: 0.85 }]}
             onPress={() => onUpdate(profile, 'rechazado')}
           >
             <Text style={styles.btnText}>Rechazar</Text>
           </Pressable>
-        )}
-
-        {estado === 'activa' && (
+        ) : null}
+        {estado === 'activa' ? (
           <Pressable
             style={({ pressed }) => [styles.btnRechazar, pressed && { opacity: 0.85 }]}
             onPress={() => onUpdate(profile, 'suspendida')}
           >
             <Text style={styles.btnText}>Suspender</Text>
           </Pressable>
-        )}
+        ) : null}
       </View>
     </View>
   );
