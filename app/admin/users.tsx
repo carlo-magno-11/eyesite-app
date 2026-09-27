@@ -16,6 +16,8 @@ interface ProfileRow {
   estado?: string | null;
   status?: string | null;
   created_at?: string | null;
+  updated_at?: string | null;
+  email_confirmed_at?: string | null;
 }
 
 const TABS = ['todos', 'pendiente', 'activa', 'suspendida'] as const;
@@ -35,62 +37,25 @@ export default function AdminUsers() {
     return ((p.estado ?? p.status ?? 'pendiente') as string).toLowerCase();
   }, []);
 
-  const fetchUsers = async () => {
+  const fetchUsers = useCallback(async () => {
     try {
       setLoading(true);
-      const { data: { user } } = await supabase.auth.getUser();
-      console.log('[users] fetching as', user?.email, 'uid:', user?.id);
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .order('created_at', { ascending: false });
-      console.log('[users] result count:', data?.length, 'error:', error);
+      setErrorMsg(null);
+
+      const { data, error } = await supabase.rpc('admin_list_profiles');
       if (error) {
         setErrorMsg(error.message);
-        console.error('[users] fetch falló:', {
+        console.error('[users] admin_list_profiles falló:', {
           code: error.code, message: error.message, details: error.details, hint: error.hint,
         });
         return;
       }
-      setProfiles(data || []);
-      setHasMore((data?.length ?? 0) >= PAGE_SIZE);
+
+      setProfiles((data ?? []) as ProfileRow[]);
+      setPage(0);
+      setHasMore(false);
     } catch (e: any) {
       console.error('[users] crash', e);
-      setErrorMsg(e.message ?? String(e));
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchPage = useCallback(async (p: number, append: boolean) => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      console.log('[users] fetching as', user?.email, 'uid:', user?.id);
-      const from = p * PAGE_SIZE;
-      const to = from + PAGE_SIZE - 1;
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(PAGE_SIZE)
-        .range(from, to);
-      console.log('[users] result count:', data?.length, 'error:', error);
-
-      if (error) {
-        // 42703/PGRST204 = falta la migración 20250517_profiles_admin_terms.sql
-        setErrorMsg(error.message);
-        console.error('[users] fetch falló:', {
-          code: error.code, message: error.message, details: error.details, hint: error.hint,
-        });
-        Alert.alert('Error', error.message);
-        return;
-      }
-      setProfiles((prev) => (append ? [...prev, ...(data as ProfileRow[])] : (data as ProfileRow[])));
-      setHasMore((data?.length ?? 0) === PAGE_SIZE);
-    } catch (e: any) {
-      console.error('[users] ERROR REAL:', {
-        code: e?.code, message: e?.message, details: e?.details, hint: e?.hint,
-      });
       setErrorMsg(e?.message ?? String(e));
     } finally {
       setLoading(false);
@@ -99,46 +64,45 @@ export default function AdminUsers() {
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      void fetchPage(0, false);
+      void fetchUsers();
     }, 0);
     return () => clearTimeout(timer);
-  }, [fetchPage]);
+  }, [fetchUsers]);
 
-  // Realtime: un usuario nuevo/actualizado aparece sin F5 (página inicial).
+  // Realtime: un usuario nuevo/actualizado aparece sin F5.
   useRealtimeTable('profiles', () => {
     console.log('[realtime] profiles changed -> refetch');
-    setProfiles([]);
-    setPage(0);
-    fetchUsers();
+    void fetchUsers();
   });
+
+  const updateEstado = async (profile: ProfileRow, nuevo: 'activa' | 'rechazado' | 'suspendida') => {
+    try {
+      const rpc =
+        nuevo === 'activa'
+          ? 'admin_approve_profile'
+          : nuevo === 'rechazado'
+            ? 'admin_reject_profile'
+            : 'admin_suspend_profile';
+
+      const { error } = await supabase.rpc(rpc, { p_profile_id: profile.id });
+      if (error) {
+        console.error('ADMIN_PROFILE_UPDATE_FAIL', error.code, error.message, error.details, error.hint);
+        Alert.alert('No se pudo actualizar', error.message);
+        return;
+      }
+
+      await fetchUsers();
+    } catch (e: any) {
+      console.error('ADMIN_PROFILE_UPDATE_FAIL', e?.code, e?.message, e?.details, e?.hint);
+      Alert.alert('No se pudo actualizar', e?.message || 'No se pudo actualizar');
+    }
+  };
+
 
   const filtered = useMemo(
     () => profiles.filter((p) => tab === 'todos' || estadoUI(p) === tab),
     [profiles, tab, estadoUI]
   );
-
-  const loadMore = () => {
-    const next = page + 1;
-    setPage(next);
-    fetchPage(next, true);
-  };
-
-  const updateEstado = async (profile: ProfileRow, nuevo: string) => {
-    try {
-      const { error } = await supabase.from('profiles').update({ estado: nuevo }).eq('id', profile.id);
-      if (error) {
-        console.error('ADMIN_UPDATE_FAIL', error.code, error.message, error.details, error.hint);
-        Alert.alert('Error', `${error.message}${error.details ? ' — ' + error.details : ''}`);
-        return;
-      }
-      setProfiles((prev) =>
-        prev.map((p) => (p.id === profile.id ? { ...p, estado: nuevo, status: nuevo } : p))
-      );
-    } catch (e: any) {
-      console.error('ADMIN_UPDATE_FAIL', e?.code, e?.message, e?.details, e?.hint);
-      Alert.alert('Error', e?.message || 'No se pudo actualizar');
-    }
-  };
 
   if (loading && profiles.length === 0) {
     return (
@@ -179,14 +143,7 @@ export default function AdminUsers() {
           <UserCard key={p.id} profile={p} estadoUI={estadoUI(p)} onUpdate={updateEstado} />
         ))}
 
-        {hasMore && (
-          <Pressable onPress={loadMore} style={styles.loadMore}>
-            <Text style={styles.loadMoreText}>CARGAR MÁS</Text>
-          </Pressable>
-        )}
-        {!hasMore && profiles.length > 0 && (
-          <Text style={styles.endText}>— fin —</Text>
-        )}
+
       </ScrollView>
     </ScreenContainer>
   );
@@ -220,6 +177,7 @@ const UserCard = React.memo(function UserCard({
       <Text style={styles.cardMeta}>Presupuesto: {profile.presupuesto != null ? String(profile.presupuesto) : "—"}</Text>
       {profile.created_at && (
         <Text style={styles.cardMeta}>Registro: {new Date(profile.created_at).toLocaleDateString()}</Text>
+      <Text style={styles.cardMeta}>Correo: {profile.email_confirmed_at ? 'verificado' : 'sin verificar'}</Text>
       )}
 
       <View style={styles.actions}>
