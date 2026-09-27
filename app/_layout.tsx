@@ -84,7 +84,7 @@ function AuthGate({ children }: { children: React.ReactNode }) {
     // over. Once onboarding is complete, pending accounts stay in /pending.
     const needsPendingOnboarding =
       profile?.estado === "pendiente" &&
-      !profile?.nombre?.trim();
+      !profile?.terminos_aceptados;
     const emailConfirmed = !!session?.user?.email_confirmed_at;
 
     if (!session && isProtected && current !== "(auth)/login") {
@@ -113,7 +113,9 @@ function AuthGate({ children }: { children: React.ReactNode }) {
 
       if (profile.estado === "pendiente") {
         if (needsPendingOnboarding) {
-          if (!inCreateProfile) router.replace("/(auth)/create-profile" as never);
+          if (!inCreateProfile && !inTerms) {
+            router.replace("/(auth)/create-profile" as never);
+          }
           return;
         }
 
