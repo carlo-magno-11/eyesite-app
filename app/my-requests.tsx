@@ -10,7 +10,7 @@ import { ScreenContainer } from "@/components/screen-container";
 export default function MyRequestsScreen() {
   const { user } = useAuth();
   const { horizontalPadding, contentMaxWidth } = useResponsive();
-  const { t, language } = useI18n();
+  const { t } = useI18n();
   const [items, setItems] = useState<any[]>([]);
   const [loadingData, setLoadingData] = useState(false);
   const loading = Boolean(user) && loadingData;
