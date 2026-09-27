@@ -22,15 +22,12 @@ interface ProfileRow {
 
 const TABS = ['todos', 'pendiente', 'activa', 'suspendida'] as const;
 type Tab = (typeof TABS)[number];
-
-const PAGE_SIZE = 100;
+type EstadoAction = 'activa' | 'rechazado' | 'suspendida';
 
 export default function AdminUsers() {
   const [profiles, setProfiles] = useState<ProfileRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [page, setPage] = useState(0);
-  const [hasMore, setHasMore] = useState(false);
   const [tab, setTab] = useState<Tab>('todos');
 
   const estadoUI = useCallback((p: ProfileRow): string => {
@@ -52,8 +49,6 @@ export default function AdminUsers() {
       }
 
       setProfiles((data ?? []) as ProfileRow[]);
-      setPage(0);
-      setHasMore(false);
     } catch (e: any) {
       console.error('[users] crash', e);
       setErrorMsg(e?.message ?? String(e));
@@ -75,7 +70,7 @@ export default function AdminUsers() {
     void fetchUsers();
   });
 
-  const updateEstado = async (profile: ProfileRow, nuevo: 'activa' | 'rechazado' | 'suspendida') => {
+  const updateEstado = async (profile: ProfileRow, nuevo: EstadoAction) => {
     try {
       const rpc =
         nuevo === 'activa'
@@ -98,10 +93,9 @@ export default function AdminUsers() {
     }
   };
 
-
   const filtered = useMemo(
     () => profiles.filter((p) => tab === 'todos' || estadoUI(p) === tab),
-    [profiles, tab, estadoUI]
+    [profiles, tab, estadoUI],
   );
 
   if (loading && profiles.length === 0) {
@@ -126,7 +120,6 @@ export default function AdminUsers() {
           </View>
         )}
 
-        {/* Tabs */}
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tabs}>
           {TABS.map((t) => (
             <Pressable
@@ -142,14 +135,11 @@ export default function AdminUsers() {
         {filtered.map((p) => (
           <UserCard key={p.id} profile={p} estadoUI={estadoUI(p)} onUpdate={updateEstado} />
         ))}
-
-
       </ScrollView>
     </ScreenContainer>
   );
 }
 
-// Card memoizada (React.memo) → evita re-renders al filtrar/recargar
 const UserCard = React.memo(function UserCard({
   profile,
   estadoUI: estado,
@@ -157,7 +147,7 @@ const UserCard = React.memo(function UserCard({
 }: {
   profile: ProfileRow;
   estadoUI: string;
-  onUpdate: (p: ProfileRow, nuevo: string) => Promise<void>;
+  onUpdate: (p: ProfileRow, nuevo: EstadoAction) => Promise<void>;
 }) {
   const nombre = profile.nombre || profile.full_name || '—';
   const telefono = profile.telefono || profile.phone || '—';
@@ -171,14 +161,21 @@ const UserCard = React.memo(function UserCard({
           <Text style={[styles.estadoText, { color: estadoColor }]}>{estado}</Text>
         </View>
       </View>
+
       <Text style={styles.cardEmail}>{profile.email || '—'}</Text>
       <Text style={styles.cardMeta}>Tel: {telefono}</Text>
-      <Text style={styles.cardMeta}>Zona: {profile.ciudad || "—"}</Text>
-      <Text style={styles.cardMeta}>Presupuesto: {profile.presupuesto != null ? String(profile.presupuesto) : "—"}</Text>
+      <Text style={styles.cardMeta}>Zona: {profile.ciudad || '—'}</Text>
+      <Text style={styles.cardMeta}>
+        Presupuesto: {profile.presupuesto != null ? String(profile.presupuesto) : '—'}
+      </Text>
       {profile.created_at && (
-        <Text style={styles.cardMeta}>Registro: {new Date(profile.created_at).toLocaleDateString()}</Text>
-      <Text style={styles.cardMeta}>Correo: {profile.email_confirmed_at ? 'verificado' : 'sin verificar'}</Text>
+        <Text style={styles.cardMeta}>
+          Registro: {new Date(profile.created_at).toLocaleDateString()}
+        </Text>
       )}
+      <Text style={styles.cardMeta}>
+        Correo: {profile.email_confirmed_at ? 'verificado' : 'sin verificar'}
+      </Text>
 
       <View style={styles.actions}>
         {estado !== 'activa' && (
@@ -189,12 +186,22 @@ const UserCard = React.memo(function UserCard({
             <Text style={styles.btnText}>Aprobar</Text>
           </Pressable>
         )}
-        {estado !== 'suspendida' && (
+
+        {estado === 'pendiente' && (
+          <Pressable
+            style={({ pressed }) => [styles.btnRechazar, pressed && { opacity: 0.85 }]}
+            onPress={() => onUpdate(profile, 'rechazado')}
+          >
+            <Text style={styles.btnText}>Rechazar</Text>
+          </Pressable>
+        )}
+
+        {estado === 'activa' && (
           <Pressable
             style={({ pressed }) => [styles.btnRechazar, pressed && { opacity: 0.85 }]}
             onPress={() => onUpdate(profile, 'suspendida')}
           >
-            <Text style={styles.btnText}>Rechazar</Text>
+            <Text style={styles.btnText}>Suspender</Text>
           </Pressable>
         )}
       </View>
@@ -247,15 +254,4 @@ const styles = StyleSheet.create({
   btnAprobar: { flex: 1, backgroundColor: '#22c55e', paddingVertical: 10, borderRadius: 8, alignItems: 'center' },
   btnRechazar: { flex: 1, backgroundColor: '#ef4444', paddingVertical: 10, borderRadius: 8, alignItems: 'center' },
   btnText: { color: '#FFFFFF', fontWeight: '700', fontSize: 13 },
-  loadMore: {
-    marginTop: 8,
-    backgroundColor: '#1A1A1A',
-    borderColor: '#C9A84C',
-    borderWidth: 1,
-    paddingVertical: 14,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  loadMoreText: { color: '#C9A84C', fontWeight: '700', letterSpacing: 0.5 },
-  endText: { color: '#6E6E6E', fontSize: 12, textAlign: 'center', marginTop: 12 },
 });
