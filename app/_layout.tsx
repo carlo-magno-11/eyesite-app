@@ -78,6 +78,13 @@ function AuthGate({ children }: { children: React.ReactNode }) {
       !inCreateProfile &&
       !inResetPassword &&
       !inPublicContent;
+
+    // A newly confirmed account starts as pendiente, but it must be able
+    // to finish the profile survey before the admin approval screen takes
+    // over. Once onboarding is complete, pending accounts stay in /pending.
+    const needsPendingOnboarding =
+      profile?.estado === "pendiente" &&
+      !profile?.nombre?.trim();
     const emailConfirmed = !!session?.user?.email_confirmed_at;
 
     if (!session && isProtected && current !== "(auth)/login") {
@@ -105,6 +112,11 @@ function AuthGate({ children }: { children: React.ReactNode }) {
       }
 
       if (profile.estado === "pendiente") {
+        if (needsPendingOnboarding) {
+          if (!inCreateProfile) router.replace("/(auth)/create-profile" as never);
+          return;
+        }
+
         if (!inPending) router.replace("/pending" as never);
         return;
       }
