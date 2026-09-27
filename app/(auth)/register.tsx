@@ -26,6 +26,7 @@ export default function RegisterScreen() {
   const { isDesktop } = useResponsive();
   const { t } = useI18n();
 
+  const [nombre, setNombre] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -91,7 +92,10 @@ export default function RegisterScreen() {
       return;
     }
 
+    const nombreLimpio = nombre.trim();
     const cleanEmail = email.trim().toLowerCase();
+
+    if (!nombreLimpio) return Alert.alert(t("missingInfo"), t("enterName"));
 
     // Validar correo
     if (!cleanEmail) {
@@ -133,6 +137,7 @@ export default function RegisterScreen() {
         email: cleanEmail,
         password,
         options: {
+          data: { nombre: nombreLimpio },
           emailRedirectTo:
             Platform.OS === "web"
               ? "https://auth.eyesite.mx/auth/callback"
@@ -260,6 +265,15 @@ export default function RegisterScreen() {
               <Text style={styles.subtitle}>
                 {t("registerSubtitle")}
               </Text>
+            </View>
+
+            {/* NOMBRE */}
+            <View style={styles.field}>
+              <Text style={styles.label}>{t("fullName")}</Text>
+              <View style={styles.inputWrap}>
+                <Ionicons name="person-outline" size={20} color="#888" style={styles.inputIcon} />
+                <TextInput value={nombre} onChangeText={setNombre} placeholder={t("fullNamePlaceholder")} placeholderTextColor="#666" autoCapitalize="words" autoCorrect={false} textContentType="name" autoComplete="name" returnKeyType="next" style={styles.input} />
+              </View>
             </View>
 
             {/* CORREO */}
