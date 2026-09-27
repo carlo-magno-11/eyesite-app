@@ -26,8 +26,8 @@ function AccountForm({ user, profile }: ProfileFormProps) {
 
   const saveProfile = async () => {
     if (saving) return;
-    if (!nombre.trim() || !ciudad.trim()) {
-      Alert.alert(t("missingAccountInfo"), t("nameCityRequired"));
+    if (!nombre.trim()) {
+      Alert.alert(t("missingAccountInfo"), t("enterName"));
       return;
     }
 
@@ -187,7 +187,7 @@ function AccountForm({ user, profile }: ProfileFormProps) {
             placeholderTextColor="#777"
           />
 
-          <Text style={styles.label}>{t("phoneWhatsapp")}</Text>
+          <Text style={styles.label}>{t("phoneWhatsapp")} <Text style={styles.optional}>({t("optional")})</Text></Text>
           <TextInput
             value={telefono}
             onChangeText={setTelefono}
@@ -197,7 +197,7 @@ function AccountForm({ user, profile }: ProfileFormProps) {
             placeholderTextColor="#777"
           />
 
-          <Text style={styles.label}>{t("cityZone")}</Text>
+          <Text style={styles.label}>{t("cityZone")} <Text style={styles.optional}>({t("optional")})</Text></Text>
           <TextInput
             value={ciudad}
             onChangeText={setCiudad}
@@ -206,7 +206,7 @@ function AccountForm({ user, profile }: ProfileFormProps) {
             placeholderTextColor="#777"
           />
 
-          <Text style={styles.label}>{t("budgetOptional")}</Text>
+          <Text style={styles.label}>{t("budgetOptional")} <Text style={styles.optional}>({t("optional")})</Text></Text>
           <TextInput
             value={presupuesto}
             onChangeText={setPresupuesto}
@@ -384,6 +384,7 @@ const styles = StyleSheet.create({
     fontSize: 11,
     marginTop: 2,
   },
+  optional: { color: "#777", fontWeight: "400" },
   label: {
     color:"#9A9A9A",
     fontSize: 10,
