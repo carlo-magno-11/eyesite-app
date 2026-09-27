@@ -11,6 +11,8 @@ interface ProfileRow {
   full_name?: string | null;
   telefono?: string | null;
   phone?: string | null;
+  ciudad?: string | null;
+  presupuesto?: number | string | null;
   estado?: string | null;
   status?: string | null;
   created_at?: string | null;
@@ -214,6 +216,8 @@ const UserCard = React.memo(function UserCard({
       </View>
       <Text style={styles.cardEmail}>{profile.email || '—'}</Text>
       <Text style={styles.cardMeta}>Tel: {telefono}</Text>
+      <Text style={styles.cardMeta}>Zona: {profile.ciudad || "—"}</Text>
+      <Text style={styles.cardMeta}>Presupuesto: {profile.presupuesto != null ? String(profile.presupuesto) : "—"}</Text>
       {profile.created_at && (
         <Text style={styles.cardMeta}>Registro: {new Date(profile.created_at).toLocaleDateString()}</Text>
       )}
