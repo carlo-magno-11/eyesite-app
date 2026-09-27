@@ -30,10 +30,6 @@ export default function RegisterScreen() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [passwordFocused, setPasswordFocused] = useState(false);
-  const [nombre, setNombre] = useState("");
-  const [telefono, setTelefono] = useState("");
-  const [ciudad, setCiudad] = useState("");
-  const [presupuesto, setPresupuesto] = useState("");
 
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -114,21 +110,6 @@ export default function RegisterScreen() {
       );
     }
 
-    const cleanNombre = nombre.trim();
-    const cleanTelefono = telefono.trim().replace(/\D/g, "");
-    const cleanCiudad = ciudad.trim();
-    const cleanPresupuesto = presupuesto.trim();
-
-    if (!cleanNombre) {
-      return Alert.alert(t("requiredName"), t("enterFullName"));
-    }
-    if (cleanTelefono.length < 10) {
-      return Alert.alert(t("invalidPhone"), t("validPhone"));
-    }
-    if (!cleanCiudad) {
-      return Alert.alert(t("requiredCity"), t("enterCity"));
-    }
-
     // Validar contraseña
     if (password.length < 8 || !passwordChecks.number || !passwordChecks.upper) {
       return Alert.alert(
@@ -152,12 +133,6 @@ export default function RegisterScreen() {
         email: cleanEmail,
         password,
         options: {
-          data: {
-            nombre: cleanNombre,
-            telefono: cleanTelefono,
-            ciudad: cleanCiudad,
-            presupuesto: cleanPresupuesto,
-          },
           emailRedirectTo:
             Platform.OS === "web"
               ? "https://auth.eyesite.mx/auth/callback"
@@ -314,39 +289,6 @@ export default function RegisterScreen() {
               </View>
             </View>
 
-            {/* DATOS DEL PERFIL */}
-            <View style={styles.field}>
-              <Text style={styles.label}>{t("fullName")}</Text>
-              <View style={styles.inputWrap}>
-                <Ionicons name="person-outline" size={20} color="#888" style={styles.inputIcon} />
-                <TextInput value={nombre} onChangeText={setNombre} placeholder={t("fullNamePlaceholder")} placeholderTextColor="#666" autoCapitalize="words" autoCorrect={false} style={styles.input} />
-              </View>
-            </View>
-
-            <View style={styles.field}>
-              <Text style={styles.label}>{t("phoneWhatsapp")}</Text>
-              <View style={styles.inputWrap}>
-                <Ionicons name="call-outline" size={20} color="#888" style={styles.inputIcon} />
-                <TextInput value={telefono} onChangeText={setTelefono} placeholder={t("phonePlaceholder")} placeholderTextColor="#666" keyboardType="phone-pad" style={styles.input} />
-              </View>
-            </View>
-
-            <View style={styles.field}>
-              <Text style={styles.label}>{t("cityZone")}</Text>
-              <View style={styles.inputWrap}>
-                <Ionicons name="location-outline" size={20} color="#888" style={styles.inputIcon} />
-                <TextInput value={ciudad} onChangeText={setCiudad} placeholder={t("cityPlaceholder")} placeholderTextColor="#666" autoCapitalize="words" autoCorrect={false} style={styles.input} />
-              </View>
-            </View>
-
-            <View style={styles.field}>
-              <Text style={styles.label}>{t("budgetOptional")} <Text style={styles.optional}>({t("optional")})</Text></Text>
-              <View style={styles.inputWrap}>
-                <Ionicons name="cash-outline" size={20} color="#888" style={styles.inputIcon} />
-                <TextInput value={presupuesto} onChangeText={setPresupuesto} placeholder={t("budgetPlaceholder")} placeholderTextColor="#666" keyboardType="default" style={styles.input} />
-              </View>
-            </View>
-
             {/* CONTRASEÑA */}
             <View style={styles.field}>
               <Text style={styles.label}>{t("password")}</Text>
@@ -363,6 +305,8 @@ export default function RegisterScreen() {
                   value={password}
                   onChangeText={setPassword}
                   placeholder={t("passwordMin")}
+                  autoComplete="new-password"
+                  textContentType="newPassword"
                   placeholderTextColor="#666"
                   secureTextEntry={!showPassword}
                   autoCapitalize="none"
