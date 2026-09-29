@@ -22,6 +22,7 @@ export default function PropertiesScreen() {
   const [minSurface, setMinSurface] = useState('');
   const [maxSurface, setMaxSurface] = useState('');
   const [sort, setSort] = useState<'recent' | 'priceAsc' | 'priceDesc' | 'surfaceDesc' | 'featured'>('recent');
+  const [filtersOpen, setFiltersOpen] = useState(false);
   useEffect(() => {
     const timer = setTimeout(() => setCatalogSearch(search), 300);
     return () => clearTimeout(timer);
@@ -66,6 +67,14 @@ export default function PropertiesScreen() {
   const { save } = useSavedSearches(user?.id);
 
   const visibleCountLabel = hasMore ? `${properties.length}+` : String(properties.length);
+  const activeFilterCount = [
+    activeFilter !== 'all', municipio.trim(), minPrice, maxPrice, minSurface, maxSurface, sort !== 'recent',
+  ].filter(Boolean).length;
+
+  const clearCatalogFilters = () => {
+    setActiveFilter('all'); setMunicipio(''); setMinPrice(''); setMaxPrice('');
+    setMinSurface(''); setMaxSurface(''); setSort('recent');
+  };
 
 
   return (
@@ -79,88 +88,90 @@ export default function PropertiesScreen() {
 
         </View>
 
-      {/* Barra de búsqueda */}
+      {/* Búsqueda + filtros compactos */}
       <View style={[styles.searchContainer, { paddingHorizontal: horizontalPadding, maxWidth: contentMaxWidth }, isDesktop && styles.contentCentered]}>
-        <View style={styles.searchBar}>
-          <IconSymbol name="magnifyingglass" size={16} color="#9A9A9A" />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Buscar por nombre o ubicación..."
-            placeholderTextColor="#9A9A9A"
-            value={search}
-            onChangeText={setSearch}
-            returnKeyType="search"
-          />
-          {search.length > 0 && (
-            <Pressable onPress={() => setSearch('')} style={({ pressed }) => [pressed && { opacity: 0.7 }]}>
-              <IconSymbol name="xmark" size={16} color="#9A9A9A" />
-            </Pressable>
-          )}
+        <View style={styles.searchControlsRow}>
+          <View style={styles.searchBar}>
+            <IconSymbol name="magnifyingglass" size={16} color="#9A9A9A" />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Buscar por nombre o ubicación..."
+              placeholderTextColor="#9A9A9A"
+              value={search}
+              onChangeText={setSearch}
+              returnKeyType="search"
+            />
+            {search.length > 0 && (
+              <Pressable onPress={() => setSearch('')} style={({ pressed }) => [pressed && { opacity: 0.7 }]}>
+                <IconSymbol name="xmark" size={16} color="#9A9A9A" />
+              </Pressable>
+            )}
+          </View>
+          <Pressable
+            onPress={() => setFiltersOpen((value) => !value)}
+            style={({ pressed }) => [styles.filterToggle, filtersOpen && styles.filterToggleActive, pressed && { opacity: 0.78 }]}
+            accessibilityRole="button"
+            accessibilityState={{ expanded: filtersOpen }}
+          >
+            <IconSymbol name="slider.horizontal.3" size={16} color={filtersOpen ? '#0D0D0D' : '#C9A84C'} />
+            <Text style={[styles.filterToggleText, filtersOpen && styles.filterToggleTextActive]}>Filtros</Text>
+            {activeFilterCount > 0 && <View style={styles.filterCount}><Text style={styles.filterCountText}>{activeFilterCount}</Text></View>}
+          </Pressable>
         </View>
       </View>
 
-      <View style={[styles.advancedFilters, { paddingHorizontal: horizontalPadding, maxWidth: contentMaxWidth }, isDesktop && styles.contentCentered]}>
-        <TextInput style={styles.filterInput} placeholder="Zona / municipio" placeholderTextColor="#777" value={municipio} onChangeText={setMunicipio} />
-        <TextInput style={styles.filterInput} placeholder="Precio mínimo" placeholderTextColor="#777" value={minPrice} onChangeText={setMinPrice} keyboardType="numeric" />
-        <TextInput style={styles.filterInput} placeholder="Precio máximo" placeholderTextColor="#777" value={maxPrice} onChangeText={setMaxPrice} keyboardType="numeric" />
-        <TextInput style={styles.filterInput} placeholder="Superficie mínima m²" placeholderTextColor="#777" value={minSurface} onChangeText={setMinSurface} keyboardType="numeric" />
-        <TextInput style={styles.filterInput} placeholder="Superficie máxima m²" placeholderTextColor="#777" value={maxSurface} onChangeText={setMaxSurface} keyboardType="numeric" />
-      </View>
+      {filtersOpen && (
+        <View style={[styles.filterPanel, { paddingHorizontal: horizontalPadding, maxWidth: contentMaxWidth }, isDesktop && styles.contentCentered]}>
+          <View style={styles.filterPanelHeader}>
+            <View>
+              <Text style={styles.filterPanelTitle}>FILTRAR PROPIEDADES</Text>
+              <Text style={styles.filterPanelHint}>{activeFilterCount ? activeFilterCount + ' filtros activos' : 'Ajusta tu búsqueda'}</Text>
+            </View>
+            {activeFilterCount > 0 && <Pressable onPress={clearCatalogFilters}><Text style={styles.clearFilters}>Limpiar</Text></Pressable>}
+          </View>
 
-      {/* Filtros */}
-      <View style={[styles.filtersWrapper, { maxWidth: contentMaxWidth }, isDesktop && styles.contentCentered]}>
-        <FlatList
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          data={PROPERTY_TYPES_OPTIONS}
-          keyExtractor={(item) => item.key}
-          contentContainerStyle={[styles.filtersContainer, { paddingHorizontal: horizontalPadding }]}
-          renderItem={({ item }) => (
-            <Pressable
-              onPress={() => setActiveFilter(item.key)}
-              style={({ pressed }) => [
-                styles.filterChip,
-                activeFilter === item.key && styles.filterChipActive,
-                pressed && { opacity: 0.7 },
-              ]}
-            >
-              <Text
-                style={[
-                  styles.filterText,
-                  activeFilter === item.key && styles.filterTextActive,
-                ]}
-              >
-                {item.label}
-              </Text>
-            </Pressable>
-          )}
-        />
-      </View>
+          <View style={styles.filterSection}>
+            <Text style={styles.filterSectionLabel}>TIPO</Text>
+            <FlatList
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              data={[{ key: 'all', label: 'Todos' }, ...PROPERTY_TYPES_OPTIONS]}
+              keyExtractor={(item) => item.key}
+              contentContainerStyle={styles.filtersContainer}
+              renderItem={({ item }) => (
+                <Pressable
+                  onPress={() => setActiveFilter(item.key)}
+                  style={({ pressed }) => [styles.filterChip, activeFilter === item.key && styles.filterChipActive, pressed && { opacity: 0.7 }]}
+                >
+                  <Text style={[styles.filterText, activeFilter === item.key && styles.filterTextActive]}>{item.label}</Text>
+                </Pressable>
+              )}
+            />
+          </View>
 
-      <View style={[styles.sortWrapper, { paddingHorizontal: horizontalPadding, maxWidth: contentMaxWidth }, isDesktop && styles.contentCentered]}>
-        <Text style={styles.sortLabel}>{t('catalogSortLabel')}</Text>
-        <View style={styles.sortChips}>
-          {[
-            ['recent', t('sortRecent')],
-            ['priceAsc', t('sortPriceAsc')],
-            ['priceDesc', t('sortPriceDesc')],
-            ['surfaceDesc', t('sortSurfaceDesc')],
-            ['featured', t('sortFeatured')],
-          ].map(([value, label]) => (
-            <Pressable
-              key={value}
-              onPress={() => setSort(value as typeof sort)}
-              style={({ pressed }) => [
-                styles.sortChip,
-                sort === value && styles.sortChipActive,
-                pressed && { opacity: 0.7 },
-              ]}
-            >
-              <Text style={[styles.sortChipText, sort === value && styles.sortChipTextActive]}>{label}</Text>
-            </Pressable>
-          ))}
+          <View style={styles.advancedFilters}>
+            <TextInput style={styles.filterInput} placeholder="Zona / municipio" placeholderTextColor="#777" value={municipio} onChangeText={setMunicipio} />
+            <TextInput style={styles.filterInput} placeholder="Precio mínimo" placeholderTextColor="#777" value={minPrice} onChangeText={setMinPrice} keyboardType="numeric" />
+            <TextInput style={styles.filterInput} placeholder="Precio máximo" placeholderTextColor="#777" value={maxPrice} onChangeText={setMaxPrice} keyboardType="numeric" />
+            <TextInput style={styles.filterInput} placeholder="Superficie mínima m²" placeholderTextColor="#777" value={minSurface} onChangeText={setMinSurface} keyboardType="numeric" />
+            <TextInput style={styles.filterInput} placeholder="Superficie máxima m²" placeholderTextColor="#777" value={maxSurface} onChangeText={setMaxSurface} keyboardType="numeric" />
+          </View>
+
+          <View style={styles.sortWrapper}>
+            <Text style={styles.sortLabel}>{t('catalogSortLabel')}</Text>
+            <View style={styles.sortChips}>
+              {[
+                ['recent', t('sortRecent')], ['priceAsc', t('sortPriceAsc')], ['priceDesc', t('sortPriceDesc')],
+                ['surfaceDesc', t('sortSurfaceDesc')], ['featured', t('sortFeatured')],
+              ].map(([value, label]) => (
+                <Pressable key={value} onPress={() => setSort(value as typeof sort)} style={({ pressed }) => [styles.sortChip, sort === value && styles.sortChipActive, pressed && { opacity: 0.7 }]}>
+                  <Text style={[styles.sortChipText, sort === value && styles.sortChipTextActive]}>{label}</Text>
+                </Pressable>
+              ))}
+            </View>
+          </View>
         </View>
-      </View>
+      )}
 
       <View style={[styles.savedSearchRow, { paddingHorizontal: horizontalPadding, maxWidth: contentMaxWidth }, isDesktop && styles.contentCentered]}>
         <Pressable
@@ -287,8 +298,9 @@ const styles = StyleSheet.create({
   },
   searchContainer: {
     paddingHorizontal: 0,
-    paddingBottom: 12,
+    paddingBottom: 10,
   },
+  searchControlsRow: { flexDirection: 'row', alignItems: 'stretch', gap: 8 },
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -305,6 +317,19 @@ const styles = StyleSheet.create({
     color: '#F5F5F5',
     fontSize: 14,
   },
+  filterToggle: { minWidth: 112, paddingHorizontal: 14, borderRadius: 10, borderWidth: 1, borderColor: '#2A2A2A', backgroundColor: '#141414', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7 },
+  filterToggleActive: { backgroundColor: '#C9A84C', borderColor: '#C9A84C' },
+  filterToggleText: { color: '#C9A84C', fontSize: 12, fontWeight: '800' },
+  filterToggleTextActive: { color: '#0D0D0D' },
+  filterCount: { minWidth: 20, height: 20, borderRadius: 10, backgroundColor: '#C9A84C', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 5 },
+  filterCountText: { color: '#0D0D0D', fontSize: 10, fontWeight: '900' },
+  filterPanel: { width: '100%', alignSelf: 'center', marginBottom: 10, paddingTop: 14, paddingBottom: 4, backgroundColor: '#111111', borderRadius: 14, borderWidth: 1, borderColor: '#252525' },
+  filterPanelHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
+  filterPanelTitle: { color: '#F5F5F5', fontSize: 11, fontWeight: '900', letterSpacing: 1 },
+  filterPanelHint: { color: '#6F6F6F', fontSize: 10, marginTop: 3 },
+  clearFilters: { color: '#C9A84C', fontSize: 11, fontWeight: '800' },
+  filterSection: { marginBottom: 4 },
+  filterSectionLabel: { color: '#666', fontSize: 9, fontWeight: '900', letterSpacing: 1, marginBottom: 6 },
   advancedFilters: {
     width: '100%',
     alignSelf: 'center',
