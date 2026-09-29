@@ -1,0 +1,18 @@
+<!-- Supabase Auth > Email Templates > Confirm signup -->
+<h2>Confirma tu correo de EYESITE</h2>
+<p>Gracias por crear tu cuenta en EYESITE.</p>
+
+<p>Haz clic en el siguiente botón para confirmar tu correo electrónico:</p>
+<p>
+  <a href="https://auth.eyesite.mx/callback?token_hash={{ .TokenHash }}&amp;type=email"
+     style="display:inline-block;padding:13px 22px;border-radius:10px;background:#c9a84c;color:#0e0e0e;text-decoration:none;font-weight:700;">
+    Confirmar correo
+  </a>
+</p>
+
+<p>Si el botón no abre, copia y pega este enlace en tu navegador:</p>
+<p style="word-break:break-all;">
+  https://auth.eyesite.mx/callback?token_hash={{ .TokenHash }}&amp;type=email
+</p>
+
+<p>Si no creaste esta cuenta, puedes ignorar este mensaje.</p>
