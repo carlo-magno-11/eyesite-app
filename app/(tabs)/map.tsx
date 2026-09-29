@@ -7,7 +7,6 @@ import {
   StyleSheet,
   Text,
   View,
-  useWindowDimensions,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import * as Location from "expo-location";
@@ -470,7 +469,6 @@ function createMapHtml(
 export default function MapScreen() {
   const router = useRouter();
   const { t } = useI18n();
-  const { width: windowWidth, height: windowHeight } = useWindowDimensions();
   const { propertyId: focusPropertyIdParam } = useLocalSearchParams<{ propertyId?: string }>();
   const focusPropertyId = typeof focusPropertyIdParam === "string" ? focusPropertyIdParam : null;
 
