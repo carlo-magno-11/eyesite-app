@@ -2487,6 +2487,23 @@
     font-size: 11px;
     margin-top: 8px;
   }
+
+    .property-tools{gap:14px;align-items:center;}
+    .property-search-row{display:flex;align-items:center;gap:8px;min-width:min(100%,520px);}
+    .property-search-row .tsrch{flex:1;min-width:180px;}
+    .property-filter-btn{height:40px;padding:0 14px;border:1px solid #2A2A2A;border-radius:10px;background:#141414;color:#C9A84C;font-weight:800;cursor:pointer;white-space:nowrap;}
+    .property-filter-btn.active{background:#C9A84C;color:#0D0D0D;border-color:#C9A84C;}
+    .property-filter-count{display:inline-flex;min-width:20px;height:20px;margin-left:5px;border-radius:10px;align-items:center;justify-content:center;background:#C9A84C;color:#0D0D0D;font-size:10px;}
+    .property-filter-panel{margin:0 0 14px;padding:14px 16px;border:1px solid #292929;border-radius:12px;background:#111;}
+    .property-filter-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+    .property-filter-head strong{display:block;color:#F5F5F5;font-size:11px;letter-spacing:1px;}
+    .property-filter-head small{display:block;color:#6F6F6F;margin-top:3px;}
+    .property-filter-clear{border:0;background:none;color:#C9A84C;font-weight:800;cursor:pointer;}
+    .property-filter-grid{display:grid;grid-template-columns:repeat(5,minmax(130px,1fr));gap:9px;}
+    .property-filter-grid label{display:flex;flex-direction:column;gap:5px;color:#777;font-size:10px;font-weight:800;}
+    .property-filter-grid input,.property-filter-grid select{width:100%;height:38px;padding:0 10px;border:1px solid #2A2A2A;border-radius:9px;background:#181818;color:#F5F5F5;box-sizing:border-box;}
+    @media(max-width:900px){.property-tools{align-items:stretch;flex-direction:column;}.property-search-row{min-width:0;}.property-filter-grid{grid-template-columns:repeat(2,minmax(0,1fr));}}
+    @media(max-width:560px){.property-search-row{flex-direction:column;}.property-search-row .tsrch,.property-filter-btn{width:100%;}.property-filter-grid{grid-template-columns:1fr;}}
   </style>
 
   </head>
