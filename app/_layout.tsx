@@ -252,13 +252,13 @@ export default Sentry.wrap(function RootLayout() {
   }, [router, authLoading, profile?.estado, profile?.terminos_aceptados, profile?.terminos_version, session?.user?.id, session?.user?.email_confirmed_at]);
 
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
+    <GestureHandlerRootView style={{ flex: 1, width: "100%", minHeight: 0 }}>
       <QueryClientProvider client={queryClient}>
         <SafeAreaProvider>
           <ThemeProvider>
             <I18nProvider>
             <AuthGate>
-              <Stack screenOptions={{ headerShown: false, animation: "fade", contentStyle: { backgroundColor: "#fff" }}} />
+              <Stack screenOptions={{ headerShown: false, animation: "fade", contentStyle: { backgroundColor: "#fff", flex: 1, minHeight: 0, width: "100%" }}} />
             </AuthGate>
             </I18nProvider>
           </ThemeProvider>
