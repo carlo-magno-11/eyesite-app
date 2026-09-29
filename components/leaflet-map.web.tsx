@@ -39,8 +39,15 @@ export function LeafletMap({ html, onMessage, style, onLoad, command }: LeafletM
       onLoad={onLoad}
       style={{
         ...(StyleSheet.flatten(style) as React.CSSProperties),
+        position: "absolute",
+        top: 0,
+        right: 0,
+        bottom: 0,
+        left: 0,
         width: "100%",
         height: "100%",
+        minWidth: 0,
+        minHeight: 0,
         border: "none",
         display: "block",
         backgroundColor: "#0B0B0B",
