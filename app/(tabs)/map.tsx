@@ -831,23 +831,6 @@ export default function MapScreen() {
           </View>
         )}
       </View>
-
-              <View style={styles.resultContent}>
-                <Text numberOfLines={1} style={styles.resultTitle}>
-                  {getPropertyTitle(item)}
-                </Text>
-
-                <Text style={styles.resultMeta}>
-                  {item.municipio || item.location || "Yucatán"}
-                  {distance !== undefined ? ` · ${distance.toFixed(1)} km ${t("kmFromYou")}` : ""}
-                </Text>
-              </View>
-
-              <Text style={styles.arrow}>›</Text>
-            </Pressable>
-          );
-        })}
-      </View>
     </ScreenContainer>
   );
 }
