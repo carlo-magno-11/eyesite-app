@@ -1450,37 +1450,99 @@ function renderPropiedades(list = propiedades) {
    FILTRO DE PROPIEDADES
    ============================================================ */
 
-function filterT(value) {
-  const q = String(value || "")
-    .toLowerCase()
-    .trim();
-
-  if (!q) {
-    renderPropiedades(propiedades);
-
-    return;
-  }
-
-  const result = propiedades.filter((p) => {
-    const text = [
-      getPropTitle(p),
-      getPropType(p),
-      getMunicipio(p),
-      p.estado,
-      p.status,
-      p.descripcion,
-      p.direccion,
-    ]
-      .filter(Boolean)
-      .join(" ")
-      .toLowerCase();
-
-    return text.includes(q);
-  });
-
-  renderPropiedades(result);
+function getPropertyFilterState() {
+  return {
+    q: String(document.getElementById("propertySearch")?.value || "").trim().toLowerCase(),
+    tipo: String(document.getElementById("propertyFilterType")?.value || "").trim().toLowerCase(),
+    estado: String(document.getElementById("propertyFilterStatus")?.value || "").trim().toLowerCase(),
+    municipio: String(document.getElementById("propertyFilterMunicipio")?.value || "").trim().toLowerCase(),
+    minPrice: Number(document.getElementById("propertyFilterMinPrice")?.value || 0),
+    maxPrice: Number(document.getElementById("propertyFilterMaxPrice")?.value || 0),
+  };
 }
 
+function getFilteredProperties() {
+  const f = getPropertyFilterState();
+
+  return propiedades.filter((p) => {
+    const searchText = [
+      getPropTitle(p), getPropType(p), getMunicipio(p),
+      p.estado, p.status, p.descripcion, p.direccion,
+    ].filter(Boolean).join(" ").toLowerCase();
+
+    const tipo = String(getPropType(p) || "").toLowerCase();
+    const municipio = String(getMunicipio(p) || "").toLowerCase();
+    const rawStatus = String(p.estado ?? p.status ?? "").trim().toLowerCase();
+    const estado = p.activa === false || ["inactiva", "inactivo", "desactivada", "desactivado", "inactive"].includes(rawStatus)
+      ? "inactiva"
+      : "activa";
+    const precio = Number(getPrecio(p) || 0);
+
+    if (f.q && !searchText.includes(f.q)) return false;
+    if (f.tipo && !tipo.includes(f.tipo)) return false;
+    if (f.estado && estado !== f.estado) return false;
+    if (f.municipio && !municipio.includes(f.municipio)) return false;
+    if (f.minPrice > 0 && precio < f.minPrice) return false;
+    if (f.maxPrice > 0 && precio > f.maxPrice) return false;
+
+    return true;
+  });
+}
+
+function updatePropertyFilterUi() {
+  const f = getPropertyFilterState();
+  const count = [f.tipo, f.estado, f.municipio, f.minPrice > 0, f.maxPrice > 0].filter(Boolean).length;
+  const badge = document.getElementById("propertyFilterCount");
+  const button = document.getElementById("propertyFilterBtn");
+  const summary = document.getElementById("propertyFilterSummary");
+
+  if (badge) badge.textContent = String(count);
+  if (button) button.classList.toggle("active", count > 0);
+
+  if (summary) {
+    const total = getFilteredProperties().length;
+    summary.textContent = count
+      ? count + " filtros activos · " + total + " resultados"
+      : total + " resultados";
+  }
+}
+
+function togglePropertyFilters(force) {
+  const panel = document.getElementById("propertyFilterPanel");
+  const button = document.getElementById("propertyFilterBtn");
+  if (!panel) return;
+
+  const open = typeof force === "boolean" ? force : panel.hidden;
+  panel.hidden = !open;
+  if (button) button.setAttribute("aria-expanded", open ? "true" : "false");
+  updatePropertyFilterUi();
+}
+
+function clearPropertyFilters() {
+  ["propertyFilterType", "propertyFilterStatus", "propertyFilterMunicipio", "propertyFilterMinPrice", "propertyFilterMaxPrice"]
+    .forEach((id) => {
+      const element = document.getElementById(id);
+      if (element) element.value = "";
+    });
+
+  const search = document.getElementById("propertySearch");
+  if (search) search.value = "";
+
+  renderPropiedades(propiedades);
+  updatePropertyFilterUi();
+}
+
+function applyPropertyFilters() {
+  const result = getFilteredProperties();
+  renderPropiedades(result);
+  updatePropertyFilterUi();
+}
+
+function filterT(value) {
+  const search = document.getElementById("propertySearch");
+  if (search && search.value !== String(value || "")) search.value = String(value || "");
+  applyPropertyFilters();
+}
 /* ============================================================
    PENDIENTES
    ============================================================ */
