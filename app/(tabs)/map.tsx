@@ -470,7 +470,7 @@ function createMapHtml(
 export default function MapScreen() {
   const router = useRouter();
   const { t } = useI18n();
-  const { height: windowHeight } = useWindowDimensions();
+  const { width: windowWidth, height: windowHeight } = useWindowDimensions();
   const { propertyId: focusPropertyIdParam } = useLocalSearchParams<{ propertyId?: string }>();
   const focusPropertyId = typeof focusPropertyIdParam === "string" ? focusPropertyIdParam : null;
 
@@ -669,9 +669,15 @@ export default function MapScreen() {
   // reducido por una altura fija pequeña. El footer permanece compacto debajo.
   const unlocatedCount = Math.max(properties.length - geoProperties.length, 0);
 
+  // On web the map should use the viewport rather than a small fixed box.
+  // Keep enough room for the header, the result summary and the bottom tab bar,
+  // while scaling the map up on desktop displays.
   const webMapHeight = Math.max(
-    520,
-    Math.min(Math.round(windowHeight - 250), 900),
+    windowWidth < 600 ? 420 : windowWidth < 1024 ? 500 : 560,
+    Math.min(
+      Math.round(windowHeight - (windowWidth < 600 ? 225 : 190)),
+      windowWidth >= 1440 ? 1050 : 900,
+    ),
   );
 
   const handleMapMessage = useCallback(
@@ -898,7 +904,9 @@ const styles = StyleSheet.create({
   mapWrap: {
     flex: 1,
     minHeight: 360,
-    marginHorizontal: 12,
+    width: "100%",
+    alignSelf: "center",
+    marginHorizontal: 0,
     borderRadius: 16,
     overflow: "hidden",
     borderWidth: 1,
