@@ -8,7 +8,7 @@ const supabaseAnonKey =
   process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ||
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhodnB2cHZ0a2Rnbm54ZHdkcmtuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODcwODk5MTEsImV4cCI6MjEwMjY2NTkxMX0.zsEMjmhbln24S25FnbKvlkic2djzON8QoXNLO8CtXA0';
 
-if (!supabaseUrl || !supabaseAnonKey) {
+if (!supabaseUrl || !supabaseKey) {
   console.error('[supabase] Faltan EXPO_PUBLIC_SUPABASE_URL / ANON_KEY en .env');
 }
 
@@ -28,7 +28,7 @@ const getStorage = () => {
 
 export const supabase: SupabaseClient =
   globalThis.__eyesi_supabase__ ??
-  createClient(supabaseUrl, supabaseAnonKey, {
+  createClient(supabaseUrl, supabaseKey, {
     auth: {
       storage: getStorage() as any,
       storageKey: 'eyesi-auth',
