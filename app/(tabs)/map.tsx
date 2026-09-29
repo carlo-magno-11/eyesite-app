@@ -700,6 +700,7 @@ export default function MapScreen() {
     <ScreenContainer
       edges={["top", "left", "right"]}
       containerClassName="bg-background"
+      style={Platform.OS === "web" ? styles.webScreen : undefined}
     >
       <View style={styles.header}>
         <View style={styles.headerContent}>
@@ -746,13 +747,20 @@ export default function MapScreen() {
         style={[
           styles.mapWrap,
           Platform.OS === "web" && {
-            flex: 1,
-            flexGrow: 1,
-            flexShrink: 1,
-            flexBasis: 0,
-            minHeight: 0,
+            position: "absolute",
+            left: 0,
+            right: 0,
+            top: 76,
+            bottom: 0,
             width: "100%",
+            height: "auto",
+            flex: undefined,
+            flexGrow: 0,
+            flexShrink: 0,
+            minWidth: 0,
+            minHeight: 0,
             alignSelf: "stretch",
+            zIndex: 1,
           },
         ]}
       >
@@ -784,7 +792,28 @@ export default function MapScreen() {
         </>
       </View>
 
-      <View style={styles.footer}>
+      <View
+        style={[
+          styles.footer,
+          Platform.OS === "web" && {
+            position: "absolute",
+            left: 18,
+            right: 18,
+            bottom: 8,
+            width: "auto",
+            maxHeight: 150,
+            overflow: "hidden",
+            paddingHorizontal: 12,
+            paddingTop: 10,
+            paddingBottom: 8,
+            backgroundColor: "rgba(13,13,13,0.94)",
+            borderRadius: 14,
+            borderWidth: 1,
+            borderColor: "#2A2A2A",
+            zIndex: 5,
+          },
+        ]}
+      >
         <Text style={styles.footerTitle}>
           {userLocation ? t("mapNearbyTitle") : t("mapLocatedTitle")}
         </Text>
@@ -834,6 +863,11 @@ export default function MapScreen() {
 }
 
 const styles = StyleSheet.create({
+  webScreen: {
+    position: "relative",
+    overflow: "hidden",
+  },
+
   header: {
     flexDirection: "row",
     alignItems: "center",
