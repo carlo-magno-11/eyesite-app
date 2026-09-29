@@ -34,11 +34,12 @@ export default function PropertiesScreen() {
   // Keep the chip selection synchronized when navigation changes the filter
   // (for example, Home -> Propiedades?filter=Terreno) without remounting.
   useEffect(() => {
-    setActiveFilter(
+    const nextFilter =
       typeof params.filter === 'string' && params.filter.trim()
         ? params.filter.trim()
-        : 'all',
-    );
+        : 'all';
+    const timer = setTimeout(() => setActiveFilter(nextFilter), 0);
+    return () => clearTimeout(timer);
   }, [params.filter]);
   const catalogOptions = useMemo(() => ({
     search: catalogSearch,
