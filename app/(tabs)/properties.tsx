@@ -29,6 +29,16 @@ export default function PropertiesScreen() {
 
   const initialFilter = typeof params.filter === 'string' && params.filter ? params.filter : 'all';
   const [activeFilter, setActiveFilter] = useState<string>(initialFilter);
+
+  // Keep the chip selection synchronized when navigation changes the filter
+  // (for example, Home -> Propiedades?filter=Terreno) without remounting.
+  useEffect(() => {
+    setActiveFilter(
+      typeof params.filter === 'string' && params.filter.trim()
+        ? params.filter.trim()
+        : 'all',
+    );
+  }, [params.filter]);
   const catalogOptions = useMemo(() => ({
     search: catalogSearch,
     municipio,
