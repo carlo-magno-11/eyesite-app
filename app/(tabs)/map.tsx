@@ -445,8 +445,19 @@ function createMapHtml(
   // split-screen, tablet rotation, etc.).
   const refreshMapSize = () => map.invalidateSize({ pan: false });
   window.addEventListener('resize', refreshMapSize);
+
+  // A desktop browser can resize the WebView/iframe without firing a window
+  // resize (sidebar changes, split view, devtools, responsive layout, etc.).
+  // Observe the actual map container so Leaflet always recalculates its tiles.
+  const mapResizeObserver =
+    typeof ResizeObserver !== 'undefined'
+      ? new ResizeObserver(refreshMapSize)
+      : null;
+  mapResizeObserver?.observe(document.getElementById('map'));
+
   setTimeout(refreshMapSize, 0);
   setTimeout(refreshMapSize, 250);
+  setTimeout(refreshMapSize, 800);
 
   // The default view is the whole state of Yucatán. User location is optional
   // and never replaces the initial statewide view.
@@ -659,8 +670,8 @@ export default function MapScreen() {
   const unlocatedCount = Math.max(properties.length - geoProperties.length, 0);
 
   const webMapHeight = Math.max(
-    500,
-    Math.min(Math.round(windowHeight * 0.70), 860),
+    520,
+    Math.min(Math.round(windowHeight - 250), 900),
   );
 
   const handleMapMessage = useCallback(
@@ -738,7 +749,7 @@ export default function MapScreen() {
           <LeafletMap
             html={mapHtml}
             onMessage={handleMapMessage}
-            style={StyleSheet.absoluteFill}
+            style={[StyleSheet.absoluteFill, { width: '100%', height: '100%' }]}
           />
 
           {loading && (
