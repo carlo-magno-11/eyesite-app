@@ -37,7 +37,14 @@ export function LeafletMap({ html, onMessage, style, onLoad, command }: LeafletM
       title="Mapa de propiedades EYESITE"
       srcDoc={html}
       onLoad={onLoad}
-      style={{ ...(StyleSheet.flatten(style) as React.CSSProperties), border: "none", display: "block" }}
+      style={{
+        ...(StyleSheet.flatten(style) as React.CSSProperties),
+        width: "100%",
+        height: "100%",
+        border: "none",
+        display: "block",
+        backgroundColor: "#0B0B0B",
+      }}
     />
   );
 }
