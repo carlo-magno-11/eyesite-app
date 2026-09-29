@@ -303,6 +303,8 @@ Deno.serve(async (req) => {
     let sent = 0;
     const invalidTokens: string[] = [];
     const deliveryNow = new Date().toISOString();
+    let lastExpoResponseOk = true;
+    let lastExpoResult: any = { data: [] };
 
     for (const batch of chunks(messages, EXPO_BATCH_SIZE)) {
       try {
@@ -313,6 +315,8 @@ Deno.serve(async (req) => {
           body: JSON.stringify(expoMessages),
         });
         const expoResult = await expoResponse.json();
+        lastExpoResponseOk = expoResponse.ok;
+        lastExpoResult = expoResult;
         const tickets = Array.isArray(expoResult?.data) ? expoResult.data : [];
 
         await mapWithConcurrency(batch, DB_CONCURRENCY, async (message, index) => {
@@ -433,13 +437,13 @@ Deno.serve(async (req) => {
 
     return new Response(
       JSON.stringify({
-        ok: expoResponse.ok,
+        ok: lastExpoResponseOk,
         attempted: messages.length,
         sent,
         invalid_tokens: invalidTokens.length,
-        result: expoResult,
+        result: lastExpoResult,
       }),
-      { status: expoResponse.ok ? 200 : 502, headers: H },
+      { status: lastExpoResponseOk ? 200 : 502, headers: H },
     );
   } catch (error) {
     console.error("[send-notification]", error);
