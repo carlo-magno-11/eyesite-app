@@ -6,7 +6,7 @@ import AuthBackground from "@/components/AuthBackground";
 
 const getAuthRedirect = () =>
   Platform.OS === "web"
-    ? "https://auth.eyesite.mx/auth/callback"
+    ? "https://auth.eyesite.mx/callback"
     : "eyesite://auth/callback";
 
 export default function ForgotPasswordScreen() {
