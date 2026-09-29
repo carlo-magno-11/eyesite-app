@@ -78,8 +78,8 @@
     el.classList.remove("hidden");
   };
 
-  const params = new URLSearchParams(location.search);
-  const emailParam = params.get("email");
+  const params = new URLSearchParams(location.search); const hashParams = new URLSearchParams(location.hash.replace(/^#/,"")); const getParam = (name) => params.get(name) || hashParams.get(name); const accessToken = getParam("access_token"); const refreshToken = getParam("refresh_token"); const authError = getParam("error"); const authErrorCode = getParam("error_code"); const authErrorDescription = getParam("error_description");
+  if (authError || authErrorCode) { message(globalMessage, authErrorDescription || (authErrorCode === "otp_expired" ? "El enlace expiró o ya fue utilizado. Solicita uno nuevo." : "El enlace de autenticación no es válido."), true); } const emailParam = params.get("email");
   if (emailParam) email.value = emailParam.trim().toLowerCase();
 
   $("requestBtn").addEventListener("click", async () => {
