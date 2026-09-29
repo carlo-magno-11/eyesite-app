@@ -52,8 +52,6 @@ export default function CreateProfileScreen() {
     if (saving) return;
 
     const nombreLimpio = nombre.trim();
-    const telefonoSoloNumeros = telefono.trim().replace(/\D/g, '');
-
     if (!nombreLimpio) {
       Alert.alert(t("missingInfo"), t("enterName"));
       return;
