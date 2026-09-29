@@ -5,6 +5,34 @@ import { router } from "expo-router";
 
 import { supabase } from "@/lib/supabase";
 
+const AUTH_WEB_CALLBACK = "https://auth.eyesite.mx/callback";
+
+function getUrlParams(url: string) {
+  const parsed = Linking.parse(url);
+  const query = parsed.queryParams ?? {};
+
+  // Web implicit-flow errors/sessions can arrive in the URL fragment.
+  // expo-linking exposes query params separately, so parse the raw URL too.
+  const hash = url.includes("#") ? url.split("#", 2)[1] : "";
+  const fragment = new URLSearchParams(hash);
+
+  const get = (name: string) => {
+    const queryValue = query[name];
+    if (typeof queryValue === "string") return queryValue;
+    const fragmentValue = fragment.get(name);
+    return fragmentValue;
+  };
+
+  return {
+    code: get("code"),
+    tokenHash: get("token_hash"),
+    type: get("type") || "email",
+    error: get("error"),
+    errorCode: get("error_code"),
+    errorDescription: get("error_description"),
+  };
+}
+
 export default function AuthCallbackScreen() {
   const [message, setMessage] = useState("Verificando tu enlace...");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -21,9 +49,7 @@ export default function AuthCallbackScreen() {
     };
 
     const authSubscription = supabase.auth.onAuthStateChange((event) => {
-      if (event === "PASSWORD_RECOVERY") {
-        goToRecovery();
-      }
+      if (event === "PASSWORD_RECOVERY") goToRecovery();
     });
 
     const handleUrl = async (url: string) => {
@@ -34,34 +60,44 @@ export default function AuthCallbackScreen() {
         setMessage("Confirmando tu cuenta...");
         setErrorMessage(null);
 
-        const parsed = Linking.parse(url);
-        const params = parsed.queryParams ?? {};
+        const { code, tokenHash, type, error, errorCode, errorDescription } =
+          getUrlParams(url);
 
-        const code = typeof params.code === "string" ? params.code : null;
-        const tokenHash = typeof params.token_hash === "string" ? params.token_hash : null;
-        const type = typeof params.type === "string" ? params.type : "email";
+        if (error || errorCode) {
+          throw new Error(
+            errorDescription ||
+              (errorCode === "otp_expired"
+                ? "El enlace de verificación expiró o ya fue utilizado. Solicita un correo nuevo."
+                : "El enlace de autenticación no es válido."),
+          );
+        }
 
         if (code) {
-          const { error } = await supabase.auth.exchangeCodeForSession(code);
-          if (error) throw error;
+          const { error: exchangeError } =
+            await supabase.auth.exchangeCodeForSession(code);
+          if (exchangeError) throw exchangeError;
         } else if (tokenHash) {
           const otpType = type === "recovery" ? "recovery" : "email";
-          const { error } = await supabase.auth.verifyOtp({
+          const { error: verifyError } = await supabase.auth.verifyOtp({
             token_hash: tokenHash,
             type: otpType,
           });
-          if (error) throw error;
+          if (verifyError) throw verifyError;
         } else {
-          const { data: { session } } = await supabase.auth.getSession();
+          const {
+            data: { session },
+          } = await supabase.auth.getSession();
 
-          // On web, Supabase may already have consumed the URL before this
-          // screen runs. A recovery session is still sufficient to continue.
           if (session && type === "recovery") {
             goToRecovery();
             return;
           }
 
-          throw new Error("El enlace no contiene un código válido o ya expiró.");
+          // The web callback is hosted by Hostinger. This Expo route is
+          // primarily for the native eyesite:// deep link.
+          throw new Error(
+            "El enlace no contiene un código válido. Solicita uno nuevo.",
+          );
         }
 
         if (!mounted) return;
@@ -79,7 +115,8 @@ export default function AuthCallbackScreen() {
         console.error("[EYESITE] auth callback error:", error);
         if (!mounted) return;
         setErrorMessage(
-          error?.message || "No pudimos procesar el enlace. Solicita uno nuevo.",
+          error?.message ||
+            "No pudimos procesar el enlace. Solicita uno nuevo.",
         );
         setMessage("No se pudo procesar el enlace.");
       }
@@ -103,7 +140,13 @@ export default function AuthCallbackScreen() {
   return (
     <View style={styles.container}>
       <Text style={styles.logo}>EYESITE</Text>
-      {!errorMessage && <ActivityIndicator size="large" color="#C9A84C" style={styles.spinner} />}
+      {!errorMessage && (
+        <ActivityIndicator
+          size="large"
+          color="#C9A84C"
+          style={styles.spinner}
+        />
+      )}
       <Text style={styles.message}>{message}</Text>
       {errorMessage && <Text style={styles.error}>{errorMessage}</Text>}
     </View>
@@ -111,9 +154,31 @@ export default function AuthCallbackScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, alignItems: "center", justifyContent: "center", padding: 32, backgroundColor: "#0E0E0E" },
-  logo: { fontSize: 30, fontWeight: "900", letterSpacing: 2, color: "#C9A84C" },
+  container: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 32,
+    backgroundColor: "#0E0E0E",
+  },
+  logo: {
+    fontSize: 30,
+    fontWeight: "900",
+    letterSpacing: 2,
+    color: "#C9A84C",
+  },
   spinner: { marginTop: 24 },
-  message: { marginTop: 20, fontSize: 17, textAlign: "center", color: "#FFFFFF" },
-  error: { marginTop: 16, fontSize: 14, lineHeight: 21, textAlign: "center", color: "#FF6B6B" },
+  message: {
+    marginTop: 20,
+    fontSize: 17,
+    textAlign: "center",
+    color: "#FFFFFF",
+  },
+  error: {
+    marginTop: 16,
+    fontSize: 14,
+    lineHeight: 21,
+    textAlign: "center",
+    color: "#FF6B6B",
+  },
 });
