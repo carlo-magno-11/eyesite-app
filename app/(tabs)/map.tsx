@@ -672,13 +672,20 @@ export default function MapScreen() {
   // On web the map should use the viewport rather than a small fixed box.
   // Keep enough room for the header, the result summary and the bottom tab bar,
   // while scaling the map up on desktop displays.
-  const webMapHeight = Math.max(
-    windowWidth < 600 ? 420 : windowWidth < 1024 ? 500 : 560,
-    Math.min(
-      Math.round(windowHeight - (windowWidth < 600 ? 225 : 190)),
-      windowWidth >= 1440 ? 1050 : 900,
-    ),
-  );
+  const webMapHeight =
+    Platform.OS === "web"
+      ? Math.max(
+          windowWidth < 600 ? 420 : 500,
+          Math.round(
+            windowHeight -
+              (windowWidth < 600
+                ? 235
+                : windowWidth < 1024
+                  ? 220
+                  : 205),
+          ),
+        )
+      : undefined;
 
   const handleMapMessage = useCallback(
     (rawData: string) => {
@@ -748,7 +755,14 @@ export default function MapScreen() {
       <View
         style={[
           styles.mapWrap,
-          Platform.OS === "web" && { height: webMapHeight },
+          Platform.OS === "web" && {
+            height: webMapHeight,
+            flexGrow: 1,
+            flexShrink: 1,
+            minHeight: 0,
+            width: "100%",
+            alignSelf: "stretch",
+          },
         ]}
       >
         <>
@@ -903,9 +917,11 @@ const styles = StyleSheet.create({
 
   mapWrap: {
     flex: 1,
-    minHeight: 360,
+    flexGrow: 1,
+    flexShrink: 1,
+    minHeight: 0,
     width: "100%",
-    alignSelf: "center",
+    alignSelf: "stretch",
     marginHorizontal: 0,
     borderRadius: 16,
     overflow: "hidden",
@@ -946,6 +962,8 @@ const styles = StyleSheet.create({
   },
 
   footer: {
+    flexShrink: 0,
+    width: "100%",
     paddingHorizontal: 18,
     paddingTop: 12,
     paddingBottom: 8,
