@@ -306,7 +306,7 @@ const styles = StyleSheet.create({
   },
   returnBadgeSlot: {
     flexShrink: 1,
-    maxWidth: '62%',
+    maxWidth: '58%',
   },
   bottomOverlay: {
     position: 'absolute',
@@ -329,6 +329,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.25,
   },
   videoBadge: {
+    flexShrink: 0,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
@@ -355,6 +356,7 @@ const styles = StyleSheet.create({
   },
   title: {
     flex: 1,
+    minHeight: 42,
     color: '#F5F5F5',
     fontSize: 16,
     fontWeight: '700',
@@ -364,6 +366,7 @@ const styles = StyleSheet.create({
   },
   locationRow: {
     flexDirection: 'row',
+    minHeight: 22,
     alignItems: 'center',
     minHeight: 22,
     marginBottom: 14,
