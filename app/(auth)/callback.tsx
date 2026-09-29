@@ -5,7 +5,6 @@ import { router } from "expo-router";
 
 import { supabase } from "@/lib/supabase";
 
-const AUTH_WEB_CALLBACK = "https://auth.eyesite.mx/callback";
 
 function getUrlParams(url: string) {
   const parsed = Linking.parse(url);
