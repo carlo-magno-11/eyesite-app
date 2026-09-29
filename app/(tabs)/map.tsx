@@ -672,20 +672,10 @@ export default function MapScreen() {
   // On web the map should use the viewport rather than a small fixed box.
   // Keep enough room for the header, the result summary and the bottom tab bar,
   // while scaling the map up on desktop displays.
-  const webMapHeight =
-    Platform.OS === "web"
-      ? Math.max(
-          windowWidth < 600 ? 420 : 500,
-          Math.round(
-            windowHeight -
-              (windowWidth < 600
-                ? 235
-                : windowWidth < 1024
-                  ? 220
-                  : 205),
-          ),
-        )
-      : undefined;
+  // The navigator scene now has a real flex height on web. Let the map
+  // consume every pixel left after the header/hint/footer instead of mixing
+  // a viewport-derived fixed height with flexbox (which can shrink the map).
+
 
   const handleMapMessage = useCallback(
     (rawData: string) => {
@@ -756,9 +746,10 @@ export default function MapScreen() {
         style={[
           styles.mapWrap,
           Platform.OS === "web" && {
-            height: webMapHeight,
+            flex: 1,
             flexGrow: 1,
             flexShrink: 1,
+            flexBasis: 0,
             minHeight: 0,
             width: "100%",
             alignSelf: "stretch",
