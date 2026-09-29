@@ -2663,17 +2663,62 @@
 
           <section class="sec" id="sec-propiedades">
             <div class="tw">
-              <div class="th">
+              <div class="th property-tools">
                 <div class="tt">Todas las propiedades</div>
+                <div class="property-search-row">
+                  <input
+                    class="tsrch"
+                    id="propertySearch"
+                    type="search"
+                    placeholder="🔍 Buscar propiedad..."
+                    autocomplete="off"
+                    oninput="filterT(this.value)"
+                  />
+                  <button type="button" class="property-filter-btn" id="propertyFilterBtn" onclick="togglePropertyFilters()" aria-expanded="false">
+                    ⚙️ Filtros <span id="propertyFilterCount" class="property-filter-count">0</span>
+                  </button>
+                </div>
+              </div>
 
-                <input
-                  class="tsrch"
-                  id="propertySearch"
-                  type="search"
-                  placeholder="🔍 Buscar propiedad..."
-                  autocomplete="off"
-                  oninput="filterT(this.value)"
-                />
+              <div class="property-filter-panel" id="propertyFilterPanel" hidden>
+                <div class="property-filter-head">
+                  <div>
+                    <strong>FILTRAR PROPIEDADES</strong>
+                    <small id="propertyFilterSummary">Todos los resultados</small>
+                  </div>
+                  <button type="button" class="property-filter-clear" onclick="clearPropertyFilters()">Limpiar</button>
+                </div>
+                <div class="property-filter-grid">
+                  <label>Tipo
+                    <select id="propertyFilterType" onchange="applyPropertyFilters()">
+                      <option value="">Todos</option>
+                      <option value="Casa">Casa</option>
+                      <option value="Departamento">Departamento</option>
+                      <option value="Terreno">Terreno</option>
+                      <option value="Hacienda">Hacienda</option>
+                      <option value="Rancho">Rancho</option>
+                      <option value="Industrial">Industrial</option>
+                      <option value="Local">Local</option>
+                      <option value="Oficina">Oficina</option>
+                    </select>
+                  </label>
+                  <label>Estado
+                    <select id="propertyFilterStatus" onchange="applyPropertyFilters()">
+                      <option value="">Todos</option>
+                      <option value="activa">Activa</option>
+                      <option value="inactiva">Inactiva</option>
+                    </select>
+                  </label>
+                  <label>Municipio
+                    <input id="propertyFilterMunicipio" type="search" placeholder="Ej. Mérida" oninput="applyPropertyFilters()" />
+                  </label>
+                  <label>Precio mínimo
+                    <input id="propertyFilterMinPrice" type="number" min="0" inputmode="numeric" placeholder="$ mínimo" oninput="applyPropertyFilters()" />
+                  </label>
+                  <label>Precio máximo
+                    <input id="propertyFilterMaxPrice" type="number" min="0" inputmode="numeric" placeholder="$ máximo" oninput="applyPropertyFilters()" />
+                  </label>
+                </div>
               </div>
 
               <div class="table-scroll">
