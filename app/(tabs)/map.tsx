@@ -483,6 +483,7 @@ export default function MapScreen() {
   const [userLocation, setUserLocation] = useState<UserCoords | null>(null);
 
   const [locating, setLocating] = useState(false);
+  const [nearbyOpen, setNearbyOpen] = useState(false);
 
   const fetchMapProperties = useCallback(async (center: UserCoords, radiusKm: number) => {
     const requestId = ++mapRequestGeneration.current;
@@ -792,55 +793,44 @@ export default function MapScreen() {
         </>
       </View>
 
-      <View
-        style={[
-          styles.footer,
-          Platform.OS === "web" && {
-            position: "absolute",
-            left: 18,
-            right: 18,
-            bottom: 8,
-            width: "auto",
-            maxHeight: 150,
-            overflow: "hidden",
-            paddingHorizontal: 12,
-            paddingTop: 10,
-            paddingBottom: 8,
-            backgroundColor: "rgba(13,13,13,0.94)",
-            borderRadius: 14,
-            borderWidth: 1,
-            borderColor: "#2A2A2A",
-            zIndex: 5,
-          },
-        ]}
-      >
-        <Text style={styles.footerTitle}>
-          {userLocation ? t("mapNearbyTitle") : t("mapLocatedTitle")}
-        </Text>
-
-        <Text style={styles.footerNote}>
-          {t("mapPublishedOnly")}
-        </Text>
-
-        {unlocatedCount > 0 && (
-          <Text style={styles.unlocatedNote}>
-            {unlocatedCount} {t("mapUnlocated")}
-          </Text>
+      <View style={styles.nearbyControl} pointerEvents="box-none">
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Ver propiedades cerca"
+          onPress={() => setNearbyOpen((open) => !open)}
+          style={[styles.nearbyButton, nearbyOpen && styles.nearbyButtonActive]}
+        >
+          <Text style={styles.nearbyButtonIcon}>⌖</Text>
+          <View style={styles.nearbyButtonContent}>
+            <Text style={styles.nearbyButtonTitle}>Propiedades cerca</Text>
+            <Text style={styles.nearbyButtonCount}>{userLocation ? nearby.length : geoProperties.length} disponibles</Text>
+          </View>
+          <Text style={styles.nearbyButtonArrow}>{nearbyOpen ? "‹" : "›"}</Text>
+        </Pressable>
+        {nearbyOpen && (
+          <View style={styles.nearbyPanel}>
+            <Text style={styles.footerTitle}>{userLocation ? t("mapNearbyTitle") : t("mapLocatedTitle")}</Text>
+            <Text style={styles.footerNote}>{t("mapPublishedOnly")}</Text>
+            {unlocatedCount > 0 && <Text style={styles.unlocatedNote}>{unlocatedCount} {t("mapUnlocated")}</Text>}
+            {nearby.slice(0, 8).map((item) => {
+              const distance = typeof item.distance === "number" ? item.distance : undefined;
+              return (
+                <Pressable key={item.id} style={styles.resultRow} onPress={() => router.push(`/property/${String(item.id)}` as any)}>
+                  <View style={styles.pin}><Text style={styles.pinText}>E</Text></View>
+                  <View style={styles.resultContent}>
+                    <Text numberOfLines={1} style={styles.resultTitle}>{getPropertyTitle(item)}</Text>
+                    <Text style={styles.resultMeta}>
+                      {item.municipio || item.location || "Yucatán"}
+                      {distance !== undefined ? ` · ${distance.toFixed(1)} km ${t("kmFromYou")}` : ""}
+                    </Text>
+                  </View>
+                  <Text style={styles.arrow}>›</Text>
+                </Pressable>
+              );
+            })}
+          </View>
         )}
-
-        {nearby.slice(0, 4).map((item) => {
-          const distance =
-            typeof item.distance === "number" ? item.distance : undefined;
-
-          return (
-            <Pressable
-              key={item.id}
-              style={styles.resultRow}
-              onPress={() => router.push(`/property/${String(item.id)}` as any)}
-            >
-              <View style={styles.pin}>
-                <Text style={styles.pinText}>E</Text>
-              </View>
+      </View>
 
               <View style={styles.resultContent}>
                 <Text numberOfLines={1} style={styles.resultTitle}>
@@ -985,6 +975,16 @@ const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 17,
   },
+
+  nearbyControl: { position: "absolute", left: 14, bottom: 14, zIndex: 10, alignItems: "flex-start" },
+  nearbyButton: { minHeight: 48, maxWidth: 210, flexDirection: "row", alignItems: "center", paddingHorizontal: 12, borderRadius: 24, backgroundColor: "rgba(13,13,13,0.94)", borderWidth: 1, borderColor: "#3A3A3A", shadowOpacity: 0.25, shadowRadius: 8, shadowOffset: { width: 0, height: 3 } },
+  nearbyButtonActive: { borderColor: "#C9A84C" },
+  nearbyButtonIcon: { color: "#C9A84C", fontSize: 22, fontWeight: "900", marginRight: 8 },
+  nearbyButtonContent: { flex: 1 },
+  nearbyButtonTitle: { color: "#F5F5F5", fontSize: 12, fontWeight: "800" },
+  nearbyButtonCount: { color: "#8E8E8E", fontSize: 10, marginTop: 2 },
+  nearbyButtonArrow: { color: "#C9A84C", fontSize: 24, marginLeft: 8 },
+  nearbyPanel: { width: 300, maxHeight: 360, marginTop: 8, paddingHorizontal: 14, paddingTop: 12, paddingBottom: 8, backgroundColor: "rgba(13,13,13,0.97)", borderRadius: 16, borderWidth: 1, borderColor: "#2A2A2A" },
 
   footer: {
     flexShrink: 0,
