@@ -26,7 +26,12 @@ export const LeafletMap = forwardRef<LeafletMapHandle, LeafletMapProps>(
       },
     }), []);
     useEffect(() => {
-      if (command) webViewRef.current?.injectJavaScript(command);
+      if (command) {
+        const safeCommand = JSON.stringify(command);
+        webViewRef.current?.injectJavaScript(
+          `window.postMessage(${safeCommand}, '*'); true;`,
+        );
+      }
     }, [command]);
     return (
       <WebView
