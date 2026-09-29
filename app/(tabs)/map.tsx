@@ -976,7 +976,7 @@ const styles = StyleSheet.create({
     lineHeight: 17,
   },
 
-  nearbyControl: { position: "absolute", left: 14, bottom: 14, zIndex: 10, alignItems: "flex-start" },
+  nearbyControl: { position: "absolute", right: 14, bottom: 14, zIndex: 10, alignItems: "flex-end" },
   nearbyButton: { minHeight: 48, maxWidth: 210, flexDirection: "row", alignItems: "center", paddingHorizontal: 12, borderRadius: 24, backgroundColor: "rgba(13,13,13,0.94)", borderWidth: 1, borderColor: "#3A3A3A", shadowOpacity: 0.25, shadowRadius: 8, shadowOffset: { width: 0, height: 3 } },
   nearbyButtonActive: { borderColor: "#C9A84C" },
   nearbyButtonIcon: { color: "#C9A84C", fontSize: 22, fontWeight: "900", marginRight: 8 },
@@ -984,7 +984,7 @@ const styles = StyleSheet.create({
   nearbyButtonTitle: { color: "#F5F5F5", fontSize: 12, fontWeight: "800" },
   nearbyButtonCount: { color: "#8E8E8E", fontSize: 10, marginTop: 2 },
   nearbyButtonArrow: { color: "#C9A84C", fontSize: 24, marginLeft: 8 },
-  nearbyPanel: { width: 300, maxHeight: 360, marginTop: 8, paddingHorizontal: 14, paddingTop: 12, paddingBottom: 8, backgroundColor: "rgba(13,13,13,0.97)", borderRadius: 16, borderWidth: 1, borderColor: "#2A2A2A" },
+  nearbyPanel: { width: 300, maxHeight: 360, marginBottom: 8, paddingHorizontal: 14, paddingTop: 12, paddingBottom: 8, backgroundColor: "rgba(13,13,13,0.97)", borderRadius: 16, borderWidth: 1, borderColor: "#2A2A2A" },
 
   footer: {
     flexShrink: 0,
