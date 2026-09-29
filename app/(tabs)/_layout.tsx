@@ -19,6 +19,12 @@ export default function TabLayout() {
         tabBarActiveTintColor: "#C9A84C",
         tabBarInactiveTintColor: "#9A9A9A",
         headerShown: false,
+        sceneStyle: {
+          flex: 1,
+          minHeight: 0,
+          width: "100%",
+          alignSelf: "stretch",
+        },
         tabBarButton: (props: any) => <HapticTab {...props} />,
         tabBarStyle: {
           paddingTop: 8,
