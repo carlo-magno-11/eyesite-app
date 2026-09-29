@@ -284,7 +284,7 @@ Deno.serve(async (req) => {
     const mapWithConcurrency = async <T>(
       items: T[],
       concurrency: number,
-      worker: (item: T) => Promise<void>,
+      worker: (item: T, index: number) => Promise<void>,
     ) => {
       let cursor = 0;
       const workers = Array.from(
@@ -293,7 +293,7 @@ Deno.serve(async (req) => {
           while (true) {
             const index = cursor++;
             if (index >= items.length) return;
-            await worker(items[index]);
+            await worker(items[index], index);
           }
         },
       );
