@@ -56,25 +56,55 @@ h1{margin:0 0 12px;font-size:23px}p{margin:0;color:#b8b8b8;line-height:1.6;font-
   const errorMessage=document.getElementById("errorMessage"),openApp=document.getElementById("openApp"),openAppRecovery=document.getElementById("openAppRecovery");
   const successTitle=document.getElementById("successTitle"),successText=document.getElementById("successText");
   const password=document.getElementById("password"),password2=document.getElementById("password2"),savePassword=document.getElementById("savePassword"),recoveryMessage=document.getElementById("recoveryMessage");
-  const params=new URLSearchParams(window.location.search),type=params.get("type")||"email",tokenHash=params.get("token_hash"),code=params.get("code");
-  const appQuery=new URLSearchParams(); if(tokenHash)appQuery.set("token_hash",tokenHash); if(code)appQuery.set("code",code); appQuery.set("type",type);
+  const params=new URLSearchParams(window.location.search);
+  const hashParams=new URLSearchParams(window.location.hash.replace(/^#/,""));
+  const getParam=(name)=>params.get(name) || hashParams.get(name);
+  const type=getParam("type")||"email";
+  const tokenHash=getParam("token_hash");
+  const code=getParam("code");
+  const accessToken=getParam("access_token");
+  const refreshToken=getParam("refresh_token");
+  const authError=getParam("error");
+  const authErrorCode=getParam("error_code");
+  const authErrorDescription=getParam("error_description");
+  const appQuery=new URLSearchParams();
+  appQuery.set("type",type);
   const appUrl="eyesite://auth/callback?"+appQuery.toString();
   openApp.href=appUrl; openAppRecovery.href=appUrl;
 
   function showError(message){loading.classList.add("hidden");success.classList.add("hidden");recovery.classList.add("hidden");errorBox.classList.remove("hidden");if(message)errorMessage.textContent=message;}
 
   async function establishSession(){
+    if(authError || authErrorCode){
+      throw new Error(
+        authErrorDescription ||
+        (authErrorCode==="otp_expired"
+          ? "El enlace expiró o ya fue utilizado. Solicita un correo nuevo."
+          : "El enlace de autenticación no es válido.")
+      );
+    }
+    if(accessToken && refreshToken){
+      const {error}=await supabase.auth.setSession({
+        access_token:accessToken,
+        refresh_token:refreshToken
+      });
+      if(error)throw error;
+      return;
+    }
     if(code){
       const {error}=await supabase.auth.exchangeCodeForSession(code);
       if(error)throw error;
       return;
     }
     if(tokenHash){
-      const {error}=await supabase.auth.verifyOtp({token_hash:tokenHash,type:type==="recovery"?"recovery":"email"});
+      const {error}=await supabase.auth.verifyOtp({
+        token_hash:tokenHash,
+        type:type==="recovery"?"recovery":"email"
+      });
       if(error)throw error;
       return;
     }
-    throw new Error("El enlace no contiene un código válido.");
+    throw new Error("El enlace no contiene un código válido o ya expiró.");
   }
 
   async function run(){
