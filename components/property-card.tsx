@@ -368,7 +368,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     minHeight: 22,
     alignItems: 'center',
-    minHeight: 22,
     marginBottom: 14,
   },
   locationIcon: {
