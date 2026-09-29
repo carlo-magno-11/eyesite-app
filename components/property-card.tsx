@@ -62,9 +62,6 @@ export function PropertyCard({ property, compact = false }: PropertyCardProps) {
         <View style={styles.compactOverlay} pointerEvents="none" />
 
         <View style={styles.compactTopRow} pointerEvents="none">
-          <View style={styles.compactCodeBadge}>
-            <Text style={styles.compactCodeText}>EYESITE · #{property.code}</Text>
-          </View>
           {hasVideo && (
             <View style={styles.compactMediaBadge}>
               <IconSymbol name="play.circle.fill" size={10} color="#0E0E0E" />
@@ -129,10 +126,7 @@ export function PropertyCard({ property, compact = false }: PropertyCardProps) {
         <View style={styles.imageVignette} pointerEvents="none" />
 
         <View style={styles.topOverlay} pointerEvents="box-none">
-          <View style={styles.codeBadge}>
-            <View style={styles.liveDot} />
-            <Text style={styles.codeBadgeText}>EYESITE · #{property.code}</Text>
-          </View>
+          <View style={styles.topSpacer} />
 
           <Pressable
             accessibilityRole="button"
@@ -154,18 +148,20 @@ export function PropertyCard({ property, compact = false }: PropertyCardProps) {
         </View>
 
         <View style={styles.bottomOverlay} pointerEvents="none">
-          <View
-            style={[
-              styles.returnBadge,
-              {
-                backgroundColor: `${returnColor}24`,
-                borderColor: `${returnColor}AA`,
-              },
-            ]}
-          >
-            <Text style={[styles.returnBadgeText, { color: returnColor }]}>
-              +{property.returnRate}% {t("returnRate")}
-            </Text>
+          <View style={styles.returnBadgeSlot}>
+            <View
+              style={[
+                styles.returnBadge,
+                {
+                  backgroundColor: `${returnColor}24`,
+                  borderColor: `${returnColor}AA`,
+                },
+              ]}
+            >
+              <Text style={[styles.returnBadgeText, { color: returnColor }]}>
+                +{property.returnRate}% {t("returnRate")}
+              </Text>
+            </View>
           </View>
 
           {hasVideo && (
@@ -268,6 +264,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
+  topSpacer: {
+    width: 38,
+    height: 38,
+  },
   codeBadge: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -303,6 +303,10 @@ const styles = StyleSheet.create({
   },
   favoritePressed: {
     backgroundColor: 'rgba(201,168,76,0.18)',
+  },
+  returnBadgeSlot: {
+    flexShrink: 1,
+    maxWidth: '62%',
   },
   bottomOverlay: {
     position: 'absolute',
@@ -489,6 +493,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   compactCodeBadge: {
+    display: 'none',
     backgroundColor: 'rgba(10,10,10,0.68)',
     borderRadius: 8,
     paddingHorizontal: 7,
