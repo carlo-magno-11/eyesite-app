@@ -30,6 +30,15 @@
     <button id="requestBtn">ENVIAR CÓDIGO</button>
   </section>
 
+  <section id="confirmStep" class="hidden">
+    <h1>Confirma tu correo</h1>
+    <p class="sub">Introduce el código de 6 dígitos que recibiste para confirmar tu correo electrónico.</p>
+    <label for="confirmCode">CÓDIGO</label>
+    <input id="confirmCode" class="code" inputmode="numeric" maxlength="6" autocomplete="one-time-code" placeholder="000000">
+    <button id="confirmBtn">CONFIRMAR CORREO</button>
+    <div id="confirmMessage" class="message hidden"></div>
+  </section>
+
   <section id="verifyStep" class="hidden">
     <h1>Verifica tu código</h1>
     <p class="sub">Introduce el código de 6 dígitos que recibiste por correo.</p>
@@ -69,6 +78,8 @@
   const password = $("password");
   const confirm = $("confirm");
   const globalMessage = $("globalMessage");
+  const confirmCode = $("confirmCode");
+  const confirmMessage = $("confirmMessage");
 
   const show = (id) => $(id).classList.remove("hidden");
   const hide = (id) => $(id).classList.add("hidden");
@@ -81,6 +92,12 @@
   const params = new URLSearchParams(location.search); const hashParams = new URLSearchParams(location.hash.replace(/^#/,"")); const getParam = (name) => params.get(name) || hashParams.get(name); const accessToken = getParam("access_token"); const refreshToken = getParam("refresh_token"); const authError = getParam("error"); const authErrorCode = getParam("error_code"); const authErrorDescription = getParam("error_description");
   if (authError || authErrorCode) { message(globalMessage, authErrorDescription || (authErrorCode === "otp_expired" ? "El enlace expiró o ya fue utilizado. Solicita uno nuevo." : "El enlace de autenticación no es válido."), true); } const emailParam = params.get("email");
   if (emailParam) email.value = emailParam.trim().toLowerCase();
+
+  const mode = params.get("mode");
+  if (mode === "confirm" && emailParam) {
+    hide("requestStep");
+    show("confirmStep");
+  }
 
   $("requestBtn").addEventListener("click", async () => {
     const value = email.value.trim().toLowerCase();
@@ -99,6 +116,23 @@
     } catch (e) {
       message(globalMessage, "No pudimos enviar el código. Inténtalo nuevamente.", true);
     } finally { $("requestBtn").disabled = false; }
+  });
+
+  $("confirmBtn").addEventListener("click", async () => {
+    const value = email.value.trim().toLowerCase();
+    const token = confirmCode.value.replace(/\D/g, "");
+    if (!/^\S+@\S+\.\S+$/.test(value) || token.length !== 6) {
+      message(confirmMessage, "Escribe el correo y el código de 6 dígitos.", true); return;
+    }
+    $("confirmBtn").disabled = true;
+    try {
+      const { error } = await sb.auth.verifyOtp({ email: value, token, type: "email" });
+      if (error) throw error;
+      hide("confirmStep");
+      message(globalMessage, "Correo confirmado correctamente. Ya puedes iniciar sesión en EYESITE.");
+    } catch (e) {
+      message(confirmMessage, "El código no es válido, ya fue usado o expiró.", true);
+    } finally { $("confirmBtn").disabled = false; }
   });
 
   $("verifyBtn").addEventListener("click", async () => {
