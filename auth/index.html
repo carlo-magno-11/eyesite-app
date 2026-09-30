@@ -90,7 +90,7 @@
     $("requestBtn").disabled = true;
     try {
       const { error } = await sb.auth.resetPasswordForEmail(value, {
-        redirectTo: "https://auth.eyesite.mx/?mode=recovery"
+        redirectTo: "https://auth.eyesite.mx/callback?mode=recovery"
       });
       if (error) throw error;
       email.value = value;
