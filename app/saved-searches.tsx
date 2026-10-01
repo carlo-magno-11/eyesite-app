@@ -14,6 +14,7 @@ export default function SavedSearchesScreen() {
   const { contentMaxWidth, horizontalPadding } = useResponsive();
   const [pendingDelete, setPendingDelete] = useState<SavedSearch | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   if (authLoading || !user) return null;
 
@@ -36,7 +37,9 @@ export default function SavedSearchesScreen() {
           {t("savedSearchesSubtitle")}
         </Text>
 
-        {loading ? (
+        {deleteError ? <View style={styles.card}><Text style={styles.error}>{deleteError}</Text></View> : null}
+
+        {loading ?
           <View style={styles.center}>
             <ActivityIndicator color="#C9A84C" size="large" />
           </View>
@@ -79,7 +82,7 @@ export default function SavedSearchesScreen() {
               </View>
 
               <Pressable
-                onPress={() => setPendingDelete(search)}
+                onPress={() => { setDeleteError(null); setPendingDelete(search); }}
                 disabled={deletingId === search.id}
                 accessibilityRole="button"
                 accessibilityLabel={t("deleteSearch")}
@@ -100,7 +103,7 @@ export default function SavedSearchesScreen() {
             <Text style={styles.modalHint}>{t("savedSearchesSubtitle")}</Text>
             <View style={styles.modalActions}>
               <Pressable disabled={Boolean(deletingId)} onPress={() => setPendingDelete(null)} style={styles.cancelButton}><Text style={styles.cancelText}>{t("cancel")}</Text></Pressable>
-              <Pressable disabled={Boolean(deletingId)} onPress={async () => { if (!pendingDelete) return; setDeletingId(pendingDelete.id); try { await remove(pendingDelete.id); setPendingDelete(null); } catch (e: any) { setError(e?.message || t("tryAgainShort")); } finally { setDeletingId(null); } }} style={styles.confirmDeleteButton}><Text style={styles.confirmDeleteText}>{t("deleteSearch")}</Text></Pressable>
+              <Pressable disabled={Boolean(deletingId)} onPress={async () => { if (!pendingDelete) return; setDeletingId(pendingDelete.id); try { await remove(pendingDelete.id); setPendingDelete(null); } catch (e: any) { setDeleteError(e?.message || t("tryAgainShort")); } finally { setDeletingId(null); } }} style={styles.confirmDeleteButton}><Text style={styles.confirmDeleteText}>{t("deleteSearch")}</Text></Pressable>
             </View>
           </View>
         </View>
