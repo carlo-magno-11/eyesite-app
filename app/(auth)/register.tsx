@@ -51,7 +51,7 @@ export default function RegisterScreen() {
         options: {
           emailRedirectTo:
             Platform.OS === "web"
-              ? "https://auth.eyesite.mx/callback"
+              ? "https://auth.eyesite.mx/callback?type=email"
               : "eyesite://auth/callback",
         },
       });
@@ -140,7 +140,7 @@ export default function RegisterScreen() {
           data: { nombre: nombreLimpio },
           emailRedirectTo:
             Platform.OS === "web"
-              ? "https://auth.eyesite.mx/callback"
+              ? "https://auth.eyesite.mx/callback?type=email"
               : "eyesite://auth/callback",
         },
       });
