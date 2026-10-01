@@ -36,6 +36,8 @@ export default function HomeScreen() {
       : properties.slice(0, 6);
 
   const budgetNumber = Number(String(profile?.presupuesto ?? '').replace(/[^0-9.]/g, '')) || 0;
+  const recommendationCardWidth = Math.min(320, Math.max(188, (contentMaxWidth || 390) * 0.72));
+
   const recommendedProperties = budgetNumber > 0 || profile?.ciudad
     ? rankPropertyMatches(
         properties,
@@ -184,18 +186,18 @@ export default function HomeScreen() {
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
-              snapToInterval={Math.min(320, Math.max(230, (contentMaxWidth || 360) * 0.78)) + 12}
+              snapToInterval={recommendationCardWidth + 12}
               decelerationRate="fast"
               snapToAlignment="start"
               contentContainerStyle={styles.recommendationCarousel}
               accessibilityLabel="Propiedades recomendadas"
             >
               {recommendedProperties.map((property) => (
-                <View key={property.id} style={styles.recommendationItem}>
+                <View key={property.id} style={[styles.recommendationItem, { width: recommendationCardWidth }]}>
                   <View style={styles.matchBadge}>
                     <Text style={styles.matchBadgeText}>{property.matchScore}% COMPATIBLE</Text>
                   </View>
-                  <PropertyCard property={property} compact />
+                  <PropertyCard property={property} compact compactWidth={recommendationCardWidth} />
                 </View>
               ))}
             </ScrollView>
@@ -457,8 +459,8 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     textAlign: 'center',
   },
-  recommendationCarousel: { paddingRight: 24, gap: 12 },
-  recommendationItem: { width: 200, position: 'relative' },
+  recommendationCarousel: { paddingRight: 24 },
+  recommendationItem: { position: 'relative' },
   propertiesGridRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
