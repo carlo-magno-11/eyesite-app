@@ -30,7 +30,8 @@ export default function PropertiesScreen() {
 
   useEffect(() => {
     const nextQuery = typeof params.q === 'string' ? params.q : '';
-    setSearch(nextQuery);
+    const timer = setTimeout(() => setSearch(nextQuery), 0);
+    return () => clearTimeout(timer);
   }, [params.q]);
 
   const initialFilter = typeof params.filter === 'string' && params.filter ? params.filter : 'all';
