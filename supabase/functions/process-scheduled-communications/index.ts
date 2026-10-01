@@ -95,7 +95,7 @@ Deno.serve(async(req:Request)=>{
    for(const d of (ds as DeliveryRow[])){
     const a=byA.get(d.anuncio_id),p=byP.get(d.user_id);
     if(!a||!a.activa||a.estado_publicacion!=="publicado")continue;
-    if(p?.anuncios_push===false||!String(p?.expo_push_token||"").startsWith("ExponentPushToken[")){notConfigured.push(d.id);continue;}
+    if(!p||p.anuncios_push===false||!String(p.expo_push_token||"").startsWith("ExponentPushToken[")){notConfigured.push(d.id);continue;}
     ready.push({row:d,attempts:Number(d.push_attempts||0)+1,message:{to:p.expo_push_token,sound:"default",title:a.titulo,body:a.mensaje,data:{tipo:a.tipo||"anuncio",announcement_id:a.id}}});
    }
    if(notConfigured.length){
