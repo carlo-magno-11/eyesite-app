@@ -6125,37 +6125,40 @@ async function enviarComunicacionAdmin() {
         ids = [userId];
       }
 
-      const batchId = crypto.randomUUID();
-      if (ids.length) {
-        const scheduledState = scheduledAt.getTime() > Date.now() + 5000 ? "pendiente" : "sent";
-        const { error } = await s.from("notificaciones").insert(
-          ids.map((id) => ({
-            user_id: id,
+      const isScheduled = scheduledAt.getTime() > Date.now() + 5000;
+
+      if (isScheduled) {
+        if (ids.length) {
+          const batchId = crypto.randomUUID();
+          const { error } = await s.from("notificaciones").insert(
+            ids.map((id) => ({
+              user_id: id,
+              titulo,
+              mensaje,
+              tipo,
+              leida: false,
+              event_key: `admin:${batchId}:${id}`,
+              programada_para: scheduledAt.toISOString(),
+              estado_envio: "pendiente",
+              sent_at: null,
+            })),
+          );
+          if (error) throw error;
+        }
+      } else if (ids.length) {
+        const { error: pushError } = await s.functions.invoke("send-notification", {
+          body: {
             titulo,
             mensaje,
             tipo,
-            leida: false,
-            event_key: `admin:${batchId}:${id}`,
-            programada_para: scheduledAt.toISOString(),
-            estado_envio: scheduledState,
-            sent_at: scheduledState === "sent" ? new Date().toISOString() : null,
-          })),
-        );
-        if (error) throw error;
+            user_ids: ids,
+            in_app: true,
+          },
+        });
+        if (pushError) throw pushError;
       }
 
-      if (scheduledAt.getTime() <= Date.now() + 5000) {
-        try {
-          const { error: pushError } = await s.functions.invoke("send-notification", {
-            body: { titulo, mensaje, tipo, user_id: destino === "one" ? userId : null },
-          });
-          if (pushError) console.warn("[push]", pushError);
-        } catch (e) {
-          console.warn("[push]", e);
-        }
-      }
-
-      toast(scheduledAt.getTime() > Date.now() + 5000 ? "Notificación programada." : "Notificación enviada.");
+      toast(isScheduled ? "Notificación programada." : "Notificación enviada.");
     }
 
     ["nt_titulo","nt_mensaje","nt_enlace","nt_enlace_label","nt_expira","nt_programada","nt_prioridad","nt_user"].forEach((id) => {
