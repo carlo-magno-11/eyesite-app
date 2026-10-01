@@ -134,5 +134,5 @@ Deno.serve(async(req)=>{
   await admin.from("anuncios").update({activa:false,updated_at:now}).eq("activa",true).not("fecha_expiracion","is",null).lte("fecha_expiracion",now);
   return new Response(JSON.stringify({ok:true,...result}),{headers:H});
  }catch(e){console.error("[process-scheduled-communications]",e);return new Response(JSON.stringify({error:e instanceof Error?e.message:String(e)}),{status:500,headers:H});}
- finally{if(schedulerClaimed&&admin){try{await admin.rpc("release_eyesite_scheduler");}catch(releaseError){console.error("[process-scheduled-communications] release lock failed",releaseError);}}}
+ finally{if(schedulerClaimed){try{await admin.rpc("release_eyesite_scheduler");}catch(releaseError){console.error("[process-scheduled-communications] release lock failed",releaseError);}}}
 });
