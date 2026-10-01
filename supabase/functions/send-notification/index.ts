@@ -414,7 +414,7 @@ Deno.serve(async (req) => {
           }
 
           if (announcementId && message.userId) {
-            const errorMessage = String(
+            const announcementErrorMessage = String(
               ticket?.details?.error ||
                 ticket?.message ||
                 (!expoResponse.ok ? "Expo request failed" : "Push rechazado"),
@@ -425,7 +425,7 @@ Deno.serve(async (req) => {
                 push_status: "error",
                 push_attempts: 1,
                 push_next_retry_at: deliveryNow,
-                push_error: errorMessage,
+                push_error: announcementErrorMessage,
                 updated_at: deliveryNow,
               })
               .eq("anuncio_id", announcementId)
