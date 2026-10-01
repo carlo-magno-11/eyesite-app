@@ -29,6 +29,7 @@ let usuarios = [];
 
 let propiedadEditando = null;
 let pendienteViendo = null;
+let pendienteEditando = null;
 
 let nuevasImagenes = [];
 let nuevosArchivos = [];
@@ -871,6 +872,11 @@ const sectionInfo = {
     title: "Usuarios",
     subtitle: "Gestiona los usuarios de la plataforma",
   },
+
+  crm: {
+    title: "Prospectos CRM",
+    subtitle: "Captación, prioridad y seguimiento comercial",
+  },
 };
 
 function goTo(section) {
@@ -916,6 +922,12 @@ function goTo(section) {
 
   if (section === "usuarios") {
     cargarUsuarios();
+  }
+
+  if (section === "crm") {
+    if (typeof window.initCRM === "function") {
+      window.initCRM();
+    }
   }
 
   if (section === "nueva") {
@@ -1184,6 +1196,7 @@ async function cargarDashboard() {
   const stip = document.getElementById("stip");
 
   const savg = document.getElementById("savg");
+  const smap = document.getElementById("smap");
 
   if (st) {
     st.textContent = activos.length;
@@ -1199,6 +1212,21 @@ async function cargarDashboard() {
 
   if (savg) {
     savg.textContent = `${promedio.toFixed(1)}%`;
+  }
+
+  if (smap) {
+    const ubicadas = activos.filter((p) => {
+      const lat = Number(p.latitud);
+      const lng = Number(p.longitud);
+      return (
+        Number.isFinite(lat) &&
+        Number.isFinite(lng) &&
+        lat !== 0 &&
+        lng !== 0
+      );
+    }).length;
+
+    smap.textContent = `${ubicadas}/${activos.length}`;
   }
 
   renderDashboard(activos);
@@ -1422,37 +1450,99 @@ function renderPropiedades(list = propiedades) {
    FILTRO DE PROPIEDADES
    ============================================================ */
 
-function filterT(value) {
-  const q = String(value || "")
-    .toLowerCase()
-    .trim();
-
-  if (!q) {
-    renderPropiedades(propiedades);
-
-    return;
-  }
-
-  const result = propiedades.filter((p) => {
-    const text = [
-      getPropTitle(p),
-      getPropType(p),
-      getMunicipio(p),
-      p.estado,
-      p.status,
-      p.descripcion,
-      p.direccion,
-    ]
-      .filter(Boolean)
-      .join(" ")
-      .toLowerCase();
-
-    return text.includes(q);
-  });
-
-  renderPropiedades(result);
+function getPropertyFilterState() {
+  return {
+    q: String(document.getElementById("propertySearch")?.value || "").trim().toLowerCase(),
+    tipo: String(document.getElementById("propertyFilterType")?.value || "").trim().toLowerCase(),
+    estado: String(document.getElementById("propertyFilterStatus")?.value || "").trim().toLowerCase(),
+    municipio: String(document.getElementById("propertyFilterMunicipio")?.value || "").trim().toLowerCase(),
+    minPrice: Number(document.getElementById("propertyFilterMinPrice")?.value || 0),
+    maxPrice: Number(document.getElementById("propertyFilterMaxPrice")?.value || 0),
+  };
 }
 
+function getFilteredProperties() {
+  const f = getPropertyFilterState();
+
+  return propiedades.filter((p) => {
+    const searchText = [
+      getPropTitle(p), getPropType(p), getMunicipio(p),
+      p.estado, p.status, p.descripcion, p.direccion,
+    ].filter(Boolean).join(" ").toLowerCase();
+
+    const tipo = String(getPropType(p) || "").toLowerCase();
+    const municipio = String(getMunicipio(p) || "").toLowerCase();
+    const rawStatus = String(p.estado ?? p.status ?? "").trim().toLowerCase();
+    const estado = p.activa === false || ["inactiva", "inactivo", "desactivada", "desactivado", "inactive"].includes(rawStatus)
+      ? "inactiva"
+      : "activa";
+    const precio = Number(getPrecio(p) || 0);
+
+    if (f.q && !searchText.includes(f.q)) return false;
+    if (f.tipo && !tipo.includes(f.tipo)) return false;
+    if (f.estado && estado !== f.estado) return false;
+    if (f.municipio && !municipio.includes(f.municipio)) return false;
+    if (f.minPrice > 0 && precio < f.minPrice) return false;
+    if (f.maxPrice > 0 && precio > f.maxPrice) return false;
+
+    return true;
+  });
+}
+
+function updatePropertyFilterUi() {
+  const f = getPropertyFilterState();
+  const count = [f.tipo, f.estado, f.municipio, f.minPrice > 0, f.maxPrice > 0].filter(Boolean).length;
+  const badge = document.getElementById("propertyFilterCount");
+  const button = document.getElementById("propertyFilterBtn");
+  const summary = document.getElementById("propertyFilterSummary");
+
+  if (badge) badge.textContent = String(count);
+  if (button) button.classList.toggle("active", count > 0);
+
+  if (summary) {
+    const total = getFilteredProperties().length;
+    summary.textContent = count
+      ? count + " filtros activos · " + total + " resultados"
+      : total + " resultados";
+  }
+}
+
+function togglePropertyFilters(force) {
+  const panel = document.getElementById("propertyFilterPanel");
+  const button = document.getElementById("propertyFilterBtn");
+  if (!panel) return;
+
+  const open = typeof force === "boolean" ? force : panel.hidden;
+  panel.hidden = !open;
+  if (button) button.setAttribute("aria-expanded", open ? "true" : "false");
+  updatePropertyFilterUi();
+}
+
+function clearPropertyFilters() {
+  ["propertyFilterType", "propertyFilterStatus", "propertyFilterMunicipio", "propertyFilterMinPrice", "propertyFilterMaxPrice"]
+    .forEach((id) => {
+      const element = document.getElementById(id);
+      if (element) element.value = "";
+    });
+
+  const search = document.getElementById("propertySearch");
+  if (search) search.value = "";
+
+  renderPropiedades(propiedades);
+  updatePropertyFilterUi();
+}
+
+function applyPropertyFilters() {
+  const result = getFilteredProperties();
+  renderPropiedades(result);
+  updatePropertyFilterUi();
+}
+
+function filterT(value) {
+  const search = document.getElementById("propertySearch");
+  if (search && search.value !== String(value || "")) search.value = String(value || "");
+  applyPropertyFilters();
+}
 /* ============================================================
    PENDIENTES
    ============================================================ */
@@ -1570,6 +1660,13 @@ async function renderPendientes() {
               </button>
 
               <button
+                class="bs be2"
+                onclick="editarPendiente('${esc(p.id)}')"
+              >
+                ✏️ Editar
+              </button>
+
+              <button
                 class="bs bap2"
                 onclick="aprobarDirecto('${esc(p.id)}')"
               >
@@ -1622,6 +1719,9 @@ async function verPropiedad(id) {
   if (deleteButton) {
     deleteButton.style.display = "inline-block";
   }
+
+  const editButton = document.getElementById("vedit");
+  if (editButton) editButton.style.display = "none";
 
   if (approveButton) {
     approveButton.style.display = "none";
@@ -1899,22 +1999,11 @@ async function editarPropiedad(id) {
     };
   });
 
-  editArchivos = normalizeArray([...(p.archivos || p.files || p.documentos || []), ...(p.pdfs || []), ...(p.kmz_kml || [])]).map(
-    (item) => {
-      if (typeof item === "string") {
-        return {
-          url: item,
-          name: item,
-          existing: true,
-        };
-      }
-
-      return {
-        ...item,
-        existing: true,
-      };
-    },
-  );
+  editArchivos = preserveExistingFileItems([
+    ...(Array.isArray(p.archivos) ? p.archivos : []),
+    ...(Array.isArray(p.pdfs) ? p.pdfs : []),
+    ...(Array.isArray(p.kmz_kml) ? p.kmz_kml : []),
+  ]);
 
   editEnlaces = normalizeArray(p.enlaces || p.links);
   editPdfs = normalizeArray(p.pdfs || []);
@@ -3622,9 +3711,21 @@ async function uploadFile(bucket, file, folder) {
     txt: "text/plain",
   };
 
-  const mime = String(file.type || mimeByExtension[extension] || "")
-    .toLowerCase()
-    .trim();
+  const browserMime = String(file.type || "").toLowerCase().trim();
+  const extensionMime = String(mimeByExtension[extension] || "").toLowerCase().trim();
+
+  // Safari/iOS y algunos selectores de archivos pueden entregar un MIME
+  // genérico (por ejemplo application/octet-stream) aunque la extensión sea
+  // válida. Solo hacemos fallback a la extensión para tipos genéricos; nunca
+  // sustituimos un MIME específico que pueda revelar una discrepancia real.
+  const genericBrowserMimes = new Set([
+    "",
+    "application/octet-stream",
+    "binary/octet-stream",
+  ]);
+  const mime = genericBrowserMimes.has(browserMime)
+    ? extensionMime
+    : browserMime;
   const isMediaBucket = bucket === BUCKET_IMAGES;
   const isPrivateBucket = bucket === BUCKET_FILES;
 
@@ -3770,6 +3871,91 @@ async function uploadCollection(list, bucket, folder, progressCallback) {
   return output;
 }
 
+function preserveExistingFileItems(value) {
+  const list = Array.isArray(value) ? value : value ? [value] : [];
+  return list
+    .map((item) => {
+      if (typeof item === "string") {
+        const url = item.trim();
+        return url ? { url, name: url.split("/").pop() || url, existing: true } : null;
+      }
+      if (item && typeof item === "object") {
+        const copy = { ...item };
+        const valueRef = copy.url || copy.path || copy.filePath || copy.storagePath || copy.publicUrl || copy.public_url;
+        if (!valueRef) return null;
+        if (!copy.url) copy.url = valueRef;
+        copy.existing = true;
+        return copy;
+      }
+      return null;
+    })
+    .filter(Boolean);
+}
+
+
+function assertPublicPropertyMedia(payload) {
+  const userStoragePath =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\//i;
+
+  const fields = [
+    "fotos",
+    "imagenes",
+    "fotos_pro",
+    "videos",
+    "video_url",
+    "portada_url",
+  ];
+
+  const refs = [];
+
+  const collect = (field, value) => {
+    if (Array.isArray(value)) {
+      value.forEach((item) => collect(field, item));
+      return;
+    }
+
+    if (value && typeof value === "object") {
+      collect(
+        field,
+        value.url ||
+          value.publicUrl ||
+          value.public_url ||
+          value.path ||
+          value.filePath ||
+          value.storagePath ||
+          "",
+      );
+      return;
+    }
+
+    if (typeof value === "string" && value.trim()) {
+      refs.push({ field, value: value.trim() });
+    }
+  };
+
+  for (const field of fields) {
+    collect(field, payload?.[field]);
+  }
+
+  const invalid = refs.filter(({ value }) => {
+    const normalized = value.toLowerCase();
+
+    return (
+      normalized.startsWith("eyesite-staging/") ||
+      normalized.startsWith("eyesite-private/") ||
+      normalized.includes("/storage/v1/object/public/eyesite-staging/") ||
+      normalized.includes("/storage/v1/object/public/eyesite-private/") ||
+      userStoragePath.test(value)
+    );
+  });
+
+  if (invalid.length) {
+    throw new Error(
+      "El medio de esta propiedad todavía pertenece a almacenamiento no publicado. Promueve o reemplaza el medio antes de guardar.",
+    );
+  }
+}
+
 function classifyPrivateFileItems(items) {
   const pdfs = [];
   const kmzKml = [];
@@ -3823,19 +4009,24 @@ function collectPropertyForm(mode, statusOverride = null) {
 
   estado = String(estado).toLowerCase().trim();
 
-  if (estado !== "activa" && estado !== "inactiva") {
+  if (mode === "pending") {
+    estado = "pendiente";
+  } else if (estado !== "activa" && estado !== "inactiva") {
     estado = "activa";
   }
 
   const tipo = valueOf(`${mode}_tipo`) || "terreno";
 
+  const sourceDetalles =
+    mode === "edit"
+      ? propiedadEditando?.detalles
+      : mode === "pending"
+        ? pendienteEditando?.detalles
+        : null;
+
   const detalles =
-    mode === "edit" &&
-    propiedadEditando?.detalles &&
-    typeof propiedadEditando.detalles === "object"
-      ? {
-          ...propiedadEditando.detalles,
-        }
+    sourceDetalles && typeof sourceDetalles === "object"
+      ? { ...sourceDetalles }
       : {};
 
   for (const k of [
@@ -3954,10 +4145,16 @@ function collectPropertyForm(mode, statusOverride = null) {
 
   data.construccion_m2 = readNumberField(`${mode}_construccion_m2`);
 
+  if (mode === "pending") {
+    delete data.estado;
+    delete data.activa;
+    delete data.status;
+  }
+
   return data;
 }
 
-function validateProperty(data) {
+function validateProperty(data, options = {}) {
   const estado = String(data.estado || "activa")
     .trim()
     .toLowerCase();
@@ -3968,6 +4165,14 @@ function validateProperty(data) {
    *
    * La validación completa solamente bloquea PUBLICAR / ACTIVAR.
    */
+  if (options.allowPending && options.mode === "pending") {
+    if (!data.titulo?.trim() || !data.tipo?.trim() || !data.municipio?.trim()) {
+      toast("Título, tipo y municipio son obligatorios.");
+      return false;
+    }
+    return true;
+  }
+
   if (estado !== "activa") {
     return true;
   }
@@ -4473,6 +4678,8 @@ async function saveEdit() {
           kmz_kml: [...new Set([...editKmzKml, ...classifyPrivateFileItems(files).kmzKml])],
         };
 
+        assertPublicPropertyMedia(payload);
+
         const { error } = await s.rpc("admin_update_property", {
           p_property_id: propiedadEditando.id,
 
@@ -4540,6 +4747,79 @@ async function saveEdit() {
       }
     },
   );
+}
+
+/* ============================================================
+   EDITAR SOLICITUD PENDIENTE — MISMO EDITOR QUE PROPIEDADES
+   ============================================================ */
+
+function editarPendiente(id) {
+  const p = pendientes.find((item) => String(item.id) === String(id));
+  if (!p) { toast("No se encontró la solicitud."); return; }
+  if (String(p.estado || "").toLowerCase() !== "pendiente") { toast("La solicitud ya no está pendiente."); return; }
+  pendienteEditando = p;
+  editImagenes = preserveExistingFileItems(p.imagenes || p.fotos || []);
+  editFotosPro = preserveExistingFileItems(p.fotos_pro || p.imagenes_pro || []);
+  editVideos = preserveExistingFileItems(p.videos || []);
+  editArchivos = preserveExistingFileItems(p.archivos || []);
+  editEnlaces = Array.isArray(p.enlaces) ? [...p.enlaces] : [];
+  editPdfs = Array.isArray(p.pdfs) ? [...p.pdfs] : [];
+  editKmzKml = Array.isArray(p.kmz_kml) ? [...p.kmz_kml] : [];
+  editPortadaVideo = p.portada_url || null;
+  const form = document.getElementById("ef");
+  if (!form) return;
+  form.innerHTML = propertyFormHTML(p, "pending");
+  bindPropertyForm("pending", p);
+  const title = document.querySelector("#emod .mt");
+  const subtitle = document.getElementById("emsub");
+  if (title) title.textContent = "EDITAR SOLICITUD PENDIENTE";
+  if (subtitle) subtitle.textContent = getPropTitle(p) + " · Los cambios seguirán PENDIENTES";
+  const button = document.getElementById("esb");
+  if (button) { button.textContent = "Guardar cambios sin publicar"; button.onclick = savePendingEdit; }
+  openMod("emod");
+}
+
+async function savePendingEdit() {
+  if (!pendienteEditando) { toast("No hay una solicitud seleccionada."); return; }
+  const btn = document.getElementById("esb");
+  if (btn?.disabled) return;
+  const data = collectPropertyForm("pending");
+  if (!validateProperty(data, { allowPending: true, mode: "pending" })) return;
+  confirmar("Guardar cambios de solicitud", "La solicitud seguirá PENDIENTE y no se publicará todavía.", async () => {
+    if (btn) btn.disabled = true;
+    try {
+      const requestId = pendienteEditando.id;
+      const base = "submissions/" + requestId + "/assets";
+      const images = await uploadCollection(editImagenes, BUCKET_IMAGES, base);
+      const fotosPro = await uploadCollection(editFotosPro, BUCKET_IMAGES, base + "/pro");
+      const videos = await uploadCollection(editVideos, BUCKET_IMAGES, base + "/videos");
+      const videoCover = editPortadaVideo instanceof File ? await uploadFile(BUCKET_IMAGES, editPortadaVideo, base + "/video-covers") : null;
+      const files = await uploadCollection(editArchivos, BUCKET_FILES, "submissions/" + requestId + "/files");
+      const payload = {
+        ...data,
+        fotos: images.map(x => typeof x === "string" ? x : x?.url).filter(Boolean),
+        imagenes: images,
+        fotos_pro: fotosPro.map(x => typeof x === "string" ? x : x?.url).filter(Boolean),
+        videos: videos.map(x => typeof x === "string" ? x : x?.url).filter(Boolean),
+        video_url: videos[0]?.url || videos[0] || pendienteEditando.video_url || null,
+        portada_url: videoCover?.url || (typeof editPortadaVideo === "string" ? editPortadaVideo : (pendienteEditando.portada_url || images[0]?.url || images[0] || null)),
+        tipo_portada: videoCover ? "video" : (pendienteEditando.tipo_portada || (videos.length ? "video" : (images.length ? "foto" : null))),
+        portada_tipo: videoCover ? "video" : (pendienteEditando.portada_tipo || (videos.length ? "video" : (images.length ? "foto" : null))),
+        archivos: files,
+        pdfs: [...new Set([...editPdfs, ...classifyPrivateFileItems(files).pdfs])],
+        kmz_kml: [...new Set([...editKmzKml, ...classifyPrivateFileItems(files).kmzKml])],
+        enlaces: editEnlaces,
+      };
+      const { error } = await s.rpc("admin_update_property_request", { p_request_id: requestId, p_payload: payload });
+      if (error) throw error;
+      toast("Solicitud actualizada. Sigue PENDIENTE.");
+      closeMod("emod");
+      pendienteEditando = null;
+      editImagenes=[]; editArchivos=[]; editEnlaces=[]; editFotosPro=[]; editVideos=[]; editPortadaVideo=null; editPdfs=[]; editKmzKml=[];
+      await cargarPendientes(); await cargarDashboard(); renderPendientes();
+    } catch (error) { console.error("[savePendingEdit]", error); toast(error?.message || "No se pudieron guardar los cambios de la solicitud."); }
+    finally { if (btn) btn.disabled = false; }
+  });
 }
 
 /* ============================================================
@@ -4783,6 +5063,69 @@ async function eliminarPropiedad(id) {
    MODAL PENDIENTE
    ============================================================ */
 
+async function resolvePendingMediaReference(value, request) {
+  if (typeof value !== "string") return value;
+  const clean = value.trim();
+  if (!clean) return clean;
+
+  // Las solicitudes nuevas guardan medios en el staging privado.
+  // El administrador necesita una URL firmada temporal para poder
+  // previsualizarlos antes de aprobar la solicitud.
+  const stagingPrefix = `${request?.user_id || ""}/`;
+  if (
+    request?.user_id &&
+    clean.startsWith(stagingPrefix) &&
+    !/^https?:\/\//i.test(clean)
+  ) {
+    const { data, error } = await s.storage
+      .from("eyesite-staging")
+      .createSignedUrl(clean, 3600);
+
+    if (error || !data?.signedUrl) {
+      console.warn("[pending media] no se pudo firmar:", clean, error);
+      return clean;
+    }
+
+    return data.signedUrl;
+  }
+
+  return clean;
+}
+
+async function hydratePendingMedia(request) {
+  const clone = { ...request };
+
+  for (const field of ["fotos", "fotos_pro", "videos", "imagenes"]) {
+    const value = clone[field];
+    if (Array.isArray(value)) {
+      clone[field] = await Promise.all(
+        value.map(async (item) => {
+          if (typeof item === "string") {
+            return await resolvePendingMediaReference(item, request);
+          }
+
+          if (item && typeof item === "object") {
+            const copy = { ...item };
+            const key = copy.url ? "url" : copy.publicUrl ? "publicUrl" : copy.path ? "path" : null;
+            if (key) copy[key] = await resolvePendingMediaReference(copy[key], request);
+            return copy;
+          }
+
+          return item;
+        }),
+      );
+    }
+  }
+
+  for (const field of ["video_url", "portada_url"]) {
+    if (typeof clone[field] === "string") {
+      clone[field] = await resolvePendingMediaReference(clone[field], request);
+    }
+  }
+
+  return clone;
+}
+
 async function verPendiente(id) {
   const p = pendientes.find((item) => String(item.id) === String(id));
 
@@ -4792,9 +5135,9 @@ async function verPendiente(id) {
     return;
   }
 
-  pendienteViendo = p;
+  pendienteViendo = await hydratePendingMedia(p);
 
-  renderViewProperty(p, document.getElementById("vf"));
+  renderViewProperty(pendienteViendo, document.getElementById("vf"));
 
   const subtitle = document.getElementById("vmsub");
 
@@ -4812,6 +5155,12 @@ async function verPendiente(id) {
 
   if (deleteButton) {
     deleteButton.style.display = "inline-block";
+  }
+
+  const editButton = document.getElementById("vedit");
+  if (editButton) {
+    editButton.style.display = "inline-block";
+    editButton.onclick = () => editarPendiente(p.id);
   }
 
   openMod("vmod");
@@ -5673,6 +6022,38 @@ async function cargarAnunciosAdmin() {
   }
 }
 
+function validateAnnouncementImage(file) {
+  const allowed = new Set(["image/jpeg", "image/png", "image/webp"]);
+  const mime = String(file?.type || "").toLowerCase().trim();
+  const name = String(file?.name || "").toLowerCase();
+  const extension = name.includes(".") ? name.split(".").pop() : "";
+  const allowedExtensions = new Set(["jpg", "jpeg", "png", "webp"]);
+  const MAX_ANNOUNCEMENT_IMAGE_BYTES = 10 * 1024 * 1024;
+
+  if (!allowed.has(mime) || !allowedExtensions.has(extension)) {
+    throw new Error("Los anuncios solo aceptan imágenes JPG, PNG o WebP.");
+  }
+  if (!Number.isFinite(file.size) || file.size <= 0) {
+    throw new Error("Una de las imágenes del anuncio está vacía o es inválida.");
+  }
+  if (file.size > MAX_ANNOUNCEMENT_IMAGE_BYTES) {
+    throw new Error("Cada imagen del anuncio debe pesar como máximo 10 MB.");
+  }
+}
+
+function validateAnnouncementLink(value) {
+  if (!value) return null;
+  try {
+    const url = new URL(value);
+    if (url.protocol !== "https:" && url.protocol !== "http:") {
+      throw new Error("El enlace del anuncio debe usar HTTP o HTTPS.");
+    }
+    return url.toString();
+  } catch {
+    throw new Error("El enlace del anuncio no es una URL HTTP/HTTPS válida.");
+  }
+}
+
 async function enviarComunicacionAdmin() {
   const modo = valueOf("nt_modo") || "notification";
   const titulo = valueOf("nt_titulo").trim();
@@ -5681,6 +6062,7 @@ async function enviarComunicacionAdmin() {
   const destino = valueOf("nt_destino") || "all";
   const userId = valueOf("nt_user").trim();
   const enlace = valueOf("nt_enlace").trim();
+  const safeEnlace = validateAnnouncementLink(enlace);
   const enlaceLabel = valueOf("nt_enlace_label").trim() || "VER MÁS";
   const prioridad = Number(valueOf("nt_prioridad") || 0);
   const expira = valueOf("nt_expira").trim();
@@ -5707,6 +6089,14 @@ async function enviarComunicacionAdmin() {
     return;
   }
 
+  if (modo === "announcement" && expira) {
+    const expiresAt = new Date(expira);
+    if (Number.isNaN(expiresAt.getTime()) || expiresAt.getTime() <= scheduledAt.getTime()) {
+      toast("La caducidad del anuncio debe ser posterior a su publicación.");
+      return;
+    }
+  }
+
   try {
     if (modo === "announcement") {
       const announcementId = crypto.randomUUID();
@@ -5714,52 +6104,72 @@ async function enviarComunicacionAdmin() {
       const gallery = galleryInput?.files ? [...galleryInput.files] : [];
       const uploadedPaths = [];
 
-      if (cover) {
-        const item = await uploadFile(BUCKET_IMAGES, cover, `announcements/${announcementId}`);
-        uploadedPaths.push(item.path);
-      }
-      for (const file of gallery) {
-        const item = await uploadFile(BUCKET_IMAGES, file, `announcements/${announcementId}`);
-        uploadedPaths.push(item.path);
+      if (cover) validateAnnouncementImage(cover);
+      gallery.forEach(validateAnnouncementImage);
+      if (gallery.length > 20) {
+        throw new Error("La galería del anuncio admite como máximo 20 imágenes.");
       }
 
-      const imagenes = uploadedPaths
-        .map((path) => s.storage.from(BUCKET_IMAGES).getPublicUrl(path).data?.publicUrl)
-        .filter(Boolean);
-
-      const isScheduled = scheduledAt.getTime() > Date.now() + 5000;
-      const { error } = await s.from("anuncios").insert({
-        id: announcementId,
-        titulo,
-        mensaje,
-        tipo,
-        activa: !isScheduled,
-        published_at: isScheduled ? scheduledAt.toISOString() : new Date().toISOString(),
-        programada_para: scheduledAt.toISOString(),
-        publicada_en: isScheduled ? null : new Date().toISOString(),
-        estado_publicacion: isScheduled ? "pendiente" : "publicado",
-        created_by: currentUser?.id || null,
-        imagen_url: imagenes[0] || null,
-        imagenes,
-        enlace: enlace || null,
-        enlace_label: enlace ? enlaceLabel : null,
-        fecha_expiracion: expira ? new Date(expira).toISOString() : null,
-        prioridad: Number.isFinite(prioridad) ? prioridad : 0,
-      });
-      if (error) throw error;
-
-      if (!isScheduled) {
-        try {
-          const { error: pushError } = await s.functions.invoke("send-notification", {
-            body: { titulo, mensaje, tipo, user_id: null },
-          });
-          if (pushError) console.warn("[push anuncio]", pushError);
-        } catch (e) {
-          console.warn("[push anuncio]", e);
+      try {
+        if (cover) {
+          const item = await uploadFile(BUCKET_IMAGES, cover, `announcements/${announcementId}`);
+          uploadedPaths.push(item.path);
         }
-      }
+        for (const file of gallery) {
+          const item = await uploadFile(BUCKET_IMAGES, file, `announcements/${announcementId}`);
+          uploadedPaths.push(item.path);
+        }
 
-      toast(isScheduled ? "Anuncio programado." : "Anuncio publicado correctamente.");
+        const imagenes = uploadedPaths
+          .map((path) => s.storage.from(BUCKET_IMAGES).getPublicUrl(path).data?.publicUrl)
+          .filter(Boolean);
+
+        const isScheduled = scheduledAt.getTime() > Date.now() + 5000;
+        const now = new Date().toISOString();
+        const { error } = await s.from("anuncios").insert({
+          id: announcementId,
+          titulo,
+          mensaje,
+          tipo,
+          activa: !isScheduled,
+          published_at: isScheduled ? scheduledAt.toISOString() : now,
+          programada_para: scheduledAt.toISOString(),
+          publicada_en: isScheduled ? null : now,
+          estado_publicacion: isScheduled ? "pendiente" : "publicado",
+          created_by: currentUser?.id || null,
+          imagen_url: imagenes[0] || null,
+          imagenes,
+          enlace: safeEnlace,
+          enlace_label: safeEnlace ? enlaceLabel : null,
+          fecha_expiracion: expira ? new Date(expira).toISOString() : null,
+          prioridad: Number.isFinite(prioridad) ? prioridad : 0,
+        });
+        if (error) throw error;
+
+        if (!isScheduled) {
+          try {
+            const { error: pushError } = await s.functions.invoke("send-notification", {
+              body: {
+                titulo,
+                mensaje,
+                tipo,
+                announcement_id: announcementId,
+              },
+            });
+            if (pushError) console.warn("[push anuncio]", pushError);
+          } catch (e) {
+            console.warn("[push anuncio]", e);
+          }
+        }
+
+        toast(isScheduled ? "Anuncio programado." : "Anuncio publicado correctamente.");
+      } catch (announcementError) {
+        if (uploadedPaths.length) {
+          const { error: cleanupError } = await s.storage.from(BUCKET_IMAGES).remove(uploadedPaths);
+          if (cleanupError) console.warn("[cleanup anuncio]", cleanupError);
+        }
+        throw announcementError;
+      }
     } else {
       let ids = [];
       if (destino === "all") {
@@ -5770,37 +6180,40 @@ async function enviarComunicacionAdmin() {
         ids = [userId];
       }
 
-      const batchId = crypto.randomUUID();
-      if (ids.length) {
-        const scheduledState = scheduledAt.getTime() > Date.now() + 5000 ? "pendiente" : "sent";
-        const { error } = await s.from("notificaciones").insert(
-          ids.map((id) => ({
-            user_id: id,
+      const isScheduled = scheduledAt.getTime() > Date.now() + 5000;
+
+      if (isScheduled) {
+        if (ids.length) {
+          const batchId = crypto.randomUUID();
+          const { error } = await s.from("notificaciones").insert(
+            ids.map((id) => ({
+              user_id: id,
+              titulo,
+              mensaje,
+              tipo,
+              leida: false,
+              event_key: `admin:${batchId}:${id}`,
+              programada_para: scheduledAt.toISOString(),
+              estado_envio: "pendiente",
+              sent_at: null,
+            })),
+          );
+          if (error) throw error;
+        }
+      } else if (ids.length) {
+        const { error: pushError } = await s.functions.invoke("send-notification", {
+          body: {
             titulo,
             mensaje,
             tipo,
-            leida: false,
-            event_key: `admin:${batchId}:${id}`,
-            programada_para: scheduledAt.toISOString(),
-            estado_envio: scheduledState,
-            sent_at: scheduledState === "sent" ? new Date().toISOString() : null,
-          })),
-        );
-        if (error) throw error;
+            user_ids: ids,
+            in_app: true,
+          },
+        });
+        if (pushError) throw pushError;
       }
 
-      if (scheduledAt.getTime() <= Date.now() + 5000) {
-        try {
-          const { error: pushError } = await s.functions.invoke("send-notification", {
-            body: { titulo, mensaje, tipo, user_id: destino === "one" ? userId : null },
-          });
-          if (pushError) console.warn("[push]", pushError);
-        } catch (e) {
-          console.warn("[push]", e);
-        }
-      }
-
-      toast(scheduledAt.getTime() > Date.now() + 5000 ? "Notificación programada." : "Notificación enviada.");
+      toast(isScheduled ? "Notificación programada." : "Notificación enviada.");
     }
 
     ["nt_titulo","nt_mensaje","nt_enlace","nt_enlace_label","nt_expira","nt_programada","nt_prioridad","nt_user"].forEach((id) => {
@@ -5817,7 +6230,6 @@ async function enviarComunicacionAdmin() {
     toast(e?.message || "No se pudo guardar la comunicación.");
   }
 }
-
 async function cambiarEstadoAnuncio(id, activo) {
   try {
     const { error } = await s.from("anuncios").update({

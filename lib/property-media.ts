@@ -10,10 +10,17 @@ const PUBLIC_MEDIA_BASE =
 const VIDEO_EXTENSIONS =
   /\.(mp4|webm|mov|m4v)(\?.*)?$/i;
 
+const USER_STORAGE_PATH =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\//i;
+
 /**
- * Convierte cualquier referencia de media
- * guardada por EYESITE en una URL utilizable
- * por la aplicación.
+ * Convierte una referencia de media publicada
+ * en una URL utilizable por la aplicación.
+ *
+ * Las rutas relativas antiguas pertenecientes a
+ * usuarios no son públicas por contrato: normalmente
+ * proceden de staging/private y deben ser promovidas
+ * antes de llegar al catálogo público.
  */
 export function normalizeMediaUrl(
   value: unknown
@@ -28,7 +35,7 @@ export function normalizeMediaUrl(
     return null;
   }
 
-  // URL completa. Aun así, nunca aceptamos como media pública
+  // URL completa. Nunca aceptamos como media pública
   // una URL de los buckets privados/de staging de EYESITE.
   if (
     input.startsWith('http://') ||
@@ -49,22 +56,43 @@ export function normalizeMediaUrl(
   }
 
   // Ruta /storage/v1/object/public/...
+  // Validamos el bucket antes de aceptar la URL.
   if (
     input.startsWith(
       '/storage/v1/object/public/'
     )
   ) {
+    const publicStoragePath =
+      input.slice('/storage/v1/object/public/'.length);
+
+    const normalizedStoragePath =
+      publicStoragePath.toLowerCase();
+
+    if (
+      normalizedStoragePath.startsWith('eyesite-staging/') ||
+      normalizedStoragePath.startsWith('eyesite-private/')
+    ) {
+      return null;
+    }
+
     return `${SUPABASE_URL}${input}`;
   }
 
   // Nunca convertir una ruta privada o de staging en una
   // URL pública. Si una propiedad todavía contiene una
-  // referencia antigua a estos buckets, la omitimos hasta
+  // referencia antigua a estos buckets, se omite hasta
   // que el medio sea promovido correctamente.
   if (
     input.startsWith('eyesite-staging/') ||
     input.startsWith('eyesite-private/')
   ) {
+    return null;
+  }
+
+  // Una ruta relativa que comienza por un UUID de usuario
+  // es una referencia típica de staging y NO debe
+  // reinterpretarse como un objeto público.
+  if (USER_STORAGE_PATH.test(input)) {
     return null;
   }
 
@@ -77,8 +105,9 @@ export function normalizeMediaUrl(
     return `${SUPABASE_URL}/storage/v1/object/public/${input}`;
   }
 
-  // Ruta relativa: por contrato de publicación, una ruta
-  // relativa se interpreta únicamente dentro de eyesite-media.
+  // Rutas relativas públicas heredadas se mantienen
+  // compatibles, pero solo si no parecen referencias
+  // de almacenamiento de usuario.
   return `${PUBLIC_MEDIA_BASE}/${input.replace(/^\/+/, '')}`;
 }
 

@@ -2,7 +2,6 @@ name: EYESITE checks
 
 on:
   push:
-    branches: [main]
   pull_request:
 
 jobs:
@@ -74,3 +73,20 @@ jobs:
           grep -q 'NSPrivacyCollectedDataTypes' "$manifest"
           grep -q 'NSPrivacyAccessedAPITypes' "$manifest"
           echo "Privacy manifest generated: $manifest"
+
+  edge-functions:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: Type-check Edge Functions
+        run: |
+          deno check --node-modules-dir=auto supabase/functions/send-notification/index.ts
+          deno check --node-modules-dir=auto supabase/functions/process-scheduled-communications/index.ts
+          deno check --node-modules-dir=auto supabase/functions/promote-submission-media/index.ts

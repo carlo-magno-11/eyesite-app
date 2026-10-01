@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   Animated,
+  Platform,
   StyleSheet,
   View,
   type ImageSourcePropType,
@@ -17,19 +18,17 @@ const REMOTE_IMAGES: ImageSourcePropType[] = [
   { uri: 'https://images.unsplash.com/photo-1600047509807-ba8f99d2cdde?w=1080' },
 ];
 
-// Fail-safe: si no existen los archivos locales, el require NUNCA llega a resolverse
-// porque Metro falla en build-time con una ruta inexistente. Para que sea 100% a
-// prueba de fallas el arreglo local se intenta en runtime (try/catch) y si no hay
-// imágenes locales se usan los fallbacks remotos (Unsplash).
+// Las imágenes locales forman parte del bundle. Los fallbacks remotos se conservan
+// para el caso en que una fuente local falle durante la ejecución.
 let cachedImages: ImageSourcePropType[] | null = null;
 
 export const getBgImages = (): ImageSourcePropType[] => {
   if (cachedImages) return cachedImages;
   try {
     const local: ImageSourcePropType[] = [
-      require('../../assets/images/auth/casa1.jpg'),
-      require('../../assets/images/auth/casa2.jpg'),
-      require('../../assets/images/auth/casa3.jpg'),
+      require('../../assets/images/auth/casa1.jpeg'),
+      require('../../assets/images/auth/casa2.jpeg'),
+      require('../../assets/images/auth/casa3.jpeg'),
     ];
     cachedImages = local;
   } catch {
@@ -53,13 +52,13 @@ export default function AuthBackground({ children, style }: AuthBackgroundProps)
       Animated.timing(fade, {
         toValue: 0,
         duration: 600,
-        useNativeDriver: true,
+        useNativeDriver: Platform.OS !== 'web',
       }).start(() => {
         setIndex((prev) => (prev + 1) % images.length);
         Animated.timing(fade, {
           toValue: 1,
           duration: 600,
-          useNativeDriver: true,
+          useNativeDriver: Platform.OS !== 'web',
         }).start();
       });
     }, 4000);

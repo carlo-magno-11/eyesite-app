@@ -19,18 +19,18 @@ import { Ionicons } from "@expo/vector-icons";
 import { supabase } from "@/lib/supabase";
 import AuthBackground from "@/components/AuthBackground";
 import { useResponsive } from "@/hooks/use-responsive";
+import { useI18n } from "@/lib/i18n";
 
 export default function RegisterScreen() {
   const router = useRouter();
   const { isDesktop } = useResponsive();
+  const { t } = useI18n();
 
+  const [nombre, setNombre] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [nombre, setNombre] = useState("");
-  const [telefono, setTelefono] = useState("");
-  const [ciudad, setCiudad] = useState("");
-  const [presupuesto, setPresupuesto] = useState("");
+  const [passwordFocused, setPasswordFocused] = useState(false);
 
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -38,25 +38,70 @@ export default function RegisterScreen() {
   const [loading, setLoading] = useState(false);
   const [legalAccepted, setLegalAccepted] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
+  const [confirmationEmail, setConfirmationEmail] = useState<string | null>(null);
+  const [resendingConfirmation, setResendingConfirmation] = useState(false);
+
+  const resendConfirmation = async () => {
+    if (!confirmationEmail || resendingConfirmation) return;
+    setResendingConfirmation(true);
+    try {
+      const { error } = await supabase.auth.resend({
+        type: "signup",
+        email: confirmationEmail,
+        options: {
+          emailRedirectTo:
+            Platform.OS === "web"
+              ? "https://auth.eyesite.mx/callback?type=email"
+              : "eyesite://auth/callback",
+        },
+      });
+      if (error) throw error;
+      Alert.alert(
+        "Correo reenviado",
+        "Revisa tu bandeja de entrada y la carpeta de spam.",
+      );
+    } catch (error: any) {
+      console.error("[register] resend confirmation:", error);
+      Alert.alert(
+        "No se pudo reenviar",
+        /rate limit|too many|hourly/i.test(error?.message || "")
+          ? "Espera unos minutos antes de solicitar otro correo."
+          : "No pudimos reenviar el correo. Inténtalo nuevamente.",
+      );
+    } finally {
+      setResendingConfirmation(false);
+    }
+  };
+
+  const passwordChecks = {
+    length: password.length >= 8,
+    number: /\d/.test(password),
+    upper: /[A-ZÁÉÍÓÚÑ]/.test(password),
+  };
+  const passwordScore = Object.values(passwordChecks).filter(Boolean).length;
+  const passwordLabel = passwordScore <= 1 ? t("passwordWeak") : passwordScore === 2 ? t("passwordGood") : t("passwordStrong");
 
   const signup = async () => {
     if (loading) return;
     if (!legalAccepted) {
       Alert.alert(
-        "Términos obligatorios",
-        "Debes leer y aceptar los términos antes de crear tu cuenta.",
+        t("requiredTerms"),
+        t("requiredTermsDescription"),
       );
       setShowTerms(true);
       return;
     }
 
+    const nombreLimpio = nombre.trim();
     const cleanEmail = email.trim().toLowerCase();
+
+    if (!nombreLimpio) return Alert.alert(t("missingInfo"), t("enterName"));
 
     // Validar correo
     if (!cleanEmail) {
       return Alert.alert(
-        "Correo requerido",
-        "Ingresa tu correo electrónico para continuar.",
+        t("requiredEmail"),
+        t("enterEmail"),
       );
     }
 
@@ -64,39 +109,24 @@ export default function RegisterScreen() {
 
     if (!emailIsValid) {
       return Alert.alert(
-        "Correo no válido",
-        "Ingresa una dirección de correo electrónico válida.",
+        t("invalidEmailAddress"),
+        t("invalidEmailAddress"),
       );
     }
 
-    const cleanNombre = nombre.trim();
-    const cleanTelefono = telefono.trim().replace(/\D/g, "");
-    const cleanCiudad = ciudad.trim();
-    const cleanPresupuesto = presupuesto.trim();
-
-    if (!cleanNombre) {
-      return Alert.alert("Nombre requerido", "Ingresa tu nombre completo.");
-    }
-    if (cleanTelefono.length < 10) {
-      return Alert.alert("Teléfono inválido", "Ingresa un teléfono válido de al menos 10 dígitos.");
-    }
-    if (!cleanCiudad) {
-      return Alert.alert("Ciudad requerida", "Ingresa tu ciudad o zona de interés.");
-    }
-
     // Validar contraseña
-    if (password.length < 6) {
+    if (password.length < 8 || !passwordChecks.number || !passwordChecks.upper) {
       return Alert.alert(
-        "Contraseña muy corta",
-        "La contraseña debe tener al menos 6 caracteres.",
+        t("weakPassword"),
+        t("passwordRequirements"),
       );
     }
 
     // Confirmar contraseña
     if (password !== confirmPassword) {
       return Alert.alert(
-        "Las contraseñas no coinciden",
-        "Verifica que ambas contraseñas sean iguales.",
+        t("passwordsMismatch"),
+        t("passwordsMismatchDescription"),
       );
     }
 
@@ -107,15 +137,10 @@ export default function RegisterScreen() {
         email: cleanEmail,
         password,
         options: {
-          data: {
-            nombre: cleanNombre,
-            telefono: cleanTelefono,
-            ciudad: cleanCiudad,
-            presupuesto: cleanPresupuesto,
-          },
+          data: { nombre: nombreLimpio },
           emailRedirectTo:
             Platform.OS === "web"
-              ? "https://auth.eyesite.mx/auth/callback"
+              ? "https://auth.eyesite.mx/callback?type=email"
               : "eyesite://auth/callback",
         },
       });
@@ -123,8 +148,8 @@ export default function RegisterScreen() {
       if (error) {
         if (/rate limit|too many|hourly/i.test(error.message)) {
           Alert.alert(
-            "Demasiados intentos",
-            "Supabase detectó demasiados intentos. Espera un momento e inténtalo nuevamente.",
+            t("tooManyAttempts"),
+            t("tooManyAttemptsDescription"),
           );
           return;
         }
@@ -133,15 +158,15 @@ export default function RegisterScreen() {
           /already registered|already exists|user already/i.test(error.message)
         ) {
           Alert.alert(
-            "Correo ya registrado",
-            "Este correo ya tiene una cuenta. Puedes iniciar sesión o recuperar tu contraseña.",
+            t("emailRegistered"),
+            t("emailRegisteredDescription"),
             [
               {
-                text: "Iniciar sesión",
+                text: t("signIn"),
                 onPress: () => router.replace("/(auth)/login" as never),
               },
               {
-                text: "Cancelar",
+                text: t("cancel"),
                 style: "cancel",
               },
             ],
@@ -149,24 +174,14 @@ export default function RegisterScreen() {
           return;
         }
 
-        Alert.alert("No se pudo crear la cuenta", error.message);
+        Alert.alert(t("accountCreateFailed"), error.message);
 
         return;
       }
 
       // Cuenta creada pero requiere confirmar correo
       if (data.user && !data.session) {
-        Alert.alert(
-          "Verifica tu correo",
-          `Te enviamos un enlace de confirmación a ${cleanEmail}. Revisa también la carpeta de spam.`,
-          [
-            {
-              text: "Ir al inicio de sesión",
-              onPress: () => router.replace("/(auth)/login" as never),
-            },
-          ],
-        );
-
+        setConfirmationEmail(cleanEmail);
         return;
       }
 
@@ -177,19 +192,19 @@ export default function RegisterScreen() {
       }
 
       Alert.alert(
-        "Cuenta creada",
-        "Tu cuenta fue creada correctamente. Ahora puedes iniciar sesión.",
+        t("accountCreated"),
+        t("accountCreatedDescription"),
         [
           {
-            text: "Continuar",
+            text: t("continue"),
             onPress: () => router.replace("/(auth)/login" as never),
           },
         ],
       );
     } catch {
       Alert.alert(
-        "Error",
-        "Ocurrió un problema inesperado. Inténtalo nuevamente.",
+        t("unexpectedProblem"),
+        t("unexpectedProblemDescription"),
       );
     } finally {
       setLoading(false);
@@ -198,6 +213,41 @@ export default function RegisterScreen() {
 
   return (
     <AuthBackground>
+      {confirmationEmail ? (
+        <View style={styles.confirmationScreen}>
+          <View style={styles.confirmationCard}>
+            <Ionicons name="mail-outline" size={56} color="#C9A84C" />
+            <Text style={styles.confirmationTitle}>{t("confirmEmailTitle")}</Text>
+            <Text style={styles.confirmationText}>{t("accountCreatedCorrectly")}</Text>
+            <Text style={styles.confirmationText}>{t("confirmationSent")}</Text>
+            <Text style={styles.confirmationEmail}>{confirmationEmail}</Text>
+            <Text style={styles.confirmationHint}>
+              {t("checkSpam")}
+            </Text>
+            <TouchableOpacity
+              onPress={resendConfirmation}
+              disabled={resendingConfirmation}
+              style={[styles.button, resendingConfirmation && styles.buttonDisabled]}
+              activeOpacity={0.8}
+            >
+              {resendingConfirmation ? (
+                <ActivityIndicator color="#0E0E0E" />
+              ) : (
+                <Text style={styles.buttonText}>REENVIAR VERIFICACIÓN</Text>
+              )}
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={() => router.replace("/(auth)/login" as never)}
+              style={[styles.secondaryButton, resendingConfirmation && styles.buttonDisabled]}
+              activeOpacity={0.8}
+              disabled={resendingConfirmation}
+            >
+              <Text style={styles.secondaryButtonText}>IR A INICIAR SESIÓN</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      ) : (
       <KeyboardAvoidingView
         style={styles.keyboard}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
@@ -210,16 +260,25 @@ export default function RegisterScreen() {
           <View style={[styles.container, isDesktop && styles.desktopContainer]}>
             {/* ENCABEZADO */}
             <View style={styles.header}>
-              <Text style={styles.brand}>CREAR CUENTA</Text>
+              <Text style={styles.brand}>{t("registerAccount")}</Text>
 
               <Text style={styles.subtitle}>
-                Regístrate para empezar a buscar propiedades
+                {t("registerSubtitle")}
               </Text>
+            </View>
+
+            {/* NOMBRE */}
+            <View style={styles.field}>
+              <Text style={styles.label}>{t("fullName")}</Text>
+              <View style={styles.inputWrap}>
+                <Ionicons name="person-outline" size={20} color="#888" style={styles.inputIcon} />
+                <TextInput value={nombre} onChangeText={setNombre} placeholder={t("fullNamePlaceholder")} placeholderTextColor="#666" autoCapitalize="words" autoCorrect={false} textContentType="name" autoComplete="name" returnKeyType="next" style={styles.input} />
+              </View>
             </View>
 
             {/* CORREO */}
             <View style={styles.field}>
-              <Text style={styles.label}>CORREO ELECTRÓNICO</Text>
+              <Text style={styles.label}>{t("email")}</Text>
 
               <View style={styles.inputWrap}>
                 <Ionicons
@@ -244,42 +303,9 @@ export default function RegisterScreen() {
               </View>
             </View>
 
-            {/* DATOS DEL PERFIL */}
-            <View style={styles.field}>
-              <Text style={styles.label}>NOMBRE COMPLETO</Text>
-              <View style={styles.inputWrap}>
-                <Ionicons name="person-outline" size={20} color="#888" style={styles.inputIcon} />
-                <TextInput value={nombre} onChangeText={setNombre} placeholder="Tu nombre completo" placeholderTextColor="#666" autoCapitalize="words" autoCorrect={false} style={styles.input} />
-              </View>
-            </View>
-
-            <View style={styles.field}>
-              <Text style={styles.label}>TELÉFONO / WHATSAPP</Text>
-              <View style={styles.inputWrap}>
-                <Ionicons name="call-outline" size={20} color="#888" style={styles.inputIcon} />
-                <TextInput value={telefono} onChangeText={setTelefono} placeholder="10 dígitos" placeholderTextColor="#666" keyboardType="phone-pad" style={styles.input} />
-              </View>
-            </View>
-
-            <View style={styles.field}>
-              <Text style={styles.label}>CIUDAD / ZONA</Text>
-              <View style={styles.inputWrap}>
-                <Ionicons name="location-outline" size={20} color="#888" style={styles.inputIcon} />
-                <TextInput value={ciudad} onChangeText={setCiudad} placeholder="Ciudad o zona de interés" placeholderTextColor="#666" autoCapitalize="words" autoCorrect={false} style={styles.input} />
-              </View>
-            </View>
-
-            <View style={styles.field}>
-              <Text style={styles.label}>PRESUPUESTO <Text style={styles.optional}>(OPCIONAL)</Text></Text>
-              <View style={styles.inputWrap}>
-                <Ionicons name="cash-outline" size={20} color="#888" style={styles.inputIcon} />
-                <TextInput value={presupuesto} onChangeText={setPresupuesto} placeholder="Ej. $2,500,000" placeholderTextColor="#666" keyboardType="default" style={styles.input} />
-              </View>
-            </View>
-
             {/* CONTRASEÑA */}
             <View style={styles.field}>
-              <Text style={styles.label}>CONTRASEÑA</Text>
+              <Text style={styles.label}>{t("password")}</Text>
 
               <View style={styles.inputWrap}>
                 <Ionicons
@@ -292,11 +318,15 @@ export default function RegisterScreen() {
                 <TextInput
                   value={password}
                   onChangeText={setPassword}
-                  placeholder="Mínimo 6 caracteres"
+                  placeholder={t("passwordMin")}
+                  autoComplete="new-password"
+                  textContentType="newPassword"
                   placeholderTextColor="#666"
                   secureTextEntry={!showPassword}
                   autoCapitalize="none"
                   autoCorrect={false}
+                  onFocus={() => setPasswordFocused(true)}
+                  onBlur={() => setPasswordFocused(false)}
                   style={styles.input}
                 />
 
@@ -312,11 +342,25 @@ export default function RegisterScreen() {
                   />
                 </Pressable>
               </View>
+              {(passwordFocused || password.length > 0) && (
+                <View style={styles.passwordGuide}>
+                  <View style={styles.passwordGuideHeader}>
+                    <Text style={styles.passwordGuideTitle}>{t("security")}: {passwordLabel.toUpperCase()}</Text>
+                    <Text style={styles.passwordGuideScore}>{passwordScore}/3</Text>
+                  </View>
+                  <View style={styles.passwordBarTrack}>
+                    <View style={[styles.passwordBar, { width: passwordScore === 0 ? "8%" : passwordScore === 1 ? "33%" : passwordScore === 2 ? "66%" : "100%" }]} />
+                  </View>
+                  <Text style={styles.passwordRule}>• {passwordChecks.length ? "✓" : "○"} {t("charactersMore")}</Text>
+                  <Text style={styles.passwordRule}>• {passwordChecks.upper ? "✓" : "○"} {t("oneUpper")}</Text>
+                  <Text style={styles.passwordRule}>• {passwordChecks.number ? "✓" : "○"} {t("oneNumber")}</Text>
+                </View>
+              )}
             </View>
 
             {/* CONFIRMAR CONTRASEÑA */}
             <View style={styles.field}>
-              <Text style={styles.label}>CONFIRMAR CONTRASEÑA</Text>
+              <Text style={styles.label}>{t("confirmPassword")}</Text>
 
               <View style={styles.inputWrap}>
                 <Ionicons
@@ -329,7 +373,7 @@ export default function RegisterScreen() {
                 <TextInput
                   value={confirmPassword}
                   onChangeText={setConfirmPassword}
-                  placeholder="Repite tu contraseña"
+                  placeholder={t("repeatPassword")}
                   placeholderTextColor="#666"
                   secureTextEntry={!showConfirmPassword}
                   autoCapitalize="none"
@@ -368,23 +412,22 @@ export default function RegisterScreen() {
                   )}
                 </View>
                 <Text style={styles.legalText}>
-                  He leído y acepto los Términos y Condiciones, Aviso de
-                  Privacidad y tratamiento de datos.
+                  {t("legalText")}
                 </Text>
               </Pressable>
               <Pressable onPress={() => setShowTerms(true)}>
-                <Text style={styles.legalLink}>LEER INFORMACIÓN COMPLETA</Text>
+                <Text style={styles.legalLink}>{t("readFullInfo")}</Text>
               </Pressable>
             </View>
             <Modal visible={showTerms} animationType="slide" transparent>
               <View style={styles.modalOverlay}>
                 <View style={styles.modalContent}>
                   <Text style={styles.modalTitle}>
-                    ANTES DE CREAR TU CUENTA
+                    {t("beforeAccount")}
                   </Text>
                   <ScrollView style={styles.modalScroll}>
                     <Text style={styles.modalText}>
-                      TÉRMINOS Y CONDICIONES EYESITE\n\nLa información
+                      {t("termsAndPrivacy")}\n\nLa información
                       inmobiliaria es referencial y debe verificarse con un
                       asesor. Te comprometes a proporcionar datos
                       veraces.\n\nAVISO DE PRIVACIDAD\n\nTus datos se utilizarán
@@ -402,14 +445,14 @@ export default function RegisterScreen() {
                     style={styles.acceptTermsBtn}
                   >
                     <Text style={styles.acceptTermsText}>
-                      HE LEÍDO Y ACEPTO
+                      {t("acceptTerms")}
                     </Text>
                   </Pressable>
                   <Pressable
                     onPress={() => setShowTerms(false)}
                     style={styles.closeTerms}
                   >
-                    <Text style={styles.closeTermsText}>Cerrar</Text>
+                    <Text style={styles.closeTermsText}>{t("close")}</Text>
                   </Pressable>
                 </View>
               </View>
@@ -426,31 +469,79 @@ export default function RegisterScreen() {
                 <View style={styles.loadingRow}>
                   <ActivityIndicator color="#0E0E0E" />
 
-                  <Text style={styles.buttonText}>CREANDO CUENTA...</Text>
+                  <Text style={styles.buttonText}>{t("creatingAccount")}</Text>
                 </View>
               ) : (
-                <Text style={styles.buttonText}>REGISTRARME</Text>
+                <Text style={styles.buttonText}>{t("signUp")}</Text>
               )}
             </TouchableOpacity>
 
             {/* LOGIN */}
             <View style={styles.footerContainer}>
-              <Text style={styles.footer}>¿Ya tienes una cuenta? </Text>
+              <Text style={styles.footer}>{t("alreadyAccount")} </Text>
 
               <Link href="/(auth)/login" asChild>
                 <Pressable>
-                  <Text style={styles.link}>Iniciar sesión</Text>
+                  <Text style={styles.link}>{t("signIn")}</Text>
                 </Pressable>
               </Link>
             </View>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+      )}
     </AuthBackground>
   );
 }
 
 const styles = StyleSheet.create({
+  confirmationScreen: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 24,
+  },
+  confirmationCard: {
+    width: "100%",
+    maxWidth: 560,
+    backgroundColor: "#171717",
+    borderWidth: 1,
+    borderColor: "#C9A84C",
+    borderRadius: 16,
+    padding: 28,
+    alignItems: "center",
+  },
+  confirmationTitle: {
+    color: "#C9A84C",
+    fontSize: 24,
+    fontWeight: "900",
+    letterSpacing: 1,
+    marginTop: 16,
+    marginBottom: 12,
+    textAlign: "center",
+  },
+  confirmationText: {
+    color: "#E5E5E5",
+    fontSize: 15,
+    lineHeight: 22,
+    textAlign: "center",
+  },
+  confirmationEmail: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontWeight: "800",
+    marginTop: 8,
+    marginBottom: 16,
+    textAlign: "center",
+  },
+  confirmationHint: {
+    color: "#AFAFAF",
+    fontSize: 13,
+    lineHeight: 20,
+    textAlign: "center",
+    marginBottom: 22,
+  },
+
   keyboard: {
     flex: 1,
   },
@@ -530,6 +621,14 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
 
+  passwordGuide: { marginTop: 8, padding: 12, borderRadius: 10, backgroundColor: "#141414", borderWidth: 1, borderColor: "#292929" },
+  passwordGuideHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  passwordGuideTitle: { color: "#C9A84C", fontSize: 9, fontWeight: "900", letterSpacing: 0.8 },
+  passwordGuideScore: { color: "#777", fontSize: 9, fontWeight: "800" },
+  passwordBarTrack: { height: 3, backgroundColor: "#292929", borderRadius: 3, overflow: "hidden", marginVertical: 9 },
+  passwordBar: { height: 3, backgroundColor: "#C9A84C", borderRadius: 3 },
+  passwordRule: { color: "#8F8F8F", fontSize: 10, lineHeight: 17 },
+
   optional: { color: "#777", fontWeight: "400" },
 
   legalBox: {
@@ -604,6 +703,21 @@ const styles = StyleSheet.create({
     gap: 10,
   },
 
+  secondaryButton: {
+    marginTop: 12,
+    minHeight: 50,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "#C9A84C",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  secondaryButtonText: {
+    color: "#C9A84C",
+    fontSize: 13,
+    fontWeight: "900",
+    letterSpacing: 0.8,
+  },
   buttonText: {
     color: "#0E0E0E",
     fontWeight: "900",

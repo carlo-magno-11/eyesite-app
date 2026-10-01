@@ -3,13 +3,17 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || 'https://xhvpvpvtkdgnnxdwdrkn.supabase.co';
-const supabaseAnonKey =
-  process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ||
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhodnB2cHZ0a2Rnbm54ZHdkcmtuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODcwODk5MTEsImV4cCI6MjEwMjY2NTkxMX0.zsEMmjhbln24S25FnbKvlkic2djzON8QoXNLO8CtXA0';
+const supabaseUrl =
+  process.env.EXPO_PUBLIC_SUPABASE_URL ||
+  'https://xhvpvpvtkdgnnxdwdrkn.supabase.co';
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  console.error('[supabase] Faltan EXPO_PUBLIC_SUPABASE_URL / ANON_KEY en .env');
+const supabaseKey =
+  process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
+  process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ||
+  'sb_publishable_lrWXjCHfxJdwBRo7jeGYFg_BKRooUR-';
+
+if (!supabaseUrl || !supabaseKey) {
+  console.error('[supabase] Faltan EXPO_PUBLIC_SUPABASE_URL / SUPABASE_PUBLISHABLE_KEY en .env');
 }
 
 // Fix Expo web vs native: web usa localStorage, native AsyncStorage.
@@ -28,13 +32,13 @@ const getStorage = () => {
 
 export const supabase: SupabaseClient =
   globalThis.__eyesi_supabase__ ??
-  createClient(supabaseUrl, supabaseAnonKey, {
+  createClient(supabaseUrl, supabaseKey, {
     auth: {
       storage: getStorage() as any,
       storageKey: 'eyesi-auth',
       persistSession: true,
       autoRefreshToken: true,
-      detectSessionInUrl: true,
+      detectSessionInUrl: Platform.OS === 'web',
     },
   });
 

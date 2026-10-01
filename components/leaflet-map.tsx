@@ -18,10 +18,20 @@ export const LeafletMap = forwardRef<LeafletMapHandle, LeafletMapProps>(
   function LeafletMap({ html, onMessage, style, onLoad, command }, ref) {
     const webViewRef = useRef<WebView>(null);
     useImperativeHandle(ref, () => ({
-      runScript: (script) => webViewRef.current?.injectJavaScript(script),
+      runScript: (script) => {
+        const safeScript = JSON.stringify(script);
+        webViewRef.current?.injectJavaScript(
+          `window.postMessage(${safeScript}, '*'); true;`,
+        );
+      },
     }), []);
     useEffect(() => {
-      if (command) webViewRef.current?.injectJavaScript(command);
+      if (command) {
+        const safeCommand = JSON.stringify(command);
+        webViewRef.current?.injectJavaScript(
+          `window.postMessage(${safeCommand}, '*'); true;`,
+        );
+      }
     }, [command]);
     return (
       <WebView

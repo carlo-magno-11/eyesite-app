@@ -729,7 +729,7 @@
       .stats {
         display: grid;
 
-        grid-template-columns: repeat(4, minmax(0, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
 
         gap: 14px;
 
@@ -2487,6 +2487,23 @@
     font-size: 11px;
     margin-top: 8px;
   }
+
+    .property-tools{gap:14px;align-items:center;}
+    .property-search-row{display:flex;align-items:center;gap:8px;min-width:min(100%,520px);}
+    .property-search-row .tsrch{flex:1;min-width:180px;}
+    .property-filter-btn{height:40px;padding:0 14px;border:1px solid #2A2A2A;border-radius:10px;background:#141414;color:#C9A84C;font-weight:800;cursor:pointer;white-space:nowrap;}
+    .property-filter-btn.active{background:#C9A84C;color:#0D0D0D;border-color:#C9A84C;}
+    .property-filter-count{display:inline-flex;min-width:20px;height:20px;margin-left:5px;border-radius:10px;align-items:center;justify-content:center;background:#C9A84C;color:#0D0D0D;font-size:10px;}
+    .property-filter-panel{margin:0 0 14px;padding:14px 16px;border:1px solid #292929;border-radius:12px;background:#111;}
+    .property-filter-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+    .property-filter-head strong{display:block;color:#F5F5F5;font-size:11px;letter-spacing:1px;}
+    .property-filter-head small{display:block;color:#6F6F6F;margin-top:3px;}
+    .property-filter-clear{border:0;background:none;color:#C9A84C;font-weight:800;cursor:pointer;}
+    .property-filter-grid{display:grid;grid-template-columns:repeat(5,minmax(130px,1fr));gap:9px;}
+    .property-filter-grid label{display:flex;flex-direction:column;gap:5px;color:#777;font-size:10px;font-weight:800;}
+    .property-filter-grid input,.property-filter-grid select{width:100%;height:38px;padding:0 10px;border:1px solid #2A2A2A;border-radius:9px;background:#181818;color:#F5F5F5;box-sizing:border-box;}
+    @media(max-width:900px){.property-tools{align-items:stretch;flex-direction:column;}.property-search-row{min-width:0;}.property-filter-grid{grid-template-columns:repeat(2,minmax(0,1fr));}}
+    @media(max-width:560px){.property-search-row{flex-direction:column;}.property-search-row .tsrch,.property-filter-btn{width:100%;}.property-filter-grid{grid-template-columns:1fr;}}
   </style>
 
   </head>
@@ -2563,6 +2580,7 @@
           <div class="ni" data-s="nueva">➕ Nueva propiedad</div>
 
           <div class="ni" data-s="usuarios">👥 Usuarios</div>
+          <div class="ni" data-s="crm">🎯 Prospectos CRM</div>
           <div class="ni" data-s="notificaciones">🔔 Notificaciones</div>
         </nav>
 
@@ -2624,6 +2642,12 @@
 
                 <div class="slbl">Rendimiento promedio</div>
               </div>
+
+              <div class="stat">
+                <div class="sv" id="smap">0/0</div>
+
+                <div class="slbl">Propiedades ubicadas en mapa</div>
+              </div>
             </div>
 
             <div class="tw">
@@ -2656,17 +2680,62 @@
 
           <section class="sec" id="sec-propiedades">
             <div class="tw">
-              <div class="th">
+              <div class="th property-tools">
                 <div class="tt">Todas las propiedades</div>
+                <div class="property-search-row">
+                  <input
+                    class="tsrch"
+                    id="propertySearch"
+                    type="search"
+                    placeholder="🔍 Buscar propiedad..."
+                    autocomplete="off"
+                    oninput="filterT(this.value)"
+                  />
+                  <button type="button" class="property-filter-btn" id="propertyFilterBtn" onclick="togglePropertyFilters()" aria-expanded="false">
+                    ⚙️ Filtros <span id="propertyFilterCount" class="property-filter-count">0</span>
+                  </button>
+                </div>
+              </div>
 
-                <input
-                  class="tsrch"
-                  id="propertySearch"
-                  type="search"
-                  placeholder="🔍 Buscar propiedad..."
-                  autocomplete="off"
-                  oninput="filterT(this.value)"
-                />
+              <div class="property-filter-panel" id="propertyFilterPanel" hidden>
+                <div class="property-filter-head">
+                  <div>
+                    <strong>FILTRAR PROPIEDADES</strong>
+                    <small id="propertyFilterSummary">Todos los resultados</small>
+                  </div>
+                  <button type="button" class="property-filter-clear" onclick="clearPropertyFilters()">Limpiar</button>
+                </div>
+                <div class="property-filter-grid">
+                  <label>Tipo
+                    <select id="propertyFilterType" onchange="applyPropertyFilters()">
+                      <option value="">Todos</option>
+                      <option value="Casa">Casa</option>
+                      <option value="Departamento">Departamento</option>
+                      <option value="Terreno">Terreno</option>
+                      <option value="Hacienda">Hacienda</option>
+                      <option value="Rancho">Rancho</option>
+                      <option value="Industrial">Industrial</option>
+                      <option value="Local">Local</option>
+                      <option value="Oficina">Oficina</option>
+                    </select>
+                  </label>
+                  <label>Estado
+                    <select id="propertyFilterStatus" onchange="applyPropertyFilters()">
+                      <option value="">Todos</option>
+                      <option value="activa">Activa</option>
+                      <option value="inactiva">Inactiva</option>
+                    </select>
+                  </label>
+                  <label>Municipio
+                    <input id="propertyFilterMunicipio" type="search" placeholder="Ej. Mérida" oninput="applyPropertyFilters()" />
+                  </label>
+                  <label>Precio mínimo
+                    <input id="propertyFilterMinPrice" type="number" min="0" inputmode="numeric" placeholder="$ mínimo" oninput="applyPropertyFilters()" />
+                  </label>
+                  <label>Precio máximo
+                    <input id="propertyFilterMaxPrice" type="number" min="0" inputmode="numeric" placeholder="$ máximo" oninput="applyPropertyFilters()" />
+                  </label>
+                </div>
               </div>
 
               <div class="table-scroll">
@@ -2761,6 +2830,51 @@
           </section>
 
           <!-- =================================================
+           CRM DE PROSPECTOS
+           ================================================= -->
+          <section class="sec" id="sec-crm">
+            <div class="fp">
+              <div class="fpt">PROSPECTOS</div>
+              <div class="fps">Seguimiento comercial de contactos, interés en propiedades y prioridad de atención.</div>
+
+              <div class="stat" style="margin-bottom:18px">
+                <div class="sv" id="crm_summary">Cargando prospectos...</div>
+                <div class="slbl">Resumen CRM</div>
+              </div>
+
+              <div class="tw">
+                <div class="th">
+                  <div>
+                    <div class="tt">Pipeline comercial</div>
+                    <div style="color:var(--mu);font-size:10px;margin-top:4px">
+                      El score es una señal operativa; no sustituye la valoración del asesor.
+                    </div>
+                  </div>
+                  <button class="btn btn-o" onclick="cargarCRM()">↻ Actualizar</button>
+                </div>
+                <div class="table-scroll">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Prospecto</th>
+                        <th>Score</th>
+                        <th>Presupuesto</th>
+                        <th>Zona</th>
+                        <th>Fuente</th>
+                        <th>Propiedades</th>
+                        <th>Actividad</th>
+                        <th>Estado</th>
+                        <th>Acción</th>
+                      </tr>
+                    </thead>
+                    <tbody id="crm_tbody"></tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- =================================================
            NOTIFICACIONES
            ================================================= -->
           <section class="sec" id="sec-notificaciones">
@@ -2776,8 +2890,8 @@
       <div class="fg gfull" id="nt_user_wrap" style="display:none"><label>UUID DEL USUARIO</label><input id="nt_user" class="fi2" placeholder="UUID del usuario"></div>
       <div class="fg gfull"><label>MENSAJE</label><textarea id="nt_mensaje" class="fta" maxlength="2000"></textarea></div>
 
-      <div class="fg"><label>IMAGEN DE PORTADA</label><input id="nt_imagen" class="fi2" type="file" accept="image/jpeg,image/png,image/webp,image/gif"></div>
-      <div class="fg"><label>GALERÍA</label><input id="nt_imagenes" class="fi2" type="file" multiple accept="image/jpeg,image/png,image/webp,image/gif"></div>
+      <div class="fg"><label>IMAGEN DE PORTADA</label><input id="nt_imagen" class="fi2" type="file" accept="image/jpeg,image/png,image/webp"></div>
+      <div class="fg"><label>GALERÍA</label><input id="nt_imagenes" class="fi2" type="file" multiple accept="image/jpeg,image/png,image/webp"></div>
       <div class="fg"><label>ENLACE</label><input id="nt_enlace" class="fi2" type="url" placeholder="https://..."></div>
       <div class="fg"><label>TEXTO DEL BOTÓN</label><input id="nt_enlace_label" class="fi2" placeholder="VER MÁS" maxlength="40"></div>
       <div class="fg"><label>PROGRAMAR ENVÍO / PUBLICACIÓN</label><input id="nt_programada" class="fi2" type="datetime-local"></div>
@@ -2900,6 +3014,8 @@
         <div class="mf">
           <button class="btn btn-o" onclick="closeMod('vmod')">Cerrar</button>
 
+          <button class="btn btn-g" id="vedit" style="display:none">✏️ Editar solicitud</button>
+
           <button class="btn btn-r" id="vdel" onclick="delPend()">
             🗑️ Eliminar
           </button>
@@ -2941,6 +3057,7 @@
      JAVASCRIPT PRINCIPAL
      ===================================================== -->
 
+    <script src="./crm.js"></script>
     <script src="./admin.js"></script>
   </body>
 </html>

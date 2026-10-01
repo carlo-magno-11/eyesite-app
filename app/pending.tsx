@@ -1,11 +1,16 @@
 import { View, Text, Pressable, StyleSheet, Linking } from 'react-native';
+import { ScreenContainer } from '@/components/screen-container';
+import { useResponsive } from '@/hooks/use-responsive';
 import { CONTACT } from '@/constants/contact';
 import { useAuth } from '@/hooks/useAuth';
+import { useI18n } from '@/lib/i18n';
 
 const DEFAULT_PHONE = CONTACT.whatsappNumber;
 
 export default function PendingScreen() {
   const { user } = useAuth();
+  const { t } = useI18n();
+  const { horizontalPadding, contentMaxWidth } = useResponsive();
   const openWhatsApp = () => {
     const msg = CONTACT.whatsappMessagePending + (user?.email || '');
     Linking.openURL(`https://wa.me/${DEFAULT_PHONE}?text=${encodeURIComponent(msg)}`).catch((e) =>
@@ -14,18 +19,17 @@ export default function PendingScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <ScreenContainer edges={["top", "bottom"]} containerClassName="bg-background"><View style={[styles.container, { paddingHorizontal: horizontalPadding, maxWidth: contentMaxWidth, width: "100%", alignSelf: "center" }]}>
       <Text style={styles.icon}>⏳</Text>
-      <Text style={styles.title}>Tu cuenta está en revisión</Text>
+      <Text style={styles.title}>{t("accountUnderReview")}</Text>
       <Text style={styles.body}>
-        Recibimos tu registro. Nuestro equipo está validando tu cuenta. Te notificaremos en
-        cuanto sea aprobada.
+        {t("accountUnderReviewDescription")}
       </Text>
       <Pressable onPress={openWhatsApp} style={({ pressed }) => [styles.btn, pressed && { opacity: 0.85 }]}>
-        <Text style={styles.btnText}>CONTACTAR POR WHATSAPP</Text>
+        <Text style={styles.btnText}>{t("contactWhatsapp")}</Text>
       </Pressable>
       <Text style={styles.help}>{CONTACT.whatsappNumberDisplay}</Text>
-    </View>
+    </View></ScreenContainer>
   );
 }
 

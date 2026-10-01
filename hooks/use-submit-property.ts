@@ -58,8 +58,16 @@ export function useSubmitProperty() {
       folder === 'videos'
         ? ext === 'mov'
           ? 'video/quicktime'
-          : 'video/mp4'
-        : 'image/jpeg';
+          : ext === 'm4v'
+            ? 'video/x-m4v'
+            : 'video/mp4'
+        : ext === 'png'
+          ? 'image/png'
+          : ext === 'webp'
+            ? 'image/webp'
+            : ext === 'gif'
+              ? 'image/gif'
+              : 'image/jpeg';
     const buffer = await readFileArrayBuffer(uri);
     const { error } = await supabase.storage
       .from('eyesite-staging')

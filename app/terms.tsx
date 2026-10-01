@@ -4,21 +4,19 @@ import { router } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
 import { ScreenContainer } from '@/components/screen-container';
-
-const TEXTOS: Record<string, string> = {
-  servicio: `TÉRMINOS Y CONDICIONES EYESI+E\n\n1. Plataforma para búsqueda inmobiliaria en Yucatán.\n2. La información de propiedades es referencial, debe verificarse con asesor.\n3. EYESI+E no garantiza disponibilidad inmediata.\n4. El usuario se compromete a datos veraces.\n\nContacto WhatsApp: 999 746 2162`,
-  privacidad: `AVISO DE PRIVACIDAD\n\nTus datos (email, nombre, preferencias) se usarán únicamente para contactarte sobre propiedades y listings relevantes, cumpliendo la Ley de Protección de Datos.\nNo vendemos tu info. Baja al WhatsApp 999 746 2162.`,
-  datos: `TRATAMIENTO DE DATOS PARA CONTACTO\n\nAutorizas que un asesor de EYESI+E te contacte por WhatsApp, llamada o email para mostrar propiedades y agendar visitas.`
-};
+import { useResponsive } from '@/hooks/use-responsive';
+import { useI18n } from '@/lib/i18n';
 
 const TERMS_ITEMS = [
-  { key: 'servicio', label: 'Acepto los Términos y Condiciones de EYESI+E' },
-  { key: 'privacidad', label: 'Acepto el Aviso de Privacidad' },
-  { key: 'datos', label: 'Autorizo el tratamiento de mis datos personales para contacto' },
+  { key: 'servicio', labelKey: 'termServiceLabel' as const },
+  { key: 'privacidad', labelKey: 'termPrivacyLabel' as const },
+  { key: 'datos', labelKey: 'termDataLabel' as const },
 ];
 
 export default function TermsScreen() {
   const { user } = useAuth();
+  const { isDesktop, horizontalPadding, contentMaxWidth } = useResponsive();
+  const { t } = useI18n();
   const [accepted, setAccepted] = useState<Record<string, boolean>>({});
   const [leido, setLeido] = useState<Record<string, boolean>>({});
   const [modal, setModal] = useState<string | null>(null);
@@ -105,8 +103,8 @@ export default function TermsScreen() {
     });
 
     Alert.alert(
-      'No se pudieron guardar los términos',
-      e?.message || 'No pudimos guardar tu aceptación. Inténtalo nuevamente.',
+      t("termsSaveError"),
+      e?.message || t("termsSaveErrorDescription"),
     );
   } finally {
     setSaving(false);
@@ -115,17 +113,17 @@ export default function TermsScreen() {
 
   return (
     <ScreenContainer edges={['top', 'bottom']} containerClassName="bg-background">
-      <ScrollView contentContainerStyle={styles.container}>
-        <Text style={styles.title}>TÉRMINOS Y CONDICIONES</Text>
-        <Text style={styles.subtitle}>Revisa y acepta para continuar</Text>
+      <ScrollView contentContainerStyle={[styles.container, { paddingHorizontal: horizontalPadding }]}>\n        <View style={[styles.content, isDesktop && { maxWidth: contentMaxWidth ?? 900 }]}>
+        <Text style={styles.title}>{t("termsTitle")}</Text>
+        <Text style={styles.subtitle}>{t("termsSubtitle")}</Text>
 
         <View style={styles.card}>
           {TERMS_ITEMS.map((item) => (
             <View key={item.key} style={styles.row}>
               <Pressable onPress={() => abrirModal(item.key)} style={{flex:1}}>
                 <Text style={styles.label}>
-                  {item.label}
-                  {!leido[item.key] && <Text style={{color:'#C9A84C'}}> (Ver info)</Text>}
+                  {t(item.labelKey)}
+                  {!leido[item.key] && <Text style={{color:'#C9A84C'}}> ({t("readInfo")})</Text>}
                 </Text>
               </Pressable>
               <Switch
@@ -143,37 +141,38 @@ export default function TermsScreen() {
           disabled={!allAccepted || saving}
           style={({ pressed }) => [styles.btn, (!allAccepted || saving) && styles.btnDisabled, pressed && allAccepted && { opacity: 0.85 }]}
         >
-          {saving? <ActivityIndicator color="#0D0D0D" /> : <Text style={styles.btnText}>ACEPTAR Y CONTINUAR</Text>}
+          {saving? <ActivityIndicator color="#0D0D0D" /> : <Text style={styles.btnText}>{t("acceptContinue")}</Text>}
         </Pressable>
-        <Text style={styles.hint}>{allAccepted? 'Todo leído y aceptado' : 'Debes leer (Ver info) y aceptar los 3 puntos'}</Text>
+        <Text style={styles.hint}>{allAccepted ? t("termsHintAccepted") : t("termsHintPending")}</Text>
 
         {/* MODAL DE LECTURA */}
         <Modal visible={!!modal} animationType="slide" transparent>
           <View style={styles.modalOverlay}>
             <View style={styles.modalContent}>
               <Text style={styles.modalTitle}>
-                {modal === 'servicio'? 'Términos y Condiciones' : modal === 'privacidad'? 'Aviso de Privacidad' : 'Tratamiento de Datos'}
+                {modal === 'servicio' ? t("termServiceTitle") : modal === 'privacidad' ? t("termPrivacyTitle") : t("termDataTitle")}
               </Text>
               <ScrollView style={{maxHeight:380, marginVertical:12}}>
-                <Text style={styles.modalText}>{modal? TEXTOS[modal] : ''}</Text>
+                <Text style={styles.modalText}>{modal === 'servicio' ? t("termsServiceText") : modal === 'privacidad' ? t("termsPrivacyText") : t("termsDataText")}</Text>
               </ScrollView>
               <Pressable onPress={confirmarLectura} style={styles.modalBtn}>
-                <Text style={styles.modalBtnText}>He leído y Confirmo que leí esta información</Text>
+                <Text style={styles.modalBtnText}>{t("readAndConfirm")}</Text>
               </Pressable>
               <Pressable onPress={()=>setModal(null)} style={{padding:12, alignItems:'center'}}>
-                <Text style={{color:'#888'}}>Cerrar sin aceptar</Text>
+                <Text style={{color:'#888'}}>{t("closeWithoutAccepting")}</Text>
               </Pressable>
             </View>
           </View>
         </Modal>
-
+        </View>
       </ScrollView>
     </ScreenContainer>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flexGrow: 1, padding: 20, justifyContent: 'center' },
+  container: { flexGrow: 1, justifyContent: 'center', paddingVertical: 24 },
+  content: { width: '100%', alignSelf: 'center' },
   title: { color: '#FFFFFF', fontSize: 24, fontWeight: '800', letterSpacing: 1, marginBottom: 6 },
   subtitle: { color: '#9A9A9A', fontSize: 13, marginBottom: 20 },
   card: { backgroundColor: '#0E0E0E', borderWidth: 1, borderColor: '#C9A84C', borderRadius: 12, padding: 16, marginBottom: 20, gap: 4 },

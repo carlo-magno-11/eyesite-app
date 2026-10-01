@@ -10,6 +10,9 @@ import { ScreenContainer } from '@/components/screen-container';
 import { useProperty } from '@/hooks/use-properties';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
+import { useCommercial } from '@/hooks/use-commercial';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useI18n } from '@/lib/i18n';
 
 const WHATSAPP = '+52 9813674060';
 const PHONE = '+52 9813674060';
@@ -17,40 +20,61 @@ const PHONE = '+52 9813674060';
 export default function PropertyDetailScreen() {
   const { id, play } = useLocalSearchParams<{ id: string; play?: string }>();
   const { width: windowWidth } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
+  const { t } = useI18n();
   const contentWidth = Math.min(windowWidth, 1200);
+  const galleryHeight = Math.max(260, Math.min(Math.round(windowWidth * 0.56), windowWidth >= 1024 ? 560 : 420));
   const { property, loading } = useProperty(id);
   const { session } = useAuth();
+  const { trackPropertyEvent, registerProspectInterest } = useCommercial();
   const { isFav, toggleFav } = useFavorites();
   const [activeImage, setActiveImage] = useState(0);
   const [imageLoading, setImageLoading] = useState(true);
   const [signedDocuments, setSignedDocuments] = useState<Record<string, string>>({});
+  const [loadingDocument, setLoadingDocument] = useState<string | null>(null);
 
   useEffect(() => {
-    let cancelled = false;
-    const loadPrivateDocuments = async () => {
-      if (!property?.id || !session?.user?.id) { if (!cancelled) setSignedDocuments({}); return; }
-      const items: string[] = [];
-      const add = (value: any) => {
-        if (typeof value === 'string' && value.trim()) items.push(value.trim());
-        else if (value && typeof value === 'object') add(value.path || value.url || value.publicUrl);
-      };
-      (property.pdfs || []).forEach(add);
-      (property.kmz_kml || []).forEach(add);
-      (property.archivos || []).forEach(add);
-      const unique = [...new Set(items)];
-      if (!unique.length) { if (!cancelled) setSignedDocuments({}); return; }
-      const result: Record<string, string> = {};
-      await Promise.all(unique.map(async (path) => {
-        const { data, error } = await supabase.functions.invoke('get-property-document', {
-          body: { property_id: property.id, path },
-        });
-        if (!error && data?.signedUrl) result[path] = data.signedUrl;
-      }));
-      if (!cancelled) setSignedDocuments(result);
+    if (!property?.id || !session?.user?.id) return;
+    void trackPropertyEvent(property.id, 'view');
+  }, [property?.id, session?.user?.id, trackPropertyEvent]);
+
+  const privateDocumentPaths = useMemo(() => {
+    if (!property) return [];
+    const items: string[] = [];
+    const add = (value: any) => {
+      if (typeof value === 'string' && value.trim()) items.push(value.trim());
+      else if (value && typeof value === 'object') add(value.path || value.url || value.publicUrl);
     };
-    loadPrivateDocuments();
-    return () => { cancelled = true; };
-  }, [property?.id, property?.pdfs, property?.kmz_kml, property?.archivos, session?.user?.id]);
+    (property.pdfs || []).forEach(add);
+    (property.kmz_kml || []).forEach(add);
+    (property.archivos || []).forEach(add);
+    return [...new Set(items)];
+  }, [property]);
+
+  const openPrivateDocument = async (path: string) => {
+    if (!property?.id || !session?.user?.id) return;
+    const cacheKey = `${session.user.id}:${property.id}:${path}`;
+    const cachedUrl = signedDocuments[cacheKey];
+    if (cachedUrl) {
+      await Linking.openURL(cachedUrl);
+      return;
+    }
+
+    setLoadingDocument(path);
+    try {
+      const { data, error } = await supabase.functions.invoke('get-property-document', {
+        body: { property_id: property.id, path },
+      });
+      if (error || !data?.signedUrl) {
+        console.warn('[property] document access:', error?.message ?? 'No se recibió una URL firmada');
+        return;
+      }
+      setSignedDocuments((current) => ({ ...current, [cacheKey]: data.signedUrl }));
+      await Linking.openURL(data.signedUrl);
+    } finally {
+      setLoadingDocument(null);
+    }
+  };
 
   // Portada intercambiable video/foto (anti-trabe: sin player ni autoplay en la
   // vista normal; el video solo se reproduce dentro del Modal al tocar Play)
@@ -145,6 +169,7 @@ export default function PropertyDetailScreen() {
   useEffect(() => {
     const imageUrls = mediaList
       .filter((item) => item.type === 'image')
+      .slice(0, 3)
       .map((item) => item.url)
       .filter(Boolean);
     if (imageUrls.length) {
@@ -157,7 +182,7 @@ export default function PropertyDetailScreen() {
       <ScreenContainer containerClassName="bg-background">
         <View style={styles.notFound}>
           <ActivityIndicator color="#C9A84C" size="large" />
-          <Text style={styles.notFoundText}>Cargando propiedad...</Text>
+          <Text style={styles.notFoundText}>{t("loadingProperty")}</Text>
         </View>
       </ScreenContainer>
     );
@@ -167,9 +192,9 @@ export default function PropertyDetailScreen() {
     return (
       <ScreenContainer containerClassName="bg-background">
         <View style={styles.notFound}>
-          <Text style={styles.notFoundText}>Propiedad no encontrada</Text>
+          <Text style={styles.notFoundText}>{t("propertyNotFound")}</Text>
           <Pressable onPress={() => router.back()} style={styles.backBtn}>
-            <Text style={styles.backBtnText}>← Volver</Text>
+            <Text style={styles.backBtnText}>{t("back")}</Text>
           </Pressable>
         </View>
       </ScreenContainer>
@@ -238,6 +263,9 @@ export default function PropertyDetailScreen() {
 
  const frente = Number(property.frente ?? 0);
  const fondo = Number(property.fondo ?? 0);
+ const hasDimensions = frente > 0 && fondo > 0;
+ const terrainRatio = hasDimensions ? Math.min(3.2, Math.max(0.45, frente / fondo)) : 1;
+ const hasCoordinates = Number.isFinite(Number(property.latitud)) && Number.isFinite(Number(property.longitud));
 
  const detailEntries = Object.entries(property.detalles || {})
   .filter(([_, value]) => value !== null && value !== undefined && String(value).trim() !== '');
@@ -282,6 +310,16 @@ export default function PropertyDetailScreen() {
  };
 
   const handleWhatsApp = () => {
+    if (property?.id) {
+      void trackPropertyEvent(property.id, 'whatsapp_click', {
+        property_title: title,
+      });
+      void registerProspectInterest(property.id, 'whatsapp', {
+        property_title: title,
+        channel: 'whatsapp',
+      });
+    }
+
     const msg = encodeURIComponent(
       `Hola, me interesa la propiedad: ${property.title || property.titulo} en ${property.location || property.municipio}. ¿Podría darme más información?`
     );
@@ -295,6 +333,9 @@ export default function PropertyDetailScreen() {
   const handleShareProperty =
   async () => {
     try {
+      if (property?.id) {
+        void trackPropertyEvent(property.id, 'share');
+      }
       const appLink =
         `https://www.eyesite.mx/property/${property.id}`;
 
@@ -315,8 +356,8 @@ export default function PropertyDetailScreen() {
     }
   };
 
-  const returnDiff = (marketPrice) > 0
-    ? Math.round((((marketPrice) - (currentPrice)) / (marketPrice)) * 100)
+  const returnDiff = marketPrice > 0
+    ? Math.round(((marketPrice - currentPrice) / marketPrice) * 100)
     : 0;
 
   const closeVideoModal = () => {
@@ -330,9 +371,9 @@ export default function PropertyDetailScreen() {
 
   return (
     <View style={styles.container}>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 120 }}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: Math.max(120, 96 + insets.bottom) }}>
         {/* Galería V6.3: orden fijo — portada (foto) → video (con poster) → resto. Sin negro. */}
-        <View style={[styles.galleryContainer, { width: contentWidth, alignSelf: 'center' }]}>
+        <View style={[styles.galleryContainer, { width: contentWidth, height: galleryHeight, alignSelf: 'center' }]}>
           <FlatList
             horizontal
             pagingEnabled
@@ -351,12 +392,12 @@ export default function PropertyDetailScreen() {
                     player={carouselPlayer}
                     nativeControls
                     contentFit="contain"
-                    style={{ width: contentWidth, height: 300, backgroundColor: '#000' }}
+                    style={{ width: contentWidth, height: galleryHeight, backgroundColor: '#000' }}
                   />
                 ) : (
                   <Pressable
                     onPress={handleCarouselPlay}
-                    style={{ width: contentWidth, height: 300, backgroundColor: '#000' }}
+                    style={{ width: contentWidth, height: galleryHeight, backgroundColor: '#000' }}
                   >
                     {item.poster ? (
                       <Image
@@ -373,11 +414,11 @@ export default function PropertyDetailScreen() {
                   </Pressable>
                 )
               ) : (
-                <View style={{ width: contentWidth, height: 300, backgroundColor: '#151515' }}>
+                <View style={{ width: contentWidth, height: galleryHeight, backgroundColor: '#151515' }}>
                   <Image
                     source={{ uri: item.url }}
                     placeholder={item.url !== property.portada_url && property.portada_url ? { uri: property.portada_url } : undefined}
-                    style={{ width: contentWidth, height: 300 }}
+                    style={{ width: contentWidth, height: galleryHeight }}
                     contentFit="cover"
                     cachePolicy="memory-disk"
                     transition={150}
@@ -401,7 +442,7 @@ export default function PropertyDetailScreen() {
           {/* Botón atrás */}
           <Pressable
             onPress={() => router.back()}
-            style={({ pressed }) => [styles.backButton, pressed && { opacity: 0.7 }]}
+            style={({ pressed }) => [styles.backButton, { top: insets.top + 12 }, pressed && { opacity: 0.7 }]}
           >
             <IconSymbol name="chevron.left" size={20} color="#F5F5F5" />
           </Pressable>
@@ -409,7 +450,7 @@ export default function PropertyDetailScreen() {
           {/* Botón compartir */}
           <Pressable
             onPress={handleShareProperty}
-            style={({ pressed }) => [styles.shareButton, pressed && { opacity: 0.7 }]}
+            style={({ pressed }) => [styles.shareButton, { top: insets.top + 12 }, pressed && { opacity: 0.7 }]}
           >
             <IconSymbol name="paperplane.fill" size={20} color="#ffffff" />
           </Pressable>
@@ -417,7 +458,7 @@ export default function PropertyDetailScreen() {
           {/* Botón favorito */}
           <Pressable
             onPress={() => session ? toggleFav(property.id) : Alert.alert('Inicia sesión', 'Inicia sesión para guardar propiedades en favoritos.', [{ text: 'Cancelar', style: 'cancel' }, { text: 'Iniciar sesión', onPress: () => router.push('/(auth)/login' as never) }])}
-            style={({ pressed }) => [styles.favoriteButton, pressed && { opacity: 0.7 }]}
+            style={({ pressed }) => [styles.favoriteButton, { top: insets.top + 12 }, pressed && { opacity: 0.7 }]}
           >
             <IconSymbol
               name={favorite ? 'heart.fill' : 'heart'}
@@ -438,32 +479,58 @@ export default function PropertyDetailScreen() {
             </View>
           )}
 
-          {/* Badge de rendimiento */}
-          <View style={[styles.returnBadge, { backgroundColor: returnColor + '33', borderColor: returnColor }]}>
-            <Text style={[styles.returnBadgeText, { color: returnColor }]}>
-              +{property.returnRate}% rendimiento
-            </Text>
-          </View>
+          {/* Badge de rendimiento: solo aparece cuando existe un rendimiento real. */}
+          {Number(property.returnRate) > 0 ? (
+            <View style={[styles.returnBadge, { backgroundColor: returnColor + '33', borderColor: returnColor }]}>
+              <Text style={[styles.returnBadgeText, { color: returnColor }]}>
+                +{property.returnRate}% rendimiento
+              </Text>
+            </View>
+          ) : null}
         </View>
 
         {/* Contenido */}
         <View style={[styles.content, { width: contentWidth, alignSelf: 'center' }]}>
-          {/* Tipo */}
-          <View style={styles.typeTag}>
-            <Text style={styles.typeTagText}>{(property.type || property.tipo || 'PROPIEDAD').toUpperCase()}</Text>
-          </View>
-
-          {/* Título y ubicación */}
-          <Text style={styles.title}>{property.title || property.titulo}</Text>
+          <View style={styles.heroHeader}>
+            <View style={styles.heroHeaderTop}>
+              <View style={styles.typeTag}>
+                <Text style={styles.typeTagText}>{(property.type || property.tipo || 'PROPIEDAD').toUpperCase()}</Text>
+              </View>
+              {property.destacada ? (
+                <View style={styles.featuredBadge}><Text style={styles.featuredBadgeText}>DESTACADA</Text></View>
+              ) : null}
+            </View>
+            <Text style={styles.title}>{property.title || property.titulo}</Text>
           <View style={styles.locationRow}>
             <IconSymbol name="location.fill" size={14} color="#C9A84C" />
             <Text style={styles.location}>{property.location || property.municipio}</Text>
           </View>
 
-          {/* Métricas principales */}
+          <View style={styles.heroPriceRow}>
+            <View style={styles.heroPriceBlock}>
+              <Text style={styles.heroPriceLabel}>{t("currentPrice")}</Text>
+              <Text style={styles.heroPrice}>{formatPrice(currentPrice, priceUnit)}</Text>
+            </View>
+            {marketPrice > 0 ? (
+              <View style={styles.marketMiniCard}>
+                <Text style={styles.marketMiniLabel}>{t("marketValue")}</Text>
+                <Text style={styles.marketMiniValue}>{formatPrice(marketPrice, priceUnit)}</Text>
+              </View>
+            ) : null}
+          </View>
+          </View>
+
+          <View style={styles.decisionGrid}>
+            <View style={styles.decisionCard}><Text style={styles.decisionIcon}>▣</Text><Text style={styles.decisionLabel}>{t("surface")}</Text><Text style={styles.decisionValue}>{formatSurface(surfaceM2, surfaceUnit)}</Text></View>
+            <View style={styles.decisionCard}><Text style={styles.decisionIcon}>↔</Text><Text style={styles.decisionLabel}>{t("front")}</Text><Text style={styles.decisionValue}>{frente > 0 ? `${frente} m` : "—"}</Text></View>
+            <View style={styles.decisionCard}><Text style={styles.decisionIcon}>↕</Text><Text style={styles.decisionLabel}>{t("depth")}</Text><Text style={styles.decisionValue}>{fondo > 0 ? `${fondo} m` : "—"}</Text></View>
+            <View style={styles.decisionCard}><Text style={styles.decisionIcon}>↗</Text><Text style={styles.decisionLabel}>{t("returnRate")}</Text><Text style={[styles.decisionValue, styles.decisionValueGold]}>+{property.returnRate}%</Text></View>
+          </View>
+
+          {/* Métricas secundarias */}
           <View style={styles.metricsGrid}>
             <View style={styles.metricCard}>
-              <Text style={styles.metricLabel}>Precio actual</Text>
+              <Text style={styles.metricLabel}>{t("currentPrice")}</Text>
               <Text style={styles.metricValue}>
                {formatPrice(
                 currentPrice,
@@ -472,18 +539,18 @@ export default function PropertyDetailScreen() {
              </Text>
             </View>
             <View style={styles.metricCard}>
-              <Text style={styles.metricLabel}>Precio mercado</Text>
+              <Text style={styles.metricLabel}>{t("currentMarketPrice")}</Text>
               <Text style={[styles.metricValue, styles.metricValueMuted]}>
                 {formatPrice(marketPrice, priceUnit)}
               </Text>
             </View>
             <View style={styles.metricCard}>
-              <Text style={styles.metricLabel}>Superficie</Text>
+              <Text style={styles.metricLabel}>{t("surface")}</Text>
               <Text style={styles.metricValue}>{formatSurface(surfaceM2, surfaceUnit)}</Text>
             </View>
             {constructionM2 > 0 && (
               <View style={styles.metricCard}>
-                <Text style={styles.metricLabel}>Construcción</Text>
+                <Text style={styles.metricLabel}>{t("construction")}</Text>
                 <Text style={styles.metricValue}>{formatSurface(constructionM2, 'm²')}</Text>
               </View>
             )}
@@ -492,9 +559,9 @@ export default function PropertyDetailScreen() {
           {/* Rendimiento destacado */}
           <View style={[styles.returnCard, { borderColor: returnColor + '55' }]}>
             <View>
-              <Text style={styles.returnCardLabel}>Rendimiento a la compra</Text>
+              <Text style={styles.returnCardLabel}>{t("returnAtPurchase")}</Text>
               <Text style={styles.returnCardSub}>
-                {returnDiff > 0 ? `${returnDiff}% por debajo del mercado` : 'Al precio de mercado'}
+                {returnDiff > 0 ? `${returnDiff}% ${t("belowMarket")}` : t("atMarketPrice")}
               </Text>
             </View>
             <Text style={[styles.returnCardValue, { color: returnColor }]}>
@@ -505,22 +572,53 @@ export default function PropertyDetailScreen() {
           {/* Video del terreno: ahora vive en el carrusel (slide 2, V6.3) —
               el video se reproduce inline con poster, no como sección aparte */}
 
+          {(hasDimensions || constructionM2 > 0) ? (
+            <View style={styles.terrainSection}>
+              <View style={styles.sectionHeadingRow}>
+                <View>
+                  <Text style={styles.sectionEyebrow}>{t("terrainAnalysis")}</Text>
+                  <Text style={styles.sectionHeading}>{t("terrainShape")}</Text>
+                </View>
+                <Text style={styles.sectionHeadingHint}>{t("terrainVisualGuide")}</Text>
+              </View>
+              {hasDimensions ? (
+                <View style={styles.terrainCard}>
+                  <View style={styles.terrainDiagramWrap}>
+                    <View style={[styles.terrainPlot, { aspectRatio: terrainRatio }]}>
+                      <View style={styles.terrainPlotFill} />
+                      <Text style={styles.terrainPlotLabel}>{formatSurface(surfaceM2, surfaceUnit)}</Text>
+                      <Text style={styles.terrainFrontLabel}>{frente} m</Text>
+                      <Text style={styles.terrainDepthLabel}>{fondo} m</Text>
+                    </View>
+                  </View>
+                  <Text style={styles.terrainLegendText}>{t("terrainDimensionsHint")}</Text>
+                </View>
+              ) : null}
+              {constructionM2 > 0 ? (
+                <View style={styles.constructionInsight}>
+                  <Text style={styles.constructionInsightTitle}>{t("construction")}</Text>
+                  <Text style={styles.constructionInsightText}>{formatSurface(constructionM2, 'm²')} {t("constructionOnProperty")}</Text>
+                </View>
+              ) : null}
+            </View>
+          ) : null}
+
           {/* Descripción */}
           <View style={styles.descSection}>
-            <Text style={styles.descTitle}>DESCRIPCIÓN</Text>
-            <Text style={styles.descText}>{property.description || property.descripcion || 'Sin descripción disponible'}</Text>
+            <Text style={styles.descTitle}>{t("description")}</Text>
+            <Text style={styles.descText}>{property.description || property.descripcion || t("noDescription")}</Text>
           </View>
 
           {property.descripcion_pro ? (
             <View style={styles.descSection}>
-              <Text style={styles.descTitle}>INFORMACIÓN PROFESIONAL</Text>
+              <Text style={styles.descTitle}>{t("professionalInfo")}</Text>
               <Text style={styles.descText}>{property.descripcion_pro}</Text>
             </View>
           ) : null}
 
           {(property.direccion || property.ubicacion) && (
             <View style={styles.descSection}>
-              <Text style={styles.descTitle}>UBICACIÓN</Text>
+              <Text style={styles.descTitle}>{t("location")}</Text>
               {property.direccion ? <Text style={styles.descText}>{property.direccion}</Text> : null}
               {property.ubicacion && property.ubicacion !== location ? (
                 <Text style={styles.secondaryText}>{property.ubicacion}</Text>
@@ -531,38 +629,51 @@ export default function PropertyDetailScreen() {
           <View style={styles.metricsGrid}>
             {frente > 0 && (
               <View style={styles.metricCard}>
-                <Text style={styles.metricLabel}>Frente</Text>
+                <Text style={styles.metricLabel}>{t("front")}</Text>
                 <Text style={styles.metricValue}>{frente} m</Text>
               </View>
             )}
             {fondo > 0 && (
               <View style={styles.metricCard}>
-                <Text style={styles.metricLabel}>Fondo</Text>
+                <Text style={styles.metricLabel}>{t("depth")}</Text>
                 <Text style={styles.metricValue}>{fondo} m</Text>
               </View>
             )}
             {expectedPrice > 0 && (
               <View style={styles.metricCard}>
-                <Text style={styles.metricLabel}>Precio esperado</Text>
+                <Text style={styles.metricLabel}>{t("expectedPrice")}</Text>
                 <Text style={styles.metricValue}>{formatPrice(expectedPrice, priceUnit)}</Text>
               </View>
             )}
           </View>
 
-          {renderDynamicSection('CARACTERÍSTICAS', characteristicEntries)}
-          {renderDynamicSection('DETALLES', detailEntries)}
-          {renderDynamicSection('SERVICIOS CERCANOS', nearbyServiceEntries)}
+          {hasCoordinates ? (
+            <View style={styles.locationInsight}>
+              <View style={styles.locationInsightIcon}><IconSymbol name="location.fill" size={18} color="#C9A84C" /></View>
+              <View style={styles.locationInsightBody}>
+                <Text style={styles.locationInsightTitle}>{t("mapLocationTitle")}</Text>
+                <Text style={styles.locationInsightText}>{t("mapLocationDescription")}</Text>
+              </View>
+              <Pressable onPress={() => router.push({ pathname: '/(tabs)/map', params: { propertyId: String(property.id) } } as never)} style={styles.mapOpenButton}>
+                <Text style={styles.mapOpenButtonText}>{t("openMap")}</Text>
+              </Pressable>
+            </View>
+          ) : null}
+
+          {renderDynamicSection(t("characteristics"), characteristicEntries)}
+          {renderDynamicSection(t("details"), detailEntries)}
+          {renderDynamicSection(t("nearbyServices"), nearbyServiceEntries)}
 
           {(property.estatus_legal || property.certeza_legal) ? (
             <View style={styles.legalNote}>
               <Text style={styles.legalIcon}>⚖️</Text>
               <View style={styles.legalContent}>
-                <Text style={styles.legalTitle}>SITUACIÓN LEGAL</Text>
+                <Text style={styles.legalTitle}>{t("legalStatus")}</Text>
                 {property.estatus_legal ? (
                   <Text style={styles.legalText}>Estatus: {property.estatus_legal}</Text>
                 ) : null}
                 {property.certeza_legal ? (
-                  <Text style={styles.legalText}>Certeza legal: Sí</Text>
+                  <Text style={styles.legalText}>{t("legalCertainty")}</Text>
                 ) : null}
               </View>
             </View>
@@ -570,28 +681,28 @@ export default function PropertyDetailScreen() {
 
           {property.tour_360 ? (
             <View style={styles.dataSection}>
-              <Text style={styles.sectionTitle}>TOUR 360°</Text>
+              <Text style={styles.sectionTitle}>{t("tour360")}</Text>
               <Pressable
                 onPress={() => Linking.openURL(property.tour_360 as string)}
                 style={styles.linkCard}
               >
-                <Text style={styles.linkLabel}>Abrir recorrido 360°</Text>
+                <Text style={styles.linkLabel}>{t("openTour360")}</Text>
                 <Text style={styles.linkUrl}>{property.tour_360}</Text>
               </Pressable>
             </View>
           ) : null}
 
-          {Object.keys(signedDocuments).length > 0 ? (
+          {privateDocumentPaths.length > 0 ? (
             <View style={styles.dataSection}>
-              <Text style={styles.sectionTitle}>DOCUMENTOS</Text>
-              {Object.entries(signedDocuments).map(([path, url]) => {
+              <Text style={styles.sectionTitle}>{t("documents")}</Text>
+              {privateDocumentPaths.map((path) => {
                 const name = path.split('/').pop() || 'Documento';
                 const lower = name.toLowerCase();
                 const type = lower.endsWith('.pdf') ? 'PDF' : (lower.endsWith('.kmz') || lower.endsWith('.kml')) ? 'MAPA' : 'ARCHIVO';
                 return (
-                  <Pressable key={path} onPress={() => Linking.openURL(url)} style={styles.linkCard}>
+                  <Pressable key={path} onPress={() => void openPrivateDocument(path)} style={styles.linkCard} disabled={loadingDocument === path}>
                     <Text style={styles.linkLabel}>{type} · {name}</Text>
-                    <Text style={styles.linkUrl}>Abrir documento</Text>
+                    <Text style={styles.linkUrl}>{loadingDocument === path ? t("preparingDocument") : t("openDocument")}</Text>
                   </Pressable>
                 );
               })}
@@ -600,7 +711,7 @@ export default function PropertyDetailScreen() {
 
           {property.enlaces && Array.isArray(property.enlaces) && property.enlaces.length > 0 ? (
             <View style={styles.dataSection}>
-              <Text style={styles.sectionTitle}>ENLACES</Text>
+              <Text style={styles.sectionTitle}>{t("links")}</Text>
               {property.enlaces.map((link: any, index: number) => {
                 const url = typeof link === 'string' ? link : link?.url || link?.href;
                 const label = typeof link === 'string' ? link : link?.label || link?.titulo || url;
@@ -619,19 +730,19 @@ export default function PropertyDetailScreen() {
       </ScrollView>
 
       {/* Botones de acción fijos */}
-      <View style={styles.actionBar}>
+      <View style={[styles.actionBar, { paddingBottom: Math.max(16, insets.bottom + 12) }]}>
         <Pressable
           onPress={handleCall}
           style={({ pressed }) => [styles.callBtn, pressed && { opacity: 0.8 }]}
         >
           <IconSymbol name="phone.fill" size={18} color="#C9A84C" />
-          <Text style={styles.callBtnText}>Llamar</Text>
+          <Text style={styles.callBtnText}>{t("call")}</Text>
         </Pressable>
         <Pressable
           onPress={handleWhatsApp}
           style={({ pressed }) => [styles.whatsappBtn, pressed && { opacity: 0.85 }]}
         >
-          <Text style={styles.whatsappBtnText}>AGENDAR LLAMADA</Text>
+          <Text style={styles.whatsappBtnText}>{t("scheduleCall")}</Text>
         </Pressable>
       </View>
 
@@ -791,6 +902,164 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
   },
+  heroHeader: {
+    backgroundColor: '#151515',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#2A2A2A',
+    padding: 18,
+    marginBottom: 12,
+  },
+  heroHeaderTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  featuredBadge: {
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: '#C9A84C66',
+    backgroundColor: '#C9A84C14',
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+  },
+  featuredBadgeText: {
+    color: '#C9A84C',
+    fontSize: 9,
+    fontWeight: '800',
+    letterSpacing: 1.2,
+  },
+  heroPriceRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    justifyContent: 'space-between',
+    gap: 12,
+    marginTop: 8,
+  },
+  heroPriceBlock: { flex: 1 },
+  heroPriceLabel: {
+    color: '#777',
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 1.1,
+  },
+  heroPrice: {
+    color: '#C9A84C',
+    fontSize: 28,
+    lineHeight: 32,
+    fontWeight: '900',
+  },
+  marketMiniCard: {
+    minWidth: 128,
+    backgroundColor: '#101010',
+    borderRadius: 10,
+    paddingHorizontal: 11,
+    paddingVertical: 9,
+    borderWidth: 1,
+    borderColor: '#252525',
+  },
+  marketMiniLabel: { color: '#777', fontSize: 9, fontWeight: '800', letterSpacing: 0.8 },
+  marketMiniValue: { color: '#B7B7B7', fontSize: 12, fontWeight: '700', marginTop: 3 },
+  decisionGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 14,
+  },
+  decisionCard: {
+    flexGrow: 1,
+    flexBasis: '22%',
+    minWidth: 115,
+    backgroundColor: '#181818',
+    borderRadius: 12,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#282828',
+  },
+  decisionIcon: { color: '#C9A84C', fontSize: 17, marginBottom: 8 },
+  decisionLabel: { color: '#777', fontSize: 9, fontWeight: '800', letterSpacing: 0.8, marginBottom: 4 },
+  decisionValue: { color: '#F5F5F5', fontSize: 14, fontWeight: '800' },
+  decisionValueGold: { color: '#C9A84C' },
+  terrainSection: { marginBottom: 22 },
+  sectionHeadingRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-end',
+    gap: 12,
+    marginBottom: 10,
+  },
+  sectionEyebrow: { color: '#C9A84C', fontSize: 9, fontWeight: '900', letterSpacing: 1.5 },
+  sectionHeading: { color: '#F5F5F5', fontSize: 18, fontWeight: '800', marginTop: 2 },
+  sectionHeadingHint: { flex: 1, color: '#666', fontSize: 10, textAlign: 'right', lineHeight: 15 },
+  terrainCard: {
+    backgroundColor: '#151515',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#2A2A2A',
+    padding: 16,
+  },
+  terrainDiagramWrap: {
+    minHeight: 170,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+  },
+  terrainPlot: {
+    width: '70%',
+    maxWidth: 360,
+    minHeight: 105,
+    borderWidth: 2,
+    borderColor: '#C9A84C',
+    borderRadius: 6,
+    backgroundColor: '#C9A84C08',
+    position: 'relative',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  terrainPlotFill: {
+    ...StyleSheet.absoluteFill,
+    backgroundColor: '#C9A84C0D',
+  },
+  terrainPlotLabel: { color: '#C9A84C', fontSize: 16, fontWeight: '900' },
+  terrainFrontLabel: { position: 'absolute', top: -23, color: '#F5F5F5', fontSize: 11, fontWeight: '700' },
+  terrainDepthLabel: { position: 'absolute', right: -42, color: '#F5F5F5', fontSize: 11, fontWeight: '700' },
+  terrainLegendText: { color: '#8A8A8A', fontSize: 11, lineHeight: 16, marginTop: 6 },
+  constructionInsight: {
+    marginTop: 9,
+    backgroundColor: '#1A1A1A',
+    borderRadius: 10,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#252525',
+  },
+  constructionInsightTitle: { color: '#C9A84C', fontSize: 10, fontWeight: '800', letterSpacing: 1 },
+  constructionInsightText: { color: '#BDBDBD', fontSize: 12, lineHeight: 18, marginTop: 3 },
+  locationInsight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: '#151515',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#2A2A2A',
+    padding: 12,
+    marginBottom: 20,
+  },
+  locationInsightIcon: {
+    width: 36, height: 36, borderRadius: 18,
+    alignItems: 'center', justifyContent: 'center',
+    backgroundColor: '#C9A84C14',
+  },
+  locationInsightBody: { flex: 1 },
+  locationInsightTitle: { color: '#F5F5F5', fontSize: 12, fontWeight: '800' },
+  locationInsightText: { color: '#777', fontSize: 10, lineHeight: 15, marginTop: 2 },
+  mapOpenButton: {
+    borderRadius: 9,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    backgroundColor: '#C9A84C',
+  },
+  mapOpenButtonText: { color: '#0D0D0D', fontSize: 9, fontWeight: '900', letterSpacing: 0.6 },
   content: {
     maxWidth: 1200,
     padding: 20,
@@ -835,8 +1104,9 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   metricCard: {
-    flex: 1,
-    minWidth: '45%',
+    flexGrow: 1,
+    flexBasis: '45%',
+    minWidth: 140,
     backgroundColor: '#1A1A1A',
     borderRadius: 8,
     padding: 14,
@@ -920,7 +1190,9 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   dataCard: {
-    width: '48%',
+    flexGrow: 1,
+    flexBasis: '45%',
+    minWidth: 140,
     backgroundColor: '#1A1A1A',
     borderRadius: 8,
     padding: 12,

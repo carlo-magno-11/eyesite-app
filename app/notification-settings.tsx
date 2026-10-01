@@ -1,13 +1,16 @@
 import { ActivityIndicator, Platform, Pressable, StyleSheet, Switch, Text, View } from "react-native";
 import { ScreenContainer } from "@/components/screen-container";
 import { useAuth } from "@/hooks/useAuth";
+import { registerPushToken } from "@/hooks/use-notifications";
 import { supabase } from "@/lib/supabase";
 import { router } from "expo-router";
 import { useState } from "react";
-import Constants from "expo-constants";
+import { useResponsive } from "@/hooks/use-responsive";
+import { useI18n } from "@/lib/i18n";
 
 export default function NotificationSettingsScreen() {
   const { user, profile } = useAuth();
+  const { t } = useI18n();
   const [push, setPush] = useState<boolean | null>(null);
   const [inApp, setInApp] = useState<boolean | null>(null);
   const [adsPush, setAdsPush] = useState<boolean | null>(null);
@@ -15,6 +18,7 @@ export default function NotificationSettingsScreen() {
   const inAppValue = inApp ?? profile?.notificaciones_in_app !== false;
   const adsPushValue = adsPush ?? profile?.anuncios_push !== false;
   const [saving, setSaving] = useState(false);
+  const { horizontalPadding, contentMaxWidth } = useResponsive();
 
   const save = async (field: "notificaciones_push" | "notificaciones_in_app" | "anuncios_push", value: boolean) => {
     if (!user?.id || saving) return;
@@ -24,37 +28,13 @@ export default function NotificationSettingsScreen() {
 
     if (field === "notificaciones_push") {
       if (value && Platform.OS !== "web") {
-        if (Constants.executionEnvironment === "storeClient") {
+        const token = await registerPushToken(user.id);
+        if (!token) {
           setSaving(false);
           setPush(false);
           return;
         }
-        const Notifications = await import("expo-notifications");
-        const current = await Notifications.getPermissionsAsync();
-        let status = current.status;
-        if (status !== "granted") {
-          const requested = await Notifications.requestPermissionsAsync();
-          status = requested.status;
-        }
-
-        if (status !== "granted") {
-          setSaving(false);
-          setPush(false);
-          return;
-        }
-
-        try {
-          const projectId =
-            Constants.expoConfig?.extra?.eas?.projectId ||
-            "53f27292-7aee-4a95-a597-0f3d062495bd";
-          const token = await Notifications.getExpoPushTokenAsync({ projectId });
-          extraUpdate.expo_push_token = token.data;
-        } catch (error) {
-          console.error("[EYESITE] push token error:", error);
-          setSaving(false);
-          setPush(false);
-          return;
-        }
+        extraUpdate.expo_push_token = token;
       } else if (!value) {
         extraUpdate.expo_push_token = null;
       }
@@ -79,34 +59,34 @@ export default function NotificationSettingsScreen() {
 
   return (
     <ScreenContainer edges={["top", "left", "right"]} containerClassName="bg-background">
-      <View style={s.header}>
+      <View style={[s.header, { paddingHorizontal: horizontalPadding, maxWidth: contentMaxWidth, width: "100%", alignSelf: "center" }]}>
         <Pressable onPress={() => router.back()} style={s.back}>
           <Text style={s.backText}>‹</Text>
         </Pressable>
         <View style={{ flex: 1 }}>
-          <Text style={s.title}>NOTIFICACIONES</Text>
-          <Text style={s.subtitle}>Controla cómo quieres recibir comunicaciones de EYESITE.</Text>
+          <Text style={s.title}>{t("notificationsSettingsTitle")}</Text>
+          <Text style={s.subtitle}>{t("notificationsSettingsSubtitle")}</Text>
         </View>
       </View>
 
-      <View style={s.card}>
+      <View style={[s.card, { marginHorizontal: horizontalPadding, maxWidth: contentMaxWidth, width: "100%", alignSelf: "center" }]}>
         <Row
-          title="Notificaciones dentro de EYESITE"
-          description="Avisos de tu cuenta, propiedades y eventos."
+          title={t("inAppNotifications")}
+          description={t("inAppNotificationsDescription")}
           value={inAppValue}
           disabled={saving}
           onChange={(v) => void save("notificaciones_in_app", v)}
         />
         <Row
-          title="Notificaciones push"
-          description="Avisos que llegan al teléfono aunque EYESITE esté cerrada."
+          title={t("pushNotifications")}
+          description={t("pushNotificationsDescription")}
           value={pushValue}
           disabled={saving}
           onChange={(v) => void save("notificaciones_push", v)}
         />
         <Row
-          title="Anuncios de EYESITE"
-          description="Permite recibir por push novedades y anuncios generales."
+          title={t("eyesiteAnnouncements")}
+          description={t("eyesiteAnnouncementsDescription")}
           value={adsPushValue}
           disabled={saving}
           onChange={(v) => void save("anuncios_push", v)}
