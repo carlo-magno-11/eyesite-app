@@ -13,11 +13,11 @@ import { rankPropertyMatches } from '@/lib/commercial';
 import { useI18n } from '@/lib/i18n';
 
 const CATEGORIES = [
-  { key: 'terreno', label: 'Terrenos', icon: '🌿' },
-  { key: 'casa', label: 'Casas', icon: '🏠' },
-  { key: 'hacienda', label: 'Haciendas', icon: '🏛️' },
-  { key: 'rancho', label: 'Ranchos', icon: '🐄' },
-  { key: 'industrial', label: 'Industrial', icon: '🏭' },
+  { key: 'Terreno', label: 'Terrenos', icon: '🌿' },
+  { key: 'Casa', label: 'Casas', icon: '🏠' },
+  { key: 'Hacienda', label: 'Haciendas', icon: '🏛️' },
+  { key: 'Rancho', label: 'Ranchos', icon: '🐄' },
+  { key: 'Industrial', label: 'Industrial', icon: '🏭' },
 ];
 
 export default function HomeScreen() {
