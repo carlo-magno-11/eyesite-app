@@ -28,6 +28,11 @@ export default function PropertiesScreen() {
     return () => clearTimeout(timer);
   }, [search]);
 
+  useEffect(() => {
+    const nextQuery = typeof params.q === 'string' ? params.q : '';
+    setSearch(nextQuery);
+  }, [params.q]);
+
   const initialFilter = typeof params.filter === 'string' && params.filter ? params.filter : 'all';
   const [activeFilter, setActiveFilter] = useState<string>(initialFilter);
 
@@ -303,6 +308,8 @@ const styles = StyleSheet.create({
   },
   searchControlsRow: { flexDirection: 'row', alignItems: 'stretch', gap: 8 },
   searchBar: {
+    flex: 1,
+    minWidth: 0,
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: "#141414",
