@@ -123,7 +123,7 @@ export function useSavedSearches(userId?: string) {
 
     if (deleteError) throw deleteError;
     setSearches((current) => current.filter((item) => item.id !== id));
-  }, []);
+  }, [userId]);
 
   return { searches, loading, error, save, remove, refetch: load };
 }
