@@ -339,7 +339,7 @@ function validateMediaMetadata(
 }
 
 async function promoteOne(
-  client: ReturnType<typeof createClient>,
+  client: any,
   requestId: string,
   expectedOwnerId: string,
   field: string,
