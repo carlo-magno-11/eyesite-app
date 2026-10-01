@@ -10,6 +10,7 @@ import { useI18n } from '@/lib/i18n';
 interface PropertyCardProps {
   property: Property;
   compact?: boolean;
+  compactWidth?: number;
 }
 
 export function PropertyCard({ property, compact = false }: PropertyCardProps) {
@@ -42,6 +43,7 @@ export function PropertyCard({ property, compact = false }: PropertyCardProps) {
         onPress={handlePress}
         style={({ pressed }) => [
           styles.compactCard,
+          compactWidth ? { width: compactWidth } : null,
           pressed && styles.pressed,
         ]}
       >
