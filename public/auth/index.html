@@ -3,46 +3,75 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
+<meta name="referrer" content="no-referrer">
 <title>EYESITE — Acceso seguro</title>
 <style>
-*{box-sizing:border-box}html,body{margin:0;padding:0;min-height:100%;background:#0e0e0e;color:#fff;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;min-height:100%;background:#0e0e0e;color:#fff;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif}
 body{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
-.card{width:100%;max-width:430px;padding:42px 28px;text-align:center;border:1px solid rgba(201,168,76,.35);border-radius:20px;background:#151515;box-shadow:0 20px 60px rgba(0,0,0,.45)}
+.card{width:100%;max-width:460px;padding:42px 28px;text-align:center;border:1px solid rgba(201,168,76,.35);border-radius:20px;background:#151515;box-shadow:0 20px 60px rgba(0,0,0,.45)}
 .logo{color:#c9a84c;font-size:32px;font-weight:800;letter-spacing:4px;margin-bottom:28px}
-h1{margin:0 0 12px;font-size:23px}p{margin:0;color:#b8b8b8;line-height:1.6;font-size:15px}
+h1{margin:0 0 12px;font-size:23px}
+p{margin:0;color:#b8b8b8;line-height:1.6;font-size:15px}
 .spinner{width:42px;height:42px;margin:0 auto 24px;border:4px solid rgba(201,168,76,.2);border-top-color:#c9a84c;border-radius:50%;animation:spin .9s linear infinite}
-@keyframes spin{to{transform:rotate(360deg)}}.success{color:#c9a84c}.error{color:#ff7777}
+@keyframes spin{to{transform:rotate(360deg)}}
+.success{color:#c9a84c}.error{color:#ff7777}
 .button{display:inline-block;margin-top:24px;padding:13px 22px;border:0;border-radius:10px;background:#c9a84c;color:#0e0e0e;font-weight:700;text-decoration:none;cursor:pointer}
+.button.secondary{background:transparent;color:#c9a84c;border:1px solid #c9a84c}
 .input{width:100%;height:50px;margin-top:18px;padding:0 14px;border:1px solid #333;border-radius:10px;background:#0e0e0e;color:#fff;font-size:16px;outline:none}
+.input:focus{border-color:#c9a84c}
+.code{letter-spacing:8px;text-align:center;font-size:24px;font-weight:800}
 .hidden{display:none}.small{margin-top:18px;font-size:13px;color:#777}
+.hint{margin-top:14px;color:#a9a9a9;font-size:13px}
+.actions{display:flex;flex-direction:column;gap:10px;align-items:stretch}
+.actions .button{margin-top:20px;width:100%}
 </style>
 </head>
 <body>
 <main class="card">
 <div class="logo">EYESITE</div>
-<div id="loading"><div class="spinner"></div><h1>Procesando...</h1><p>Estamos verificando tu enlace de forma segura.</p></div>
+
+<div id="loading">
+  <div class="spinner"></div>
+  <h1>Procesando...</h1>
+  <p>Estamos verificando tu enlace de forma segura.</p>
+</div>
 
 <div id="success" class="hidden">
-<h1 class="success" id="successTitle">¡Correo confirmado!</h1>
-<p id="successText">Tu correo electrónico ya está confirmado. Ahora puedes iniciar sesión en EYESITE.</p>
-<a id="openApp" class="button" href="eyesite://">Abrir EYESITE</a>
-<p class="small">Si no tienes la aplicación instalada, puedes cerrar esta página. Tu correo ya quedó confirmado.</p>
+  <h1 class="success" id="successTitle">¡Correo confirmado!</h1>
+  <p id="successText">Tu correo electrónico fue confirmado correctamente. Ya puedes continuar a EYESITE.</p>
+  <div class="actions">
+    <a id="continueWeb" class="button" href="https://www.eyesite.mx/">CONTINUAR A EYESITE</a>
+    <a id="openApp" class="button secondary" href="eyesite://">ABRIR LA APLICACIÓN</a>
+  </div>
+  <p class="small">Si abriste este enlace desde otro dispositivo, puedes continuar desde la aplicación o desde la web.</p>
 </div>
 
 <div id="recovery" class="hidden">
-<h1 class="success">Nueva contraseña</h1>
-<p>Tu enlace de recuperación es válido. Escribe tu nueva contraseña.</p>
-<input id="password" class="input" type="password" minlength="6" autocomplete="new-password" placeholder="Nueva contraseña">
-<input id="password2" class="input" type="password" minlength="6" autocomplete="new-password" placeholder="Repite la contraseña">
-<button id="savePassword" class="button" type="button">CAMBIAR CONTRASEÑA</button>
-<p id="recoveryMessage" class="small"></p>
-<a id="openAppRecovery" class="button hidden" href="eyesite://">Abrir EYESITE</a>
+  <h1 class="success">Recuperación de contraseña</h1>
+  <p>Bienvenido. Para proteger tu cuenta, primero confirma el código de 6 dígitos que recibiste por correo.</p>
+  <p id="recoveryEmailHint" class="hint"></p>
+
+  <div id="codeStep">
+    <input id="recoveryCode" class="input code" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}" placeholder="000000" aria-label="Código de 6 dígitos">
+    <button id="verifyCode" class="button" type="button">VERIFICAR CÓDIGO</button>
+    <p id="codeMessage" class="small" role="status" aria-live="polite"></p>
+  </div>
+
+  <div id="passwordStep" class="hidden">
+    <p>El código fue verificado. Ahora crea una nueva contraseña segura.</p>
+    <input id="password" class="input" type="password" minlength="8" autocomplete="new-password" placeholder="Nueva contraseña">
+    <input id="password2" class="input" type="password" minlength="8" autocomplete="new-password" placeholder="Repite la contraseña">
+    <button id="savePassword" class="button" type="button">ACTUALIZAR CONTRASEÑA</button>
+    <p id="recoveryMessage" class="small" role="status" aria-live="polite"></p>
+    <a id="openAppRecovery" class="button secondary hidden" href="eyesite://">ABRIR LA APLICACIÓN</a>
+  </div>
 </div>
 
 <div id="error" class="hidden">
-<h1 class="error">No pudimos procesar el enlace</h1>
-<p id="errorMessage">El enlace puede haber expirado o ya haber sido utilizado.</p>
-<a class="button" href="https://www.eyesite.mx">Ir a EYESITE</a>
+  <h1 class="error">No pudimos procesar el enlace</h1>
+  <p id="errorMessage">El enlace puede haber expirado o ya haber sido utilizado.</p>
+  <a class="button" href="https://www.eyesite.mx/">IR A EYESITE</a>
 </div>
 </main>
 
@@ -51,16 +80,41 @@ h1{margin:0 0 12px;font-size:23px}p{margin:0;color:#b8b8b8;line-height:1.6;font-
 (function(){
   const SUPABASE_URL="https://xhvpvpvtkdgnnxdwdrkn.supabase.co";
   const SUPABASE_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhodnB2cHZ0a2Rnbm54ZHdkcmtuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODcwODk5MTEsImV4cCI6MjEwMjY2NTkxMX0.zsEMmjhbln24S25FnbKvlkic2djzON8QoXNLO8CtXA0";
-  const supabase=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
-  const loading=document.getElementById("loading"),success=document.getElementById("success"),recovery=document.getElementById("recovery"),errorBox=document.getElementById("error");
-  const errorMessage=document.getElementById("errorMessage"),openApp=document.getElementById("openApp"),openAppRecovery=document.getElementById("openAppRecovery");
-  const successTitle=document.getElementById("successTitle"),successText=document.getElementById("successText");
-  const password=document.getElementById("password"),password2=document.getElementById("password2"),savePassword=document.getElementById("savePassword"),recoveryMessage=document.getElementById("recoveryMessage");
+  const supabase=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY,{
+    auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:false}
+  });
+
+  const loading=document.getElementById("loading");
+  const success=document.getElementById("success");
+  const recovery=document.getElementById("recovery");
+  const errorBox=document.getElementById("error");
+  const errorMessage=document.getElementById("errorMessage");
+  const openApp=document.getElementById("openApp");
+  const openAppRecovery=document.getElementById("openAppRecovery");
+  const recoveryEmailHint=document.getElementById("recoveryEmailHint");
+  const codeStep=document.getElementById("codeStep");
+  const passwordStep=document.getElementById("passwordStep");
+  const recoveryCode=document.getElementById("recoveryCode");
+  const verifyCode=document.getElementById("verifyCode");
+  const codeMessage=document.getElementById("codeMessage");
+  const password=document.getElementById("password");
+  const password2=document.getElementById("password2");
+  const savePassword=document.getElementById("savePassword");
+  const recoveryMessage=document.getElementById("recoveryMessage");
+
   const params=new URLSearchParams(window.location.search);
-  const hashParams=new URLSearchParams(window.location.hash.replace(/^#/,""));
-  const getParam=(name)=>params.get(name) || hashParams.get(name);
-  const type=getParam("type")||"email";
-  const recoveryMode=getParam("mode")==="recovery" || type==="recovery";
+  const hashParams=new URLSearchParams(window.location.hash.replace(/^#/, ""));
+  const getParam=(name)=>params.get(name)||hashParams.get(name);
+
+  // Canonical contract:
+  // type=email    -> email confirmation
+  // type=recovery -> password recovery
+  // mode=recovery is accepted only for legacy links that have no type.
+  const suppliedType=getParam("type");
+  const type=suppliedType==="email"||suppliedType==="recovery"
+    ? suppliedType
+    : (!suppliedType&&getParam("mode")==="recovery" ? "recovery" : null);
+
   const tokenHash=getParam("token_hash");
   const code=getParam("code");
   const accessToken=getParam("access_token");
@@ -68,77 +122,177 @@ h1{margin:0 0 12px;font-size:23px}p{margin:0;color:#b8b8b8;line-height:1.6;font-
   const authError=getParam("error");
   const authErrorCode=getParam("error_code");
   const authErrorDescription=getParam("error_description");
+  const recoveryEmail=(getParam("email")||"").trim().toLowerCase();
+
   const appQuery=new URLSearchParams();
-  appQuery.set("type",type);
-  const appUrl="eyesite://auth/callback?"+appQuery.toString();
-  openApp.href=appUrl; openAppRecovery.href=appUrl;
+  if(type) appQuery.set("type",type);
+  const appUrl="eyesite://auth/callback"+(appQuery.toString()?"?"+appQuery.toString():"");
+  openApp.href=appUrl;
+  openAppRecovery.href=appUrl;
 
-  function showError(message){loading.classList.add("hidden");success.classList.add("hidden");recovery.classList.add("hidden");errorBox.classList.remove("hidden");if(message)errorMessage.textContent=message;}
+  function showError(message){
+    loading.classList.add("hidden");
+    success.classList.add("hidden");
+    recovery.classList.add("hidden");
+    errorBox.classList.remove("hidden");
+    if(message) errorMessage.textContent=message;
+  }
 
-  async function establishSession(){ if(authError||authErrorCode) throw new Error(authErrorDescription||(authErrorCode==="otp_expired"?"El enlace expiró o ya fue utilizado. Solicita un correo nuevo.":"El enlace de autenticación no es válido.")); if(accessToken&&refreshToken){const {error}=await supabase.auth.setSession({access_token:accessToken,refresh_token:refreshToken});if(error)throw error;return;}
-    if(authError || authErrorCode){
+  function maskEmail(value){
+    const parts=value.split("@");
+    if(parts.length!==2) return "";
+    const local=parts[0];
+    const visible=local.length<=2?local.charAt(0):local.slice(0,2);
+    return visible+"***@"+parts[1];
+  }
+
+  function validatePassword(p){
+    return p.length>=8 && /[A-ZÁÉÍÓÚÑ]/.test(p) && /\d/.test(p);
+  }
+
+  async function establishConfirmationSession(){
+    if(authError||authErrorCode){
       throw new Error(
         authErrorDescription ||
         (authErrorCode==="otp_expired"
-          ? "El enlace expiró o ya fue utilizado. Solicita un correo nuevo."
-          : "El enlace de autenticación no es válido.")
+          ?"El enlace expiró o ya fue utilizado. Solicita un correo nuevo."
+          :"El enlace de autenticación no es válido.")
       );
     }
-    if(accessToken && refreshToken){
+
+    if(accessToken&&refreshToken){
       const {error}=await supabase.auth.setSession({
         access_token:accessToken,
         refresh_token:refreshToken
       });
-      if(error)throw error;
+      if(error) throw error;
       return;
     }
+
     if(code){
       const {error}=await supabase.auth.exchangeCodeForSession(code);
-      if(error)throw error;
+      if(error) throw error;
       return;
     }
+
     if(tokenHash){
       const {error}=await supabase.auth.verifyOtp({
         token_hash:tokenHash,
-        type:type==="recovery"?"recovery":"email"
+        type:"email"
       });
-      if(error)throw error;
+      if(error) throw error;
       return;
     }
-    throw new Error("El enlace no contiene un código válido o ya expiró.");
+
+    throw new Error("El enlace de confirmación no contiene un código válido o ya expiró.");
+  }
+
+  async function verifyRecoveryCode(){
+    if(!recoveryEmail){
+      showError("Por seguridad, este enlace de recuperación no contiene el correo asociado. Solicita un nuevo enlace desde EYESITE.");
+      return;
+    }
+
+    const token=recoveryCode.value.trim();
+    if(!/^\d{6}$/.test(token)){
+      codeMessage.textContent="Introduce exactamente los 6 dígitos que recibiste por correo.";
+      return;
+    }
+
+    verifyCode.disabled=true;
+    codeMessage.textContent="Verificando código...";
+
+    try{
+      const {error}=await supabase.auth.verifyOtp({
+        email:recoveryEmail,
+        token,
+        type:"recovery"
+      });
+      if(error) throw error;
+
+      codeStep.classList.add("hidden");
+      passwordStep.classList.remove("hidden");
+      recoveryMessage.textContent="";
+      password.focus();
+    }catch(e){
+      console.error("[EYESITE recovery code]",e);
+      codeMessage.textContent="El código no es válido o ya expiró. Solicita un correo nuevo si es necesario.";
+      verifyCode.disabled=false;
+    }
+  }
+
+  async function saveNewPassword(){
+    const p=password.value;
+    const p2=password2.value;
+
+    if(!validatePassword(p)){
+      recoveryMessage.textContent="La contraseña debe tener al menos 8 caracteres, una mayúscula y un número.";
+      return;
+    }
+    if(p!==p2){
+      recoveryMessage.textContent="Las contraseñas no coinciden.";
+      return;
+    }
+
+    savePassword.disabled=true;
+    recoveryMessage.textContent="Actualizando contraseña...";
+
+    try{
+      const {error}=await supabase.auth.updateUser({password:p});
+      if(error) throw error;
+
+      await supabase.auth.signOut();
+      recoveryMessage.textContent="¡Contraseña actualizada correctamente! Ya puedes continuar a EYESITE.";
+      password.value="";
+      password2.value="";
+      savePassword.classList.add("hidden");
+      openAppRecovery.classList.remove("hidden");
+    }catch(e){
+      console.error("[EYESITE password update]",e);
+      recoveryMessage.textContent=e&&e.message
+        ? e.message
+        : "No pudimos actualizar la contraseña. Inténtalo nuevamente.";
+      savePassword.disabled=false;
+    }
   }
 
   async function run(){
     try{
-      if(recoveryMode){
+      if(!type){
+        throw new Error("El enlace no indica si corresponde a confirmación de correo o recuperación de contraseña.");
+      }
+
+      if(type==="recovery"){
+        if(authError||authErrorCode){
+          throw new Error(
+            authErrorDescription ||
+            (authErrorCode==="otp_expired"
+              ?"El enlace expiró o ya fue utilizado. Solicita un correo nuevo."
+              :"El enlace de recuperación no es válido.")
+          );
+        }
+        if(!recoveryEmail){
+          throw new Error("El enlace de recuperación no contiene el correo asociado. Solicita un nuevo enlace desde EYESITE.");
+        }
+
         loading.classList.add("hidden");
         recovery.classList.remove("hidden");
-      } else {
-        await establishSession();
-        loading.classList.add("hidden");
+        recoveryEmailHint.textContent="Código enviado a "+maskEmail(recoveryEmail)+".";
+        verifyCode.onclick=verifyRecoveryCode;
+        savePassword.onclick=saveNewPassword;
+        recoveryCode.focus();
+        return;
       }
-      if(recoveryMode){
-        recovery.classList.remove("hidden");
-        savePassword.onclick=async function(){
-          const p=password.value,p2=password2.value;
-          if(p.length<6){recoveryMessage.textContent="La contraseña debe tener al menos 6 caracteres.";return;}
-          if(p!==p2){recoveryMessage.textContent="Las contraseñas no coinciden.";return;}
-          savePassword.disabled=true; recoveryMessage.textContent="Guardando...";
-          const {error}=await supabase.auth.updateUser({password:p});
-          if(error){recoveryMessage.textContent=error.message;savePassword.disabled=false;return;}
-          recoveryMessage.textContent="Contraseña actualizada correctamente.";
-          password.value="";password2.value="";savePassword.classList.add("hidden");openAppRecovery.classList.remove("hidden");
-        };
-      }else{
-        success.classList.remove("hidden");
-        successTitle.textContent="¡Correo confirmado!";
-        successText.textContent="Tu correo electrónico ya está confirmado. Ahora puedes iniciar sesión en EYESITE.";
-      }
+
+      await establishConfirmationSession();
+      loading.classList.add("hidden");
+      success.classList.remove("hidden");
     }catch(e){
-      console.error("[EYESITE auth domain]",e);
+      console.error("[EYESITE auth callback]",e);
       showError(e&&e.message?e.message:"El enlace expiró o ya fue utilizado.");
     }
   }
+
   run();
 })();
 </script>
