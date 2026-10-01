@@ -18,13 +18,16 @@ async function mapWithConcurrency<T,R>(items:T[],concurrency:number,worker:(item
  });
  await Promise.all(workers); return results;
 }
-let admin: ReturnType<typeof createClient> | null = null;
+type DeliveryRow = { id: string; anuncio_id: string; user_id: string; push_attempts: number | null };
+type AnnouncementRow = { id: string; titulo: string; mensaje: string; tipo: string | null; activa: boolean; estado_publicacion: string };
+type ProfileRow = { id: string; expo_push_token: string | null; anuncios_push: boolean | null };
+type ReadyItem = { row: DeliveryRow; attempts: number; message: Record<string, unknown> };
+let admin!: ReturnType<typeof createClient>;
 Deno.serve(async(req:Request)=>{
  if(req.method==="OPTIONS")return new Response("ok",{headers:H});
  let schedulerClaimed=false;
  try{
   admin=createClient(Deno.env.get("SUPABASE_URL")!,Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
-  if(!admin) throw new Error("Supabase admin client unavailable");
   const supplied=req.headers.get("x-eyesite-cron-secret")||"";
   const {data:expected,error:secretError}=await admin.rpc("get_eyesite_scheduler_secret");
   if(secretError||!expected||supplied!==expected)return new Response(JSON.stringify({error:"No autorizado"}),{status:401,headers:H});
@@ -85,10 +88,11 @@ Deno.serve(async(req:Request)=>{
     admin.from("profiles").select("id,expo_push_token,anuncios_push").in("id",userIds).eq("estado","activa"),
    ]);
    if(ae)throw ae;if(pe)throw pe;
-   const byA=new Map((announcements||[]).map(a=>[a.id,a]));
-   const byP=new Map((profiles||[]).map(p=>[p.id,p]));
-   const ready=[],notConfigured=[];
-   for(const d of ds){
+   const byA=new Map<string, AnnouncementRow>((announcements||[] as AnnouncementRow[]).map(a=>[a.id,a]));
+   const byP=new Map<string, ProfileRow>((profiles||[] as ProfileRow[]).map(p=>[p.id,p]));
+   const ready: ReadyItem[]=[];
+   const notConfigured: string[]=[];
+   for(const d of (ds as DeliveryRow[])){
     const a=byA.get(d.anuncio_id),p=byP.get(d.user_id);
     if(!a||!a.activa||a.estado_publicacion!=="publicado")continue;
     if(p?.anuncios_push===false||!String(p?.expo_push_token||"").startsWith("ExponentPushToken[")){notConfigured.push(d.id);continue;}
