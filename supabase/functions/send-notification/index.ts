@@ -167,6 +167,8 @@ Deno.serve(async (req) => {
       ? resolvedUserIds
       : (rows || []).map((row: any) => row.id).filter(Boolean);
 
+    const notificationIdsByUserId = new Map<string, string>();
+
     if (createInApp && finalUserIds.length) {
       const { data: inAppProfiles, error: inAppProfilesError } = await adminClient
         .from("profiles")
@@ -184,7 +186,7 @@ Deno.serve(async (req) => {
       }
 
       const eventBase = String(body.event_key || crypto.randomUUID());
-      const { error: notificationError } = await adminClient
+      const { data: insertedNotifications, error: notificationError } = await adminClient
         .from("notificaciones")
         .upsert(
           (inAppUserIds).map((id) => ({
@@ -200,8 +202,14 @@ Deno.serve(async (req) => {
             data: navigationData,
           })),
           { onConflict: "event_key", ignoreDuplicates: true },
-        );
+        )
+        .select("id,user_id");
       if (notificationError) throw notificationError;
+      for (const notification of insertedNotifications || []) {
+        if (notification?.id && notification?.user_id) {
+          notificationIdsByUserId.set(String(notification.user_id), String(notification.id));
+        }
+      }
     }
 
     const isAnnouncement = Boolean(body.announcement_id || navigationData.announcement_id || String(body.tipo || "").toLowerCase() === "anuncio");
@@ -241,6 +249,7 @@ Deno.serve(async (req) => {
       })
       .map((row: any) => ({
         userId: row.id,
+        notificationId: notificationIdsByUserId.get(String(row.id)) || null,
         to: row.expo_push_token,
         sound: "default",
         title: String(body.titulo || "EYESITE"),
@@ -308,7 +317,7 @@ Deno.serve(async (req) => {
 
     for (const batch of chunks(messages, EXPO_BATCH_SIZE)) {
       try {
-        const expoMessages = batch.map(({ userId: _userId, ...message }) => message);
+        const expoMessages = batch.map(({ userId: _userId, notificationId: _notificationId, ...message }) => message);
         const expoResponse = await fetch("https://exp.host/--/api/v2/push/send", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -324,6 +333,19 @@ Deno.serve(async (req) => {
 
           if (ticket?.status === "ok") {
             sent += 1;
+            if (message.notificationId) {
+              const { error } = await adminClient
+                .from("notificaciones")
+                .update({
+                  push_status: "sent",
+                  push_attempts: 1,
+                  push_sent_at: deliveryNow,
+                  push_next_retry_at: null,
+                  push_error: null,
+                })
+                .eq("id", message.notificationId);
+              if (error) throw error;
+            }
             if (announcementId && message.userId) {
               const { error } = await adminClient
                 .from("anuncio_entregas")
@@ -344,6 +366,18 @@ Deno.serve(async (req) => {
 
           if (ticket?.details?.error === "DeviceNotRegistered") {
             if (message.to) invalidTokens.push(message.to);
+            if (message.notificationId) {
+              const { error } = await adminClient
+                .from("notificaciones")
+                .update({
+                  push_status: "not_configured",
+                  push_attempts: 1,
+                  push_next_retry_at: null,
+                  push_error: "DeviceNotRegistered",
+                })
+                .eq("id", message.notificationId);
+              if (error) throw error;
+            }
             if (announcementId && message.userId) {
               const { error } = await adminClient
                 .from("anuncio_entregas")
@@ -359,6 +393,24 @@ Deno.serve(async (req) => {
               if (error) throw error;
             }
             return;
+          }
+
+          const errorMessage = String(
+              ticket?.details?.error ||
+                ticket?.message ||
+                (!expoResponse.ok ? "Expo request failed" : "Push rechazado"),
+            );
+          if (message.notificationId) {
+            const { error } = await adminClient
+              .from("notificaciones")
+              .update({
+                push_status: "error",
+                push_attempts: 1,
+                push_next_retry_at: deliveryNow,
+                push_error: errorMessage,
+              })
+              .eq("id", message.notificationId);
+            if (error) throw error;
           }
 
           if (announcementId && message.userId) {
