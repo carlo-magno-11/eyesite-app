@@ -1,16 +1,18 @@
-<!-- Supabase Auth > Email Templates > Reset Password -->
-<h2>Restablecer contraseña de EYESITE</h2>
-<p>Recibimos una solicitud para cambiar la contraseña de tu cuenta.</p>
-
-<p><strong>Tu código de verificación:</strong></p>
-<p style="font-size:32px;letter-spacing:8px;font-weight:700">{{ .Token }}</p>
-
-<p>Abre la página segura de EYESITE y escribe el código:</p>
+<h2>Recupera tu contraseña de EYESITE</h2>
+<p>Recibimos una solicitud para restablecer la contraseña de tu cuenta.</p>
+<p>Para continuar, pulsa el siguiente botón:</p>
 <p>
-  <a href="https://auth.eyesite.mx/callback?mode=recovery&amp;type=recovery&amp;email={{ .Email }}">
-    Restablecer contraseña
+  <a href="{{ .RedirectTo }}"
+     style="display:inline-block;padding:12px 20px;background:#C9A84C;color:#0E0E0E;text-decoration:none;border-radius:8px;font-weight:bold;">
+    RESTABLECER CONTRASEÑA
   </a>
 </p>
-
-<p>El código es de un solo uso y tiene una vigencia limitada.</p>
-<p>Si no solicitaste este cambio, puedes ignorar este mensaje.</p>
+<p>Después de abrir la página, introduce el código de 6 dígitos que aparece en este correo.</p>
+<p>
+  <strong>Código de recuperación:</strong><br>
+  <span style="font-size:24px;letter-spacing:6px;font-weight:bold;">
+    {{ .Token }}
+  </span>
+</p>
+<p>El código es temporal y solo puede utilizarse para esta recuperación.</p>
+<p>Si tú no solicitaste cambiar tu contraseña, puedes ignorar este mensaje.</p>
