@@ -450,9 +450,19 @@ Deno.serve(async (req) => {
         const errorMessage =
           batchError instanceof Error ? batchError.message : String(batchError);
 
-        if (announcementId) {
-          await mapWithConcurrency(batch, DB_CONCURRENCY, async (message) => {
-            if (!message.userId) return;
+        await mapWithConcurrency(batch, DB_CONCURRENCY, async (message) => {
+          if (message.notificationId) {
+            await adminClient
+              .from("notificaciones")
+              .update({
+                push_status: "error",
+                push_attempts: 1,
+                push_next_retry_at: deliveryNow,
+                push_error: errorMessage,
+              })
+              .eq("id", message.notificationId);
+          }
+          if (announcementId && message.userId) {
             await adminClient
               .from("anuncio_entregas")
               .update({
@@ -464,8 +474,8 @@ Deno.serve(async (req) => {
               })
               .eq("anuncio_id", announcementId)
               .eq("user_id", message.userId);
-          });
-        }
+          }
+        });
 
         return new Response(
           JSON.stringify({
