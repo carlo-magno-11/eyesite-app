@@ -5,13 +5,13 @@ const RETRIES=[5,15,60];
 const EXPO_BATCH_SIZE=100;
 const EXPO_CONCURRENCY=3;
 const DB_CONCURRENCY=10;
-const retryAt=(attempt)=>new Date(Date.now()+RETRIES[Math.min(Math.max(attempt-1,0),RETRIES.length-1)]*60000).toISOString();
-async function expoSend(messages){
+const retryAt=(attempt:number)=>new Date(Date.now()+RETRIES[Math.min(Math.max(attempt-1,0),RETRIES.length-1)]*60000).toISOString();
+async function expoSend(messages:unknown[]){
  const r=await fetch("https://exp.host/--/api/v2/push/send",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(messages)});
  const p=await r.json(); return {ok:r.ok,tickets:Array.isArray(p?.data)?p.data:[]};
 }
-function chunks(items,size){const out=[];for(let i=0;i<items.length;i+=size)out.push(items.slice(i,i+size));return out;}
-async function mapWithConcurrency(items,concurrency,worker){
+function chunks<T>(items:T[],size:number):T[][]{const out:T[][]=[];for(let i=0;i<items.length;i+=size)out.push(items.slice(i,i+size));return out;}
+async function mapWithConcurrency<T,R>(items:T[],concurrency:number,worker:(item:T)=>Promise<R>):Promise<R[]>{
  const results=new Array(items.length); let cursor=0;
  const workers=Array.from({length:Math.min(concurrency,items.length)},async()=>{
   while(true){const index=cursor++;if(index>=items.length)return;results[index]=await worker(items[index]);}
@@ -29,7 +29,7 @@ Deno.serve(async(req)=>{
   const {data:claimed,error:claimError}=await admin.rpc("claim_eyesite_scheduler",{p_lease_seconds:90});
   if(claimError)throw claimError;
   if(claimed!==true)return new Response(JSON.stringify({ok:true,skipped:true,reason:"scheduler_locked"}),{status:200,headers:H});
-  const now=new Date().toISOString(), result={notifications:0,notification_push_sent:0,notification_push_retried:0,announcements:0,announcement_push_sent:0,skipped:false,errors:[]};
+  const now=new Date().toISOString(), result:{notifications:number;notification_push_sent:number;notification_push_retried:number;announcements:number;announcement_push_sent:number;skipped:boolean;errors:string[]}={notifications:0,notification_push_sent:0,notification_push_retried:0,announcements:0,announcement_push_sent:0,skipped:false,errors:[]};
   schedulerClaimed=true;
   const {data:dueN,error:nError}=await admin.from("notificaciones").select("id").eq("estado_envio","pendiente").lte("programada_para",now).order("programada_para").limit(100);
   if(nError)throw nError;
@@ -120,5 +120,5 @@ Deno.serve(async(req)=>{
   await admin.from("anuncios").update({activa:false,updated_at:now}).eq("activa",true).not("fecha_expiracion","is",null).lte("fecha_expiracion",now);
   return new Response(JSON.stringify({ok:true,...result}),{headers:H});
  }catch(e){console.error("[process-scheduled-communications]",e);return new Response(JSON.stringify({error:e instanceof Error?e.message:String(e)}),{status:500,headers:H});}
- finally{if(schedulerClaimed){try{await admin.rpc("release_eyesite_scheduler");}catch(releaseError){console.error("[process-scheduled-communications] release lock failed",releaseError);}}}
+ finally{if(schedulerClaimed&&admin){try{await admin.rpc("release_eyesite_scheduler");}catch(releaseError){console.error("[process-scheduled-communications] release lock failed",releaseError);}}}
 });
