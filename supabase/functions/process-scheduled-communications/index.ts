@@ -5,13 +5,24 @@ const RETRIES=[5,15,60];
 const EXPO_BATCH_SIZE=100;
 const EXPO_CONCURRENCY=3;
 const DB_CONCURRENCY=10;
-const retryAt=(attempt)=>new Date(Date.now()+RETRIES[Math.min(Math.max(attempt-1,0),RETRIES.length-1)]*60000).toISOString();
-async function expoSend(messages){
+type ExpoMessage={to:string;sound?:string;title?:string;body?:string;data?:Record<string,unknown>};
+type ExpoTicket={status?:string;details?:{error?:string};message?:string};
+type SchedulerResult={
+ notifications:number;
+ notification_push_sent:number;
+ notification_push_retried:number;
+ announcements:number;
+ announcement_push_sent:number;
+ skipped:boolean;
+ errors:string[];
+};
+const retryAt=(attempt:number)=>new Date(Date.now()+RETRIES[Math.min(Math.max(attempt-1,0),RETRIES.length-1)]*60000).toISOString();
+async function expoSend(messages:ExpoMessage[]):Promise<{ok:boolean;tickets:ExpoTicket[]}>{
  const r=await fetch("https://exp.host/--/api/v2/push/send",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(messages)});
- const p=await r.json(); return {ok:r.ok,tickets:Array.isArray(p?.data)?p.data:[]};
+ const p:any=await r.json(); return {ok:r.ok,tickets:Array.isArray(p?.data)?p.data:[]};
 }
-function chunks(items,size){const out=[];for(let i=0;i<items.length;i+=size)out.push(items.slice(i,i+size));return out;}
-async function mapWithConcurrency(items,concurrency,worker){
+function chunks<T>(items:T[],size:number):T[][]{const out:T[][]=[];for(let i=0;i<items.length;i+=size)out.push(items.slice(i,i+size));return out;}
+async function mapWithConcurrency<T,R>(items:T[],concurrency:number,worker:(item:T)=>Promise<R>):Promise<R[]>{
  const results=new Array(items.length); let cursor=0;
  const workers=Array.from({length:Math.min(concurrency,items.length)},async()=>{
   while(true){const index=cursor++;if(index>=items.length)return;results[index]=await worker(items[index]);}
@@ -21,15 +32,16 @@ async function mapWithConcurrency(items,concurrency,worker){
 Deno.serve(async(req)=>{
  if(req.method==="OPTIONS")return new Response("ok",{headers:H});
  let schedulerClaimed=false;
+ let admin:ReturnType<typeof createClient>|null=null;
  try{
-  const admin=createClient(Deno.env.get("SUPABASE_URL")!,Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+  admin=createClient(Deno.env.get("SUPABASE_URL")!,Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
   const supplied=req.headers.get("x-eyesite-cron-secret")||"";
   const {data:expected,error:secretError}=await admin.rpc("get_eyesite_scheduler_secret");
   if(secretError||!expected||supplied!==expected)return new Response(JSON.stringify({error:"No autorizado"}),{status:401,headers:H});
   const {data:claimed,error:claimError}=await admin.rpc("claim_eyesite_scheduler",{p_lease_seconds:90});
   if(claimError)throw claimError;
   if(claimed!==true)return new Response(JSON.stringify({ok:true,skipped:true,reason:"scheduler_locked"}),{status:200,headers:H});
-  const now=new Date().toISOString(), result={notifications:0,notification_push_sent:0,notification_push_retried:0,announcements:0,announcement_push_sent:0,skipped:false,errors:[]};
+  const now=new Date().toISOString(), result:SchedulerResult={notifications:0,notification_push_sent:0,notification_push_retried:0,announcements:0,announcement_push_sent:0,skipped:false,errors:[]};
   schedulerClaimed=true;
   const {data:dueN,error:nError}=await admin.from("notificaciones").select("id").eq("estado_envio","pendiente").lte("programada_para",now).order("programada_para").limit(100);
   if(nError)throw nError;
@@ -42,10 +54,11 @@ Deno.serve(async(req)=>{
   if(pnError)throw pnError;
   for(const n of pushN||[]){
    const {data:p}=await admin.from("profiles").select("expo_push_token,notificaciones_push").eq("id",n.user_id).eq("estado","activa").maybeSingle();
-   if(p?.notificaciones_push===false||!String(p?.expo_push_token||"").startsWith("ExponentPushToken[")){await admin.from("notificaciones").update({push_status:"not_configured",push_next_retry_at:null}).eq("id",n.id);continue;}
+   const pushToken=String(p?.expo_push_token||"");
+   if(p?.notificaciones_push===false||!pushToken.startsWith("ExponentPushToken[")){await admin.from("notificaciones").update({push_status:"not_configured",push_next_retry_at:null}).eq("id",n.id);continue;}
    const attempts=Number(n.push_attempts||0)+1;
    try{
-    const sent=await expoSend([{to:p.expo_push_token,sound:"default",title:n.titulo,body:n.mensaje,data:{tipo:n.tipo||"informacion",notification_id:n.id,...(n.data&&typeof n.data==="object"?n.data:{})}}]);
+    const sent=await expoSend([{to:pushToken,sound:"default",title:n.titulo,body:n.mensaje,data:{tipo:n.tipo||"informacion",notification_id:n.id,...(n.data&&typeof n.data==="object"?n.data:{})}}]);
     const t=sent.tickets[0];
     if(t?.status==="ok"){await admin.from("notificaciones").update({push_status:"sent",push_attempts:attempts,push_sent_at:now,push_next_retry_at:null,push_error:null}).eq("id",n.id);result.notification_push_sent++;if(attempts>1)result.notification_push_retried++;}
     else if(t?.details?.error==="DeviceNotRegistered"){await admin.from("profiles").update({expo_push_token:null}).eq("id",n.user_id);await admin.from("notificaciones").update({push_status:"not_configured",push_attempts:attempts,push_next_retry_at:null,push_error:"DeviceNotRegistered"}).eq("id",n.id);}
@@ -84,12 +97,13 @@ Deno.serve(async(req)=>{
    if(ae)throw ae;if(pe)throw pe;
    const byA=new Map((announcements||[]).map(a=>[a.id,a]));
    const byP=new Map((profiles||[]).map(p=>[p.id,p]));
-   const ready=[],notConfigured=[];
+   const ready:Array<{row:typeof ds[number];attempts:number;message:ExpoMessage}>=[],notConfigured:string[]=[];
    for(const d of ds){
     const a=byA.get(d.anuncio_id),p=byP.get(d.user_id);
     if(!a||!a.activa||a.estado_publicacion!=="publicado")continue;
-    if(p?.anuncios_push===false||!String(p?.expo_push_token||"").startsWith("ExponentPushToken[")){notConfigured.push(d.id);continue;}
-    ready.push({row:d,attempts:Number(d.push_attempts||0)+1,message:{to:p.expo_push_token,sound:"default",title:a.titulo,body:a.mensaje,data:{tipo:a.tipo||"anuncio",announcement_id:a.id}}});
+    const pushToken=String(p?.expo_push_token||"");
+    if(p?.anuncios_push===false||!pushToken.startsWith("ExponentPushToken[")){notConfigured.push(d.id);continue;}
+    ready.push({row:d,attempts:Number(d.push_attempts||0)+1,message:{to:pushToken,sound:"default",title:a.titulo,body:a.mensaje,data:{tipo:a.tipo||"anuncio",announcement_id:a.id}}});
    }
    if(notConfigured.length){
     const {error}=await admin.from("anuncio_entregas").update({push_status:"not_configured",push_next_retry_at:null,updated_at:now}).in("id",notConfigured);if(error)throw error;
@@ -120,5 +134,5 @@ Deno.serve(async(req)=>{
   await admin.from("anuncios").update({activa:false,updated_at:now}).eq("activa",true).not("fecha_expiracion","is",null).lte("fecha_expiracion",now);
   return new Response(JSON.stringify({ok:true,...result}),{headers:H});
  }catch(e){console.error("[process-scheduled-communications]",e);return new Response(JSON.stringify({error:e instanceof Error?e.message:String(e)}),{status:500,headers:H});}
- finally{if(schedulerClaimed){try{await admin.rpc("release_eyesite_scheduler");}catch(releaseError){console.error("[process-scheduled-communications] release lock failed",releaseError);}}}
+ finally{if(schedulerClaimed&&admin){try{await admin.rpc("release_eyesite_scheduler");}catch(releaseError){console.error("[process-scheduled-communications] release lock failed",releaseError);}}}
 });
