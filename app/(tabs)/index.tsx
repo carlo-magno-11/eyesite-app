@@ -181,25 +181,24 @@ export default function HomeScreen() {
                 <Text style={styles.viewAllLink}>Mis búsquedas →</Text>
               </Pressable>
             </View>
-            <View style={[styles.propertiesGrid, propertyColumns > 1 && styles.propertiesGridRow]}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              snapToInterval={Math.min(320, Math.max(230, (contentMaxWidth || 360) * 0.78)) + 12}
+              decelerationRate="fast"
+              snapToAlignment="start"
+              contentContainerStyle={styles.recommendationCarousel}
+              accessibilityLabel="Propiedades recomendadas"
+            >
               {recommendedProperties.map((property) => (
-                <View
-                  key={property.id}
-                  style={[
-                    styles.propertyGridItem,
-                    propertyColumns > 1 && styles.propertyGridItemMulti,
-                    propertyColumns === 2 && styles.propertyGridItemTwo,
-                    propertyColumns === 3 && styles.propertyGridItemThree,
-                    propertyColumns === 4 && styles.propertyGridItemFour,
-                  ]}
-                >
+                <View key={property.id} style={styles.recommendationItem}>
                   <View style={styles.matchBadge}>
                     <Text style={styles.matchBadgeText}>{property.matchScore}% COMPATIBLE</Text>
                   </View>
-                  <PropertyCard property={property} />
+                  <PropertyCard property={property} compact />
                 </View>
               ))}
-            </View>
+            </ScrollView>
           </View>
         ) : null}
 
@@ -408,7 +407,7 @@ const styles = StyleSheet.create({
   },
   matchBadge: {
     position: 'absolute',
-    zIndex: 2,
+    zIndex: 3,
     top: 8,
     left: 8,
     backgroundColor: '#C9A84C',
@@ -458,6 +457,8 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     textAlign: 'center',
   },
+  recommendationCarousel: { paddingRight: 24, gap: 12 },
+  recommendationItem: { width: 200, position: 'relative' },
   propertiesGridRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
