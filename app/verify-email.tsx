@@ -29,7 +29,7 @@ export default function VerifyEmailScreen() {
         options: {
           emailRedirectTo:
             Platform.OS === "web"
-              ? "https://auth.eyesite.mx/auth/callback"
+              ? "https://auth.eyesite.mx/callback"
               : "eyesite://auth/callback",
         },
       });
