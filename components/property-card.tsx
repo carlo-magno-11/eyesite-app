@@ -13,7 +13,7 @@ interface PropertyCardProps {
   compactWidth?: number;
 }
 
-export function PropertyCard({ property, compact = false }: PropertyCardProps) {
+export function PropertyCard({ property, compact = false, compactWidth }: PropertyCardProps) {
   const { isFav, toggleFav } = useFavorites();
   const { t } = useI18n();
   const favorite = isFav(property.id);
