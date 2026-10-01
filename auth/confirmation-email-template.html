@@ -1,17 +1,11 @@
-<!-- Supabase Auth > Email Templates > Confirm signup -->
-<h2>Confirma tu correo de EYESITE</h2>
+<h2>Confirma tu correo en EYESITE</h2>
 <p>Gracias por crear tu cuenta en EYESITE.</p>
-
-<p><strong>Tu código de confirmación:</strong></p>
-<p style="font-size:32px;letter-spacing:8px;font-weight:700">{{ .Token }}</p>
-
-<p>Abre la página segura de EYESITE y escribe el código:</p>
+<p>Para activar tu cuenta, confirma tu dirección de correo electrónico:</p>
 <p>
-  <a href="https://auth.eyesite.mx/callback?mode=confirm&amp;email={{ .Email }}"
-     style="display:inline-block;padding:13px 22px;border-radius:10px;background:#c9a84c;color:#0e0e0e;text-decoration:none;font-weight:700;">
-    Confirmar correo
+  <a href="{{ .RedirectTo }}&token_hash={{ .TokenHash }}"
+     style="display:inline-block;padding:12px 20px;background:#C9A84C;color:#0E0E0E;text-decoration:none;border-radius:8px;font-weight:bold;">
+    CONFIRMAR MI CORREO
   </a>
 </p>
-
-<p>El código es de un solo uso y tiene una vigencia limitada.</p>
-<p>Si no solicitaste esta cuenta, puedes ignorar este mensaje.</p>
+<p>Después de confirmar tu correo podrás continuar con EYESITE.</p>
+<p>Si tú no creaste esta cuenta, puedes ignorar este mensaje.</p>
