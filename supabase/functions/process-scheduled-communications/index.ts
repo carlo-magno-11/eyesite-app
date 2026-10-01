@@ -22,7 +22,7 @@ type DeliveryRow = { id: string; anuncio_id: string; user_id: string; push_attem
 type AnnouncementRow = { id: string; titulo: string; mensaje: string; tipo: string | null; activa: boolean; estado_publicacion: string };
 type ProfileRow = { id: string; expo_push_token: string | null; anuncios_push: boolean | null };
 type ReadyItem = { row: DeliveryRow; attempts: number; message: Record<string, unknown> };
-let admin!: ReturnType<typeof createClient>;
+let admin!: ReturnType<typeof createClient<any>>;
 Deno.serve(async(req:Request)=>{
  if(req.method==="OPTIONS")return new Response("ok",{headers:H});
  let schedulerClaimed=false;
