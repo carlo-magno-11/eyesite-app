@@ -82,7 +82,6 @@ type MetadataResult =
   | MetadataSuccess
   | MetadataError;
 
-type SupabaseClient = ReturnType<typeof createClient<any>>;
 
   function isMetadataError(
   metadata: MetadataResult,
@@ -178,7 +177,7 @@ async function destinationFor(
 }
 
 async function objectMetadata(
-  client: SupabaseClient,
+  client: any,
   bucket: string,
   path: string,
 ): Promise<MetadataResult> {
