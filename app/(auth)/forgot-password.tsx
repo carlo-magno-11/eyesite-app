@@ -4,10 +4,12 @@ import { router } from "expo-router";
 import { supabase } from "@/lib/supabase";
 import AuthBackground from "@/components/AuthBackground";
 
-const getAuthRedirect = () =>
-  Platform.OS === "web"
-    ? "https://auth.eyesite.mx/callback"
-    : "eyesite://auth/callback";
+const getAuthRedirect = (email?: string) => {
+  if (Platform.OS !== "web") return "eyesite://auth/callback";
+  const query = new URLSearchParams({ type: "recovery" });
+  if (email) query.set("email", email);
+  return `https://auth.eyesite.mx/callback?${query.toString()}`;
+};
 
 export default function ForgotPasswordScreen() {
   const [email, setEmail] = useState("");
@@ -32,7 +34,7 @@ export default function ForgotPasswordScreen() {
 
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(cleanEmail, {
-        redirectTo: getAuthRedirect(),
+        redirectTo: getAuthRedirect(cleanEmail),
       });
 
       if (error) {
