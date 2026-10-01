@@ -6089,6 +6089,14 @@ async function enviarComunicacionAdmin() {
     return;
   }
 
+  if (modo === "announcement" && expira) {
+    const expiresAt = new Date(expira);
+    if (Number.isNaN(expiresAt.getTime()) || expiresAt.getTime() <= scheduledAt.getTime()) {
+      toast("La caducidad del anuncio debe ser posterior a su publicación.");
+      return;
+    }
+  }
+
   try {
     if (modo === "announcement") {
       const announcementId = crypto.randomUUID();
@@ -6112,7 +6120,56 @@ async function enviarComunicacionAdmin() {
           uploadedPaths.push(item.path);
         }
 
-        // Announcement creation handled atomically above; continue with notification mode.
+        const imagenes = uploadedPaths
+          .map((path) => s.storage.from(BUCKET_IMAGES).getPublicUrl(path).data?.publicUrl)
+          .filter(Boolean);
+
+        const isScheduled = scheduledAt.getTime() > Date.now() + 5000;
+        const now = new Date().toISOString();
+        const { error } = await s.from("anuncios").insert({
+          id: announcementId,
+          titulo,
+          mensaje,
+          tipo,
+          activa: !isScheduled,
+          published_at: isScheduled ? scheduledAt.toISOString() : now,
+          programada_para: scheduledAt.toISOString(),
+          publicada_en: isScheduled ? null : now,
+          estado_publicacion: isScheduled ? "pendiente" : "publicado",
+          created_by: currentUser?.id || null,
+          imagen_url: imagenes[0] || null,
+          imagenes,
+          enlace: safeEnlace,
+          enlace_label: safeEnlace ? enlaceLabel : null,
+          fecha_expiracion: expira ? new Date(expira).toISOString() : null,
+          prioridad: Number.isFinite(prioridad) ? prioridad : 0,
+        });
+        if (error) throw error;
+
+        if (!isScheduled) {
+          try {
+            const { error: pushError } = await s.functions.invoke("send-notification", {
+              body: {
+                titulo,
+                mensaje,
+                tipo,
+                announcement_id: announcementId,
+              },
+            });
+            if (pushError) console.warn("[push anuncio]", pushError);
+          } catch (e) {
+            console.warn("[push anuncio]", e);
+          }
+        }
+
+        toast(isScheduled ? "Anuncio programado." : "Anuncio publicado correctamente.");
+      } catch (announcementError) {
+        if (uploadedPaths.length) {
+          const { error: cleanupError } = await s.storage.from(BUCKET_IMAGES).remove(uploadedPaths);
+          if (cleanupError) console.warn("[cleanup anuncio]", cleanupError);
+        }
+        throw announcementError;
+      }
     } else {
       let ids = [];
       if (destino === "all") {
@@ -6173,7 +6230,6 @@ async function enviarComunicacionAdmin() {
     toast(e?.message || "No se pudo guardar la comunicación.");
   }
 }
-
 async function cambiarEstadoAnuncio(id, activo) {
   try {
     const { error } = await s.from("anuncios").update({
