@@ -3,7 +3,7 @@ import { router } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
 import { useAuth } from '@/hooks/useAuth';
 import { useState } from 'react';
-import { useSavedSearches } from '@/hooks/use-commercial';
+import { SavedSearch, useSavedSearches } from '@/hooks/use-commercial';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useI18n } from '@/lib/i18n';
 
@@ -39,7 +39,7 @@ export default function SavedSearchesScreen() {
 
         {deleteError ? <View style={styles.card}><Text style={styles.error}>{deleteError}</Text></View> : null}
 
-        {loading ?
+        {loading ? (
           <View style={styles.center}>
             <ActivityIndicator color="#C9A84C" size="large" />
           </View>
