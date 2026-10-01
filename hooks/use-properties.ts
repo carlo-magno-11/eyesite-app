@@ -530,6 +530,16 @@ export function useProperties(options?: PropertyCatalogOptions) {
     fetchPropertiesRef.current = fetchProperties;
   }, [fetchProperties]);
 
+  // Reejecuta la consulta cuando cambian búsqueda/filtros/orden mientras
+  // el catálogo ya está montado. El refresh al recuperar foco se mantiene
+  // en useFocusEffect.
+  const previousFilterKey = useRef(filterKey);
+  useEffect(() => {
+    if (previousFilterKey.current === filterKey) return;
+    previousFilterKey.current = filterKey;
+    void fetchProperties();
+  }, [fetchProperties, filterKey]);
+
   const loadMore = useCallback(async () => {
     if (!isCatalogMode || loading || loadingMore || !hasMore) return;
     await fetchPage(properties.length, true);
