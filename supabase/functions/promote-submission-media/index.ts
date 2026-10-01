@@ -1198,7 +1198,7 @@ Deno.serve(
           media.map(
             ([field, value]) =>
               promoteOne(
-                admin,
+                admin as any,
                 requestId,
                 String(submission.user_id || ""),
                 field,
