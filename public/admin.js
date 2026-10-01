@@ -6022,6 +6022,38 @@ async function cargarAnunciosAdmin() {
   }
 }
 
+function validateAnnouncementImage(file) {
+  const allowed = new Set(["image/jpeg", "image/png", "image/webp"]);
+  const mime = String(file?.type || "").toLowerCase().trim();
+  const name = String(file?.name || "").toLowerCase();
+  const extension = name.includes(".") ? name.split(".").pop() : "";
+  const allowedExtensions = new Set(["jpg", "jpeg", "png", "webp"]);
+  const MAX_ANNOUNCEMENT_IMAGE_BYTES = 10 * 1024 * 1024;
+
+  if (!allowed.has(mime) || !allowedExtensions.has(extension)) {
+    throw new Error("Los anuncios solo aceptan imágenes JPG, PNG o WebP.");
+  }
+  if (!Number.isFinite(file.size) || file.size <= 0) {
+    throw new Error("Una de las imágenes del anuncio está vacía o es inválida.");
+  }
+  if (file.size > MAX_ANNOUNCEMENT_IMAGE_BYTES) {
+    throw new Error("Cada imagen del anuncio debe pesar como máximo 10 MB.");
+  }
+}
+
+function validateAnnouncementLink(value) {
+  if (!value) return null;
+  try {
+    const url = new URL(value);
+    if (url.protocol !== "https:" && url.protocol !== "http:") {
+      throw new Error("El enlace del anuncio debe usar HTTP o HTTPS.");
+    }
+    return url.toString();
+  } catch {
+    throw new Error("El enlace del anuncio no es una URL HTTP/HTTPS válida.");
+  }
+}
+
 async function enviarComunicacionAdmin() {
   const modo = valueOf("nt_modo") || "notification";
   const titulo = valueOf("nt_titulo").trim();
@@ -6030,6 +6062,7 @@ async function enviarComunicacionAdmin() {
   const destino = valueOf("nt_destino") || "all";
   const userId = valueOf("nt_user").trim();
   const enlace = valueOf("nt_enlace").trim();
+  const safeEnlace = validateAnnouncementLink(enlace);
   const enlaceLabel = valueOf("nt_enlace_label").trim() || "VER MÁS";
   const prioridad = Number(valueOf("nt_prioridad") || 0);
   const expira = valueOf("nt_expira").trim();
@@ -6063,58 +6096,23 @@ async function enviarComunicacionAdmin() {
       const gallery = galleryInput?.files ? [...galleryInput.files] : [];
       const uploadedPaths = [];
 
-      if (cover) {
-        const item = await uploadFile(BUCKET_IMAGES, cover, `announcements/${announcementId}`);
-        uploadedPaths.push(item.path);
-      }
-      for (const file of gallery) {
-        const item = await uploadFile(BUCKET_IMAGES, file, `announcements/${announcementId}`);
-        uploadedPaths.push(item.path);
+      if (cover) validateAnnouncementImage(cover);
+      gallery.forEach(validateAnnouncementImage);
+      if (gallery.length > 20) {
+        throw new Error("La galería del anuncio admite como máximo 20 imágenes.");
       }
 
-      const imagenes = uploadedPaths
-        .map((path) => s.storage.from(BUCKET_IMAGES).getPublicUrl(path).data?.publicUrl)
-        .filter(Boolean);
-
-      const isScheduled = scheduledAt.getTime() > Date.now() + 5000;
-      const { error } = await s.from("anuncios").insert({
-        id: announcementId,
-        titulo,
-        mensaje,
-        tipo,
-        activa: !isScheduled,
-        published_at: isScheduled ? scheduledAt.toISOString() : new Date().toISOString(),
-        programada_para: scheduledAt.toISOString(),
-        publicada_en: isScheduled ? null : new Date().toISOString(),
-        estado_publicacion: isScheduled ? "pendiente" : "publicado",
-        created_by: currentUser?.id || null,
-        imagen_url: imagenes[0] || null,
-        imagenes,
-        enlace: enlace || null,
-        enlace_label: enlace ? enlaceLabel : null,
-        fecha_expiracion: expira ? new Date(expira).toISOString() : null,
-        prioridad: Number.isFinite(prioridad) ? prioridad : 0,
-      });
-      if (error) throw error;
-
-      if (!isScheduled) {
-        try {
-          const { error: pushError } = await s.functions.invoke("send-notification", {
-            body: {
-              titulo,
-              mensaje,
-              tipo,
-              user_id: null,
-              announcement_id: announcementId,
-            },
-          });
-          if (pushError) console.warn("[push anuncio]", pushError);
-        } catch (e) {
-          console.warn("[push anuncio]", e);
+      try {
+        if (cover) {
+          const item = await uploadFile(BUCKET_IMAGES, cover, `announcements/${announcementId}`);
+          uploadedPaths.push(item.path);
         }
-      }
+        for (const file of gallery) {
+          const item = await uploadFile(BUCKET_IMAGES, file, `announcements/${announcementId}`);
+          uploadedPaths.push(item.path);
+        }
 
-      toast(isScheduled ? "Anuncio programado." : "Anuncio publicado correctamente.");
+        // Announcement creation handled atomically above; continue with notification mode.
     } else {
       let ids = [];
       if (destino === "all") {
