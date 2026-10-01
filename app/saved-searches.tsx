@@ -1,7 +1,8 @@
-import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
 import { useAuth } from '@/hooks/useAuth';
+import { useState } from 'react';
 import { useSavedSearches } from '@/hooks/use-commercial';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useI18n } from '@/lib/i18n';
@@ -11,6 +12,8 @@ export default function SavedSearchesScreen() {
   const { t, language } = useI18n();
   const { searches, loading, error, remove } = useSavedSearches(user?.id);
   const { contentMaxWidth, horizontalPadding } = useResponsive();
+  const [pendingDelete, setPendingDelete] = useState<SavedSearch | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   if (authLoading || !user) return null;
 
@@ -76,34 +79,32 @@ export default function SavedSearchesScreen() {
               </View>
 
               <Pressable
-                onPress={() =>
-                  Alert.alert(
-                    t("deleteSearch"),
-                    t("deleteSearchConfirm"),
-                    [
-                      { text: t("cancel"), style: "cancel" },
-                      {
-                        text: t("deleteSearch"),
-                        style: 'destructive',
-                        onPress: async () => {
-                          try {
-                            await remove(search.id);
-                          } catch (e: any) {
-                            Alert.alert(t("couldNotDelete"), e?.message || t("tryAgainShort"));
-                          }
-                        },
-                      },
-                    ],
-                  )
-                }
-                style={styles.deleteButton}
+                onPress={() => setPendingDelete(search)}
+                disabled={deletingId === search.id}
+                accessibilityRole="button"
+                accessibilityLabel={t("deleteSearch")}
+                style={({ pressed }) => [styles.deleteButton, pressed && styles.pressed, deletingId === search.id && styles.disabled]}
               >
-                <Text style={styles.deleteText}>{t("deleteSearch")}</Text>
+                {deletingId === search.id ? <ActivityIndicator color="#E57373" size="small" /> : <Text style={styles.deleteText}>{t("deleteSearch")}</Text>}
               </Pressable>
             </View>
           ))
         )}
       </ScrollView>
+      <Modal visible={Boolean(pendingDelete)} transparent animationType="fade" onRequestClose={() => deletingId ? undefined : setPendingDelete(null)}>
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalEyebrow}>{t("deleteSearch")}</Text>
+            <Text style={styles.modalTitle}>{t("deleteSearchConfirm")}</Text>
+            {pendingDelete && <Text style={styles.modalName}>{pendingDelete.nombre}</Text>}
+            <Text style={styles.modalHint}>{t("savedSearchesSubtitle")}</Text>
+            <View style={styles.modalActions}>
+              <Pressable disabled={Boolean(deletingId)} onPress={() => setPendingDelete(null)} style={styles.cancelButton}><Text style={styles.cancelText}>{t("cancel")}</Text></Pressable>
+              <Pressable disabled={Boolean(deletingId)} onPress={async () => { if (!pendingDelete) return; setDeletingId(pendingDelete.id); try { await remove(pendingDelete.id); setPendingDelete(null); } catch (e: any) { setError(e?.message || t("tryAgainShort")); } finally { setDeletingId(null); } }} style={styles.confirmDeleteButton}><Text style={styles.confirmDeleteText}>{t("deleteSearch")}</Text></Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </ScreenContainer>
   );
 }
@@ -129,6 +130,19 @@ const styles = StyleSheet.create({
   error: { color: '#E57373', fontSize: 13 },
   primary: { backgroundColor: '#C9A84C', borderRadius: 9, padding: 13, alignItems: 'center', marginTop: 16 },
   primaryText: { color: '#0D0D0D', fontSize: 12, fontWeight: '900' },
-  deleteButton: { marginTop: 14, alignSelf: 'flex-end' },
+  pressed: { opacity: 0.72 },
+  disabled: { opacity: 0.5 },
+  deleteButton: { marginTop: 14, alignSelf: 'flex-end', minWidth: 90, minHeight: 28, alignItems: 'flex-end', justifyContent: 'center' },
   deleteText: { color: '#E57373', fontSize: 12, fontWeight: '800' },
+  modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.72)', alignItems: 'center', justifyContent: 'center', padding: 24 },
+  modalCard: { width: '100%', maxWidth: 420, backgroundColor: '#171717', borderWidth: 1, borderColor: '#3A3A3A', borderRadius: 18, padding: 22 },
+  modalEyebrow: { color: '#C9A84C', fontSize: 10, fontWeight: '900', letterSpacing: 1.4 },
+  modalTitle: { color: '#F5F5F5', fontSize: 18, fontWeight: '800', marginTop: 7, lineHeight: 24 },
+  modalName: { color: '#C9A84C', fontSize: 14, fontWeight: '800', marginTop: 12 },
+  modalHint: { color: '#888', fontSize: 12, lineHeight: 18, marginTop: 8 },
+  modalActions: { flexDirection: 'row', gap: 10, marginTop: 20 },
+  cancelButton: { flex: 1, minHeight: 44, borderRadius: 10, borderWidth: 1, borderColor: '#333', alignItems: 'center', justifyContent: 'center' },
+  cancelText: { color: '#BDBDBD', fontSize: 12, fontWeight: '800' },
+  confirmDeleteButton: { flex: 1, minHeight: 44, borderRadius: 10, backgroundColor: '#E57373', alignItems: 'center', justifyContent: 'center' },
+  confirmDeleteText: { color: '#0D0D0D', fontSize: 12, fontWeight: '900' },
 });
