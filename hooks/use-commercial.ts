@@ -118,7 +118,8 @@ export function useSavedSearches(userId?: string) {
     const { error: deleteError } = await supabase
       .from('saved_searches')
       .delete()
-      .eq('id', id);
+      .eq('id', id)
+      .eq('user_id', userId ?? '');
 
     if (deleteError) throw deleteError;
     setSearches((current) => current.filter((item) => item.id !== id));
