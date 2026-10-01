@@ -115,7 +115,10 @@ Deno.serve(async(req:Request)=>{
      });
     }catch(e){
      const err=e instanceof Error?e.message:String(e);
-     await mapWithConcurrency(batch,DB_CONCURRENCY,async item=>{\n      const {error}=await admin.from("anuncio_entregas").update({push_status:"error",push_attempts:item.attempts,push_next_retry_at:item.attempts<RETRIES.length?retryAt(item.attempts):null,push_error:err,updated_at:now}).eq("id",item.row.id);\n      if(error) throw error;\n     });
+     await mapWithConcurrency(batch,DB_CONCURRENCY,async item=>{
+      const {error}=await admin.from("anuncio_entregas").update({push_status:"error",push_attempts:item.attempts,push_next_retry_at:item.attempts<RETRIES.length?retryAt(item.attempts):null,push_error:err,updated_at:now}).eq("id",item.row.id);
+      if(error) throw error;
+     });
      for(const item of batch)result.errors.push("announcement:"+item.row.anuncio_id+":user:"+item.row.user_id+":"+err);
     }
    }
