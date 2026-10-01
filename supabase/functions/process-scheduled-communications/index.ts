@@ -18,11 +18,13 @@ async function mapWithConcurrency<T,R>(items:T[],concurrency:number,worker:(item
  });
  await Promise.all(workers); return results;
 }
-Deno.serve(async(req)=>{
+let admin: ReturnType<typeof createClient> | null = null;
+Deno.serve(async(req:Request)=>{
  if(req.method==="OPTIONS")return new Response("ok",{headers:H});
  let schedulerClaimed=false;
  try{
-  const admin=createClient(Deno.env.get("SUPABASE_URL")!,Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+  admin=createClient(Deno.env.get("SUPABASE_URL")!,Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+  if(!admin) throw new Error("Supabase admin client unavailable");
   const supplied=req.headers.get("x-eyesite-cron-secret")||"";
   const {data:expected,error:secretError}=await admin.rpc("get_eyesite_scheduler_secret");
   if(secretError||!expected||supplied!==expected)return new Response(JSON.stringify({error:"No autorizado"}),{status:401,headers:H});
@@ -42,10 +44,11 @@ Deno.serve(async(req)=>{
   if(pnError)throw pnError;
   for(const n of pushN||[]){
    const {data:p}=await admin.from("profiles").select("expo_push_token,notificaciones_push").eq("id",n.user_id).eq("estado","activa").maybeSingle();
-   if(p?.notificaciones_push===false||!String(p?.expo_push_token||"").startsWith("ExponentPushToken[")){await admin.from("notificaciones").update({push_status:"not_configured",push_next_retry_at:null}).eq("id",n.id);continue;}
+   const token=String(p?.expo_push_token||"");
+   if(p?.notificaciones_push===false||!token.startsWith("ExponentPushToken[")){await admin.from("notificaciones").update({push_status:"not_configured",push_next_retry_at:null}).eq("id",n.id);continue;}
    const attempts=Number(n.push_attempts||0)+1;
    try{
-    const sent=await expoSend([{to:p.expo_push_token,sound:"default",title:n.titulo,body:n.mensaje,data:{tipo:n.tipo||"informacion",notification_id:n.id,...(n.data&&typeof n.data==="object"?n.data:{})}}]);
+    const sent=await expoSend([{to:token,sound:"default",title:n.titulo,body:n.mensaje,data:{tipo:n.tipo||"informacion",notification_id:n.id,...(n.data&&typeof n.data==="object"?n.data:{})}}]);
     const t=sent.tickets[0];
     if(t?.status==="ok"){await admin.from("notificaciones").update({push_status:"sent",push_attempts:attempts,push_sent_at:now,push_next_retry_at:null,push_error:null}).eq("id",n.id);result.notification_push_sent++;if(attempts>1)result.notification_push_retried++;}
     else if(t?.details?.error==="DeviceNotRegistered"){await admin.from("profiles").update({expo_push_token:null}).eq("id",n.user_id);await admin.from("notificaciones").update({push_status:"not_configured",push_attempts:attempts,push_next_retry_at:null,push_error:"DeviceNotRegistered"}).eq("id",n.id);}
@@ -112,7 +115,7 @@ Deno.serve(async(req)=>{
      });
     }catch(e){
      const err=e instanceof Error?e.message:String(e);
-     await mapWithConcurrency(batch,DB_CONCURRENCY,item=>admin.from("anuncio_entregas").update({push_status:"error",push_attempts:item.attempts,push_next_retry_at:item.attempts<RETRIES.length?retryAt(item.attempts):null,push_error:err,updated_at:now}).eq("id",item.row.id));
+     await mapWithConcurrency(batch,DB_CONCURRENCY,async item=>{\n      const {error}=await admin.from("anuncio_entregas").update({push_status:"error",push_attempts:item.attempts,push_next_retry_at:item.attempts<RETRIES.length?retryAt(item.attempts):null,push_error:err,updated_at:now}).eq("id",item.row.id);\n      if(error) throw error;\n     });
      for(const item of batch)result.errors.push("announcement:"+item.row.anuncio_id+":user:"+item.row.user_id+":"+err);
     }
    }
